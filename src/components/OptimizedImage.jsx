@@ -1,55 +1,65 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 /**
- * Componente de Imagen Optimizado para Hardware de Gama Media (Tablets)
- * - Intersection Observer para Lazy Loading real.
- * - decoding="async" para no bloquear el Main Thread.
- * - Soporte para miniaturas de Firebase Storage.
+ * CAPA 3: Componente de Imagen Optimizado para Tablets
+ * 
+ * Optimizaciones:
+ * - IntersectionObserver con rootMargin para pre-carga antes de ser visible
+ * - loading="lazy" + decoding="async" para no bloquear el Main Thread
+ * - Shimmer placeholder nativo (sin librería externa)
+ * - Cleanup completo del observer en unmount (previene memory leaks)
  */
-const OptimizedImage = ({ src, alt, className, thumbnail = true }) => {
+const OptimizedImage = ({ src, alt, className }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
-  const imgRef = useRef();
+  const [hasError, setHasError] = useState(false);
+  const imgRef = useRef(null);
+  const observerRef = useRef(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
+    if (!imgRef.current) return;
+
+    observerRef.current = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsInView(true);
-          observer.disconnect();
+          observerRef.current?.disconnect();
         }
       },
-      { rootMargin: '100px' } // Cargamos con un margen para evitar parpadeos
+      { rootMargin: '200px' } // Pre-carga con margen generoso para scroll fluido
     );
 
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
+    observerRef.current.observe(imgRef.current);
 
-    return () => observer.disconnect();
+    return () => {
+      observerRef.current?.disconnect();
+      observerRef.current = null;
+    };
   }, []);
 
-  // Construir URL de miniatura si es necesario (ejemplo basado en Firebase Extensions)
-  const imageSrc = thumbnail && src ? src.replace('/o/', '/o/thumbnails%2F').replace('?alt=', '_200x200?alt=') : src;
+  // Si no hay src o hay error, no intentar cargar la imagen
+  const showImage = isInView && src && !hasError;
 
   return (
     <div 
       ref={imgRef}
-      className={`image-container ${isLoaded ? 'loaded' : 'loading'} ${className}`}
+      className={`${className || ''}`}
       style={{ 
         backgroundColor: '#f1f5f9', 
         overflow: 'hidden', 
         position: 'relative',
-        minHeight: '40px' 
+        minHeight: '40px',
+        borderRadius: 'inherit'
       }}
     >
-      {isInView && (
+      {showImage && (
         <img
-          src={imageSrc}
+          src={src}
           alt={alt}
           loading="lazy"
           decoding="async"
           onLoad={() => setIsLoaded(true)}
+          onError={() => setHasError(true)}
           style={{
             width: '100%',
             height: '100%',
@@ -60,7 +70,7 @@ const OptimizedImage = ({ src, alt, className, thumbnail = true }) => {
         />
       )}
       {!isLoaded && (
-        <div className="shimmer" style={{
+        <div style={{
           position: 'absolute',
           top: 0,
           left: 0,
