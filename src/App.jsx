@@ -1,16 +1,18 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
-import InventoryView from './views/InventoryView';
-import SettingsView from './views/SettingsView';
-import ProfileView from './views/ProfileView';
-import UserManagementView from './views/UserManagementView';
-import LoginView from './views/LoginView';
-import ParquesView from './views/ParquesView';
-import AnalyticsView from './views/AnalyticsView';
-import TransactionsView from './views/TransactionsView';
-import ToolsView from './views/ToolsView';
+
+const InventoryView = lazy(() => import('./views/InventoryView'));
+const SettingsView = lazy(() => import('./views/SettingsView'));
+const ProfileView = lazy(() => import('./views/ProfileView'));
+const UserManagementView = lazy(() => import('./views/UserManagementView'));
+const LoginView = lazy(() => import('./views/LoginView'));
+const ParquesView = lazy(() => import('./views/ParquesView'));
+const AnalyticsView = lazy(() => import('./views/AnalyticsView'));
+const TransactionsView = lazy(() => import('./views/TransactionsView'));
+const ToolsView = lazy(() => import('./views/ToolsView'));
+
 import { InventoryProvider, useInventory } from './context/InventoryContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -81,23 +83,25 @@ const RootApp = () => {
       <div className="app-container">
         <Sidebar />
         <main className="main-content">
-          <Routes>
-            <Route path="/" element={<ViewProtectedRoute viewId="dashboard"><Dashboard /></ViewProtectedRoute>} />
-            <Route path="/tornilleria" element={<ViewProtectedRoute viewId="tornilleria"><InventoryView categoryTitle="Tornillería" /></ViewProtectedRoute>} />
-            <Route path="/papeleria" element={<ViewProtectedRoute viewId="papeleria"><InventoryView categoryTitle="Papelería" /></ViewProtectedRoute>} />
-            <Route path="/herramientas" element={<ViewProtectedRoute viewId="herramientas"><ToolsView /></ViewProtectedRoute>} />
-            <Route path="/impresion-3d" element={<ViewProtectedRoute viewId="impresion-3d"><InventoryView categoryTitle="Impresión 3D" /></ViewProtectedRoute>} />
-            <Route path="/electronica" element={<ViewProtectedRoute viewId="electronica"><InventoryView categoryTitle="Electrónica" /></ViewProtectedRoute>} />
-            <Route path="/general" element={<ViewProtectedRoute viewId="general"><InventoryView categoryTitle="Inventario General" /></ViewProtectedRoute>} />
-            <Route path="/almacen-temporal" element={<ViewProtectedRoute viewId="almacen-temporal"><InventoryView categoryTitle="Almacén Temporal" /></ViewProtectedRoute>} />
-            <Route path="/parques" element={<ViewProtectedRoute viewId="parques"><ParquesView /></ViewProtectedRoute>} />
-            <Route path="/analytics" element={<ViewProtectedRoute viewId="analytics"><AnalyticsView /></ViewProtectedRoute>} />
-            <Route path="/transactions" element={<ViewProtectedRoute viewId="transactions"><TransactionsView /></ViewProtectedRoute>} />
-            <Route path="/settings" element={isAdmin ? <SettingsView /> : <Navigate to="/" />} />
-            <Route path="/profile" element={<ProfileView />} />
-            <Route path="/users" element={isAdmin ? <UserManagementView /> : <Navigate to="/" />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%' }}><Loader2 className="animate-spin" style={{ color: 'hsl(var(--primary))' }} size={40} /></div>}>
+            <Routes>
+              <Route path="/" element={<ViewProtectedRoute viewId="dashboard"><Dashboard /></ViewProtectedRoute>} />
+              <Route path="/tornilleria" element={<ViewProtectedRoute viewId="tornilleria"><InventoryView categoryTitle="Tornillería" /></ViewProtectedRoute>} />
+              <Route path="/papeleria" element={<ViewProtectedRoute viewId="papeleria"><InventoryView categoryTitle="Papelería" /></ViewProtectedRoute>} />
+              <Route path="/herramientas" element={<ViewProtectedRoute viewId="herramientas"><ToolsView /></ViewProtectedRoute>} />
+              <Route path="/impresion-3d" element={<ViewProtectedRoute viewId="impresion-3d"><InventoryView categoryTitle="Impresión 3D" /></ViewProtectedRoute>} />
+              <Route path="/electronica" element={<ViewProtectedRoute viewId="electronica"><InventoryView categoryTitle="Electrónica" /></ViewProtectedRoute>} />
+              <Route path="/general" element={<ViewProtectedRoute viewId="general"><InventoryView categoryTitle="Inventario General" /></ViewProtectedRoute>} />
+              <Route path="/almacen-temporal" element={<ViewProtectedRoute viewId="almacen-temporal"><InventoryView categoryTitle="Almacén Temporal" /></ViewProtectedRoute>} />
+              <Route path="/parques" element={<ViewProtectedRoute viewId="parques"><ParquesView /></ViewProtectedRoute>} />
+              <Route path="/analytics" element={<ViewProtectedRoute viewId="analytics"><AnalyticsView /></ViewProtectedRoute>} />
+              <Route path="/transactions" element={<ViewProtectedRoute viewId="transactions"><TransactionsView /></ViewProtectedRoute>} />
+              <Route path="/settings" element={isAdmin ? <SettingsView /> : <Navigate to="/" />} />
+              <Route path="/profile" element={<ProfileView />} />
+              <Route path="/users" element={isAdmin ? <UserManagementView /> : <Navigate to="/" />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
       <Toaster position="top-right" richColors closeButton />

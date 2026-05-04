@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Wrench, PenTool, Package, Printer, Cpu, Landmark, AlertTriangle, 
   Loader2, Archive, DollarSign, BarChart3, Layers, ArrowUpCircle,
-  ArrowDownCircle, Calendar, X, RefreshCw, ClipboardCheck, Activity, User
+  ArrowDownCircle, Calendar, X, RefreshCw, ClipboardCheck, Activity, User, Zap
 } from 'lucide-react';
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
@@ -42,7 +42,7 @@ const actionColors = {
 };
 
 const Dashboard = () => {
-  const { items, movements, loading } = useInventory();
+  const { items, movements, loading, globalStats } = useInventory();
   const { userData, isAdmin } = useAuth();
   const navigate = useNavigate();
   const todayStr = toLocalDateString(new Date());
@@ -62,34 +62,10 @@ const Dashboard = () => {
     [movements, movDate]
   );
 
-  // --- OPTIMIZACIÓN O(N): Un solo paso para todas las métricas ---
-  const { totalValue, lowStockItems, chartData } = useMemo(() => {
-    // 1. Cálculo de Valor y Stock Bajo (items)
-    const val = items.reduce((acc, item) => acc + ((item.qty || 0) * (item.costo_unitario || 0)), 0);
-    const low = items.filter(item => (item.qty || 0) <= (item.threshold || 0));
-
-    // 2. Preparación de días para la gráfica
-    const last7Days = [6, 5, 4, 3, 2, 1, 0].map(i => {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      return { 
-        name: d.toLocaleDateString('es-ES', { weekday: 'short' }),
-        dateStr: toLocalDateString(d),
-        movimientos: 0 
-      };
-    });
-
-    // 3. Un solo paso por movimientos para llenar la gráfica
-    movements.forEach(m => {
-      if (!m.timestamp) return;
-      const mDate = toLocalDateString(m.timestamp.toDate());
-      const day = last7Days.find(d => d.dateStr === mDate);
-      if (day) day.movimientos++;
-    });
-
-    return { totalValue: val, lowStockItems: low, chartData: last7Days };
-  }, [items, movements]);
-
+  const lowStockItems = useMemo(() => 
+    items.filter(item => (item.qty || 0) <= (item.threshold || 0)),
+    [items]
+  );
 
   const categories = [
     { id: 'tornilleria', title: 'Tornillería', icon: <Wrench size={22} />, color: '#0071e3', route: '/tornilleria' },
@@ -104,8 +80,8 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full w-full">
-        <Loader2 className="animate-spin text-blue-500" size={32} />
+      <div className="flex items-center justify-center h-screen w-full bg-slate-950">
+        <Loader2 className="animate-spin text-blue-500" size={48} />
       </div>
     );
   }
@@ -127,7 +103,7 @@ const Dashboard = () => {
           <div>
             <p className="metric-label">Total Inventario</p>
             <div className="metric-value-row">
-               <span className="metric-value">{items.length}</span>
+               <span className="metric-value">{globalStats.items || 0}</span>
                <span className="metric-unit">Artículos</span>
             </div>
           </div>
@@ -135,9 +111,8 @@ const Dashboard = () => {
 
         <div 
           className="metric-card" 
-          style={{ cursor: 'pointer', transition: 'transform 0.2s', ':hover': { transform: 'scale(1.02)' } }}
           onClick={() => setIsCriticalModalOpen(true)}
-          title="Ver lista de artículos en estado crítico"
+          style={{ cursor: 'pointer' }}
         >
           <div className="metric-icon-box" style={{ backgroundColor: '#fff1f1', color: '#ff3b30' }}>
             <AlertTriangle size={32} />
@@ -145,7 +120,7 @@ const Dashboard = () => {
           <div>
             <p className="metric-label">Stock Crítico</p>
             <div className="metric-value-row">
-               <span className="metric-value" style={{ color: '#ff3b30' }}>{lowStockItems.length}</span>
+               <span className="metric-value" style={{ color: '#ff3b30' }}>{globalStats.critical || 0}</span>
                <span className="metric-unit">Alertas</span>
             </div>
           </div>
@@ -157,16 +132,16 @@ const Dashboard = () => {
           <div className="chart-header">
             <div className="chart-title">
                <h3>Actividad</h3>
-               <p>Movimientos semanales</p>
+               <p>Movimientos semanales (Datos Reales)</p>
             </div>
             <button className="btn-apple-primary flex items-center gap-2" onClick={() => navigate('/analytics')}>
               <BarChart3 size={16} /> Ver Análisis
             </button>
           </div>
           <div style={{ height: '320px', width: '100%' }}>
-            {isMounted && (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <AreaChart data={chartData}>
+            {isMounted && globalStats.activity?.length > 0 && (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={globalStats.activity}>
                   <defs>
                     <linearGradient id="appleGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#0071e3" stopOpacity={0.1}/>
@@ -198,9 +173,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── Daily Movements Feed ── */}
       <div className="dash-movements-card">
-        {/* Header */}
         <div className="dash-mov-header">
           <div>
             <h3 className="dash-mov-title">
@@ -208,166 +181,85 @@ const Dashboard = () => {
               Movimientos del día
             </h3>
             <p className="dash-mov-sub">
-              {movDate === todayStr
-                ? 'Hoy — en tiempo real'
-                : new Date(movDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              {movDate === todayStr ? 'Hoy — en tiempo real' : movDate}
             </p>
           </div>
           <div className="dash-mov-controls">
-            <div className="dash-date-wrap">
-              <Calendar size={14} className="dash-date-icon" />
-              <input
-                type="date"
-                className="dash-date-input"
-                value={movDate}
-                max={todayStr}
-                onChange={e => setMovDate(e.target.value)}
-              />
-            </div>
-            {movDate !== todayStr && (
-              <button className="dash-today-btn" onClick={() => setMovDate(todayStr)}>
-                Hoy <X size={11} />
-              </button>
-            )}
-            <button className="dash-ver-todo-btn" onClick={() => navigate('/transactions')}>
-              Ver todo
-            </button>
+            <input type="date" className="dash-date-input" value={movDate} max={todayStr} onChange={e => setMovDate(e.target.value)} />
+            <button className="dash-ver-todo-btn" onClick={() => navigate('/transactions')}>Ver todo</button>
           </div>
         </div>
 
-        {/* Summary chips */}
-        <div className="dash-mov-chips">
-          <span className="dash-chip dash-chip-all"><Activity size={12} />{dayMovements.length} total</span>
-          <span className="dash-chip dash-chip-in"><ArrowUpCircle size={12} />{dayMovements.filter(m => m.action === 'Entrada').length} entradas</span>
-          <span className="dash-chip dash-chip-out"><ArrowDownCircle size={12} />{dayMovements.filter(m => m.action === 'Salida').length} salidas</span>
-        </div>
-
-        {/* Feed list */}
         {dayMovements.length === 0 ? (
           <div className="dash-mov-empty">
             <Package size={40} style={{ color: '#cbd5e1' }} />
-            <p>Sin movimientos {movDate === todayStr ? 'hoy' : 'en esta fecha'}</p>
+            <p>Sin movimientos hoy</p>
           </div>
         ) : (
           <div className="dash-mov-list">
+            <div className="dash-mov-header-row">
+              <span>MOVIMIENTO</span>
+              <span>DETALLES</span>
+              <span style={{ textAlign: 'center' }}>CANT.</span>
+              <span style={{ textAlign: 'right' }}>REGISTRO</span>
+            </div>
             {dayMovements.slice(0, 15).map(mov => {
               const cfg = actionColors[mov.action] || { color: '#8e8e93', bg: '#f2f2f7', Icon: Activity };
               const { Icon } = cfg;
-              const ts = mov.timestamp?.toDate();
-              const relatedItem = items.find(i => i.name === mov.item);
-              const displaySub = mov.subcategory || relatedItem?.subcategory;
-
               return (
-                <div key={mov.id} className="dash-mov-row">
-                  {/* Badge */}
-                  <span className="dash-mov-badge" style={{ color: cfg.color, background: cfg.bg }}>
-                    <Icon size={11} /> {mov.action}
-                  </span>
-
-                  {/* Article — clickable */}
-                  <button
-                    className="dash-mov-article"
-                    onClick={() => navigate(categoryToRoute(mov.category), { state: { prefillSearch: mov.item } })}
-                    title={`Ver ${mov.item} en inventario`}
-                  >
-                    <span className="dash-mov-name">{mov.item}</span>
-                    <span className="dash-mov-cat">
-                      {mov.category || '—'}
-                      {displaySub ? ` • ${displaySub}` : ''}
+                <div key={mov.id} className="dash-mov-row compact-premium">
+                  {/* Col 1: Action + Item */}
+                  <div className="mov-col-main">
+                    <span className="mov-badge-mini" style={{ color: cfg.color, background: cfg.bg }}>
+                      <Icon size={10} /> {mov.action}
                     </span>
-                  </button>
+                    <div className="mov-item-info">
+                      <span className="mov-item-name">{mov.item}</span>
+                      <span className="mov-item-sub">{mov.category || 'Gral'} {mov.subcategory ? `• ${mov.subcategory}` : ''}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Col 2: Notes */}
+                  <div className="mov-col-notes">
+                    <span className="mov-note-text">{mov.details || '—'}</span>
+                  </div>
 
-                  {/* Details */}
-                  <span className="dash-mov-detail">{mov.details || '—'}</span>
+                  {/* Col 3: Qty */}
+                  <div className="mov-col-qty">
+                    <span className="mov-qty-pill">{mov.qty}</span>
+                  </div>
 
-                  {/* Qty */}
-                  <span className="dash-mov-qty">{mov.qty ?? '—'}</span>
-
-                  {/* User */}
-                  <span className="dash-mov-user" title={`Realizado por: ${mov.user || 'Admin'}`}>
-                    <User size={12} className="inline mr-1 opacity-60" />
-                    {mov.user || 'Admin'}
-                  </span>
-
-                  {/* Time */}
-                  <span className="dash-mov-time">
-                    {ts ? ts.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                  </span>
+                  {/* Col 4: User + Time */}
+                  <div className="mov-col-meta">
+                    <span className="mov-user-tag">
+                      <User size={10} /> {mov.user || 'Admin'}
+                    </span>
+                    <span className="mov-time-tag">
+                      {mov.timestamp?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}
+                    </span>
+                  </div>
                 </div>
               );
             })}
-            {dayMovements.length > 15 && (
-              <button className="dash-mov-more" onClick={() => navigate('/transactions')}>
-                +{dayMovements.length - 15} más — Ver todos los movimientos →
-              </button>
-            )}
           </div>
         )}
       </div>
-      {/* ── Critical Stock Modal ── */}
+
       {isCriticalModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-card animate-scale-up crit-modal-card">
-            <div className="crit-modal-header">
-              <div className="crit-modal-title-group">
-                <div className="crit-modal-icon">
-                  <AlertTriangle size={24} />
+          <div className="modal-card animate-scale-up">
+            <header className="modal-header">
+              <h3><AlertTriangle className="text-red-500" /> Stock Crítico (Top 500)</h3>
+              <button onClick={() => setIsCriticalModalOpen(false)}><X /></button>
+            </header>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {lowStockItems.map(item => (
+                <div key={item.id} className="flex justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl">
+                  <span>{item.name}</span>
+                  <span className="font-bold text-red-500">{item.qty} / {item.threshold}</span>
                 </div>
-                <div>
-                  <h3 className="crit-modal-title">Stock Crítico</h3>
-                  <p className="crit-modal-subtitle">Artículos en o por debajo de su mínimo</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsCriticalModalOpen(false)} 
-                className="crit-modal-close"
-              >
-                <X size={20} />
-              </button>
+              ))}
             </div>
-            
-            {lowStockItems.length === 0 ? (
-              <div className="crit-modal-empty">
-                <div className="crit-empty-icon">
-                  <ClipboardCheck size={32} />
-                </div>
-                <p className="crit-empty-title">¡Todo en orden!</p>
-                <p className="crit-empty-subtitle">No hay artículos con stock crítico en este momento.</p>
-              </div>
-            ) : (
-              <div className="crit-modal-list">
-                <div className="crit-modal-list-inner">
-                  {lowStockItems.map(item => (
-                    <div key={item.id} className="crit-item-row">
-                      <div className="crit-item-info">
-                        <span className="crit-item-name">{item.name}</span>
-                        <span className="crit-item-cat">{item.category || 'General'}</span>
-                      </div>
-                      <div className="crit-item-actions">
-                        <div className="crit-item-stats">
-                          <span className="crit-item-stats-label">STOCK / MÍN</span>
-                          <div className="crit-item-stats-values">
-                            <span className="crit-item-qty">{item.qty || 0}</span>
-                            <span className="crit-item-thresh">/ {item.threshold || 0}</span>
-                            <span className="crit-item-unit">{item.unit || 'pz'}</span>
-                          </div>
-                        </div>
-                        <button 
-                          className="crit-item-go-btn"
-                          onClick={() => {
-                            setIsCriticalModalOpen(false);
-                            navigate(categoryToRoute(item.category), { state: { prefillSearch: item.name } });
-                          }}
-                          title="Ir a gestionar artículo"
-                        >
-                          <ArrowUpCircle size={18} style={{ transform: 'rotate(45deg)' }} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

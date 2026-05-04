@@ -36,7 +36,8 @@ self.onmessage = (e) => {
         (item.marca && item.marca.toLowerCase().includes(searchLow)) || 
         (item.codigo && item.codigo.toLowerCase().includes(searchLow)) || 
         (item.item_number && String(item.item_number).includes(searchLow)) || 
-        (item.serie && item.serie.toLowerCase().includes(searchLow))
+        (item.serie && item.serie.toLowerCase().includes(searchLow)) ||
+        (item.id && item.id.toLowerCase().includes(searchLow))
       );
       if (!match) continue;
     }

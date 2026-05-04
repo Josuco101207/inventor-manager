@@ -77,7 +77,7 @@ export const OptimizedDataService = {
     return onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       // Solo emitimos si los datos están sincronizados
       if (!snapshot.metadata.hasPendingWrites) {
-        onData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        onData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })), snapshot);
       }
     }, (error) => {
       console.error(`[PWA] Listener error (${collectionName}):`, error);
@@ -107,5 +107,16 @@ export const OptimizedDataService = {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  },
+
+  /**
+   * Obtiene el conteo total de documentos sin descargarlos.
+   * Muy eficiente (1/1000 de lectura por doc).
+   */
+  async getCollectionCount(collectionName, constraints = []) {
+    const { getCountFromServer } = await import("firebase/firestore");
+    const q = query(collection(db, collectionName), ...constraints);
+    const snapshot = await getCountFromServer(q);
+    return snapshot.data().count;
   }
 };

@@ -45,6 +45,12 @@ export const InventoryProvider = ({ children }) => {
   const [isAutoWiping, setIsAutoWiping] = useState(false);
   const [lastSync, setLastSync] = useState(new Date());
   const [connectionStatus, setConnectionStatus] = useState('online');
+  const [globalStats, setGlobalStats] = useState({ 
+    items: 0, 
+    movements: 0, 
+    critical: 0,
+    activity: [] 
+  });
   
   // Ref para acceso estable a items en callbacks (evita stale closures)
   const itemsRef = useRef(items);
@@ -58,9 +64,66 @@ export const InventoryProvider = ({ children }) => {
       setPersonnel([]);
       setBrands([]);
       setLocations([]);
+      setGlobalStats({ items: 0, movements: 0, critical: 0, activity: [] });
       setLoading(true);
     }
   }, [user]);
+
+  // ─── CAPA EXTRA: Conteo Global sin Descarga (Dashboard Real-time) ───
+  useEffect(() => {
+    if (!user) return;
+    const fetchStats = async () => {
+      try {
+        // 1. Conteos Básicos
+        const [itemCount, moveCount] = await Promise.all([
+          OptimizedDataService.getCollectionCount('items'),
+          OptimizedDataService.getCollectionCount('movements')
+        ]);
+
+        // 2. Conteo de Stock Crítico (Estimado o por flag si existe)
+        // Nota: Firestore no permite comparar dos campos en un query.
+        // Como solución temporal eficiente, filtramos los 500 cargados + un query de qty=0
+        const outOfStockCount = await OptimizedDataService.getCollectionCount('items', [where('qty', '==', 0)]);
+        const localCritical = itemsRef.current.filter(i => (i.qty || 0) <= (i.threshold || 0) && (i.qty || 0) > 0).length;
+
+        // 3. Actividad de los últimos 7 días (Conteos individuales)
+        const last7Days = [6, 5, 4, 3, 2, 1, 0].map(i => {
+          const d = new Date();
+          d.setHours(0,0,0,0);
+          d.setDate(d.getDate() - i);
+          const nextD = new Date(d);
+          nextD.setDate(d.getDate() + 1);
+          return { d, nextD, name: d.toLocaleDateString('es-ES', { weekday: 'short' }) };
+        });
+
+        const activityPromises = last7Days.map(day => 
+          OptimizedDataService.getCollectionCount('movements', [
+            where('timestamp', '>=', day.d),
+            where('timestamp', '<', day.nextD)
+          ])
+        );
+        const activityCounts = await Promise.all(activityPromises);
+        
+        const activityData = last7Days.map((day, idx) => ({
+          name: day.name,
+          movimientos: activityCounts[idx]
+        }));
+
+        setGlobalStats({ 
+          items: itemCount, 
+          movements: moveCount, 
+          critical: outOfStockCount + localCritical,
+          activity: activityData 
+        });
+      } catch (e) {
+        console.error("Stats fetch error:", e);
+      }
+    };
+    fetchStats();
+    // Refrescar cada 5 minutos o cuando cambie el inventario local significativamente
+    const interval = setInterval(fetchStats, 300000); 
+    return () => clearInterval(interval);
+  }, [user, items.length]); // Refrescar si cambia el tamaño local significativamente
 
   // ─── Connection Monitor ───
   useEffect(() => {
@@ -70,46 +133,35 @@ export const InventoryProvider = ({ children }) => {
     return cleanup;
   }, []);
 
-  // ─── CAPA 1: Items — Cache-First + Real-time Sync ───
+  // ─── CAPA 1: Items — Cache-First + Real-time Sync (LIMITADO A 500) ───
   useEffect(() => {
     if (!user) return;
     
     let cancelled = false;
     
-    const initItems = async () => {
-      try {
-        const { snapshot } = await OptimizedDataService.getCollectionOptimized('items', [], 2000);
-        if (!cancelled) {
-          const itemsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setItems(itemsData);
-          setLoading(false);
-        }
-      } catch (e) {
-        console.error("Initial load error:", e);
-        if (!cancelled) setLoading(false);
-      }
-    };
+    // Optimizamos el listener global con un límite de seguridad
+    const constraints = [orderBy('name', 'asc'), limit(500)];
 
-    initItems();
-
-    // Real-time listener (caché + red automática)
-    const unsubscribe = OptimizedDataService.subscribeWithCleanup('items', [], (data) => {
+    const unsubscribe = OptimizedDataService.subscribeWithCleanup('items', constraints, (data, snapshot) => {
       if (!cancelled) {
+        console.log(`[Firestore] Items Sync: ${data.length} docs (From Cache: ${snapshot.metadata.fromCache})`);
         setItems(data);
         setLastSync(new Date());
+        setLoading(false);
       }
     });
 
     return () => { cancelled = true; unsubscribe(); };
   }, [user]);
 
-  // ─── Movements — Limitado a 200 docs (vs 1000 anterior) ───
+  // ─── Movements — Reducido a 100 docs para máxima eficiencia ───
   useEffect(() => {
     if (!user) return;
 
-    const q = query(collection(db, 'movements'), orderBy('timestamp', 'desc'), limit(200));
+    const q = query(collection(db, 'movements'), orderBy('timestamp', 'desc'), limit(100));
     const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       if (!snapshot.metadata.hasPendingWrites) {
+        console.log(`[Firestore] Movements Sync (From Cache: ${snapshot.metadata.fromCache})`);
         const movementsData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
@@ -124,56 +176,29 @@ export const InventoryProvider = ({ children }) => {
     return () => unsubscribe();
   }, [user]);
 
-  // ─── Personnel — Real-time ───
+  // ─── Colecciones Auxiliares — Carga Única Cache-First (Sin Listeners Activos) ───
+  const fetchAuxiliaryData = useCallback(async () => {
+    try {
+      // Usamos la estrategia optimizada para cargar una sola vez y ahorrar lecturas
+      const [personnelSnap, brandsSnap, locationsSnap] = await Promise.all([
+        OptimizedDataService.getCollectionOptimized('personnel', [orderBy('name', 'asc')], 100),
+        OptimizedDataService.getCollectionOptimized('brands', [orderBy('name', 'asc')], 100),
+        OptimizedDataService.getCollectionOptimized('locations', [orderBy('name', 'asc')], 100)
+      ]);
+
+      setPersonnel(personnelSnap.snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setBrands(brandsSnap.snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLocations(locationsSnap.snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      
+      console.log(`[Firestore] Aux Data Sync (Personnel Cache: ${personnelSnap.fromCache})`);
+    } catch (error) {
+      console.error("Error loading auxiliary data:", error);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!user) return;
-
-    const q = query(collection(db, 'personnel'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
-      if (!snapshot.metadata.hasPendingWrites) {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setPersonnel(data);
-      }
-    }, (error) => {
-      console.error("Firestore Personnel Error:", error);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  // ─── Brands — Real-time ───
-  useEffect(() => {
-    if (!user) return;
-
-    const q = query(collection(db, 'brands'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
-      if (!snapshot.metadata.hasPendingWrites) {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setBrands(data);
-      }
-    }, (error) => {
-      console.error("Firestore Brands Error:", error);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  // ─── Locations — Real-time ───
-  useEffect(() => {
-    if (!user) return;
-
-    const q = query(collection(db, 'locations'), orderBy('name', 'asc'));
-    const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
-      if (!snapshot.metadata.hasPendingWrites) {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setLocations(data);
-      }
-    }, (error) => {
-      console.error("Firestore Locations Error:", error);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
+    if (user) fetchAuxiliaryData();
+  }, [user, fetchAuxiliaryData]);
 
   // ─── Helpers ───
   const addMovement = useCallback(async (action, itemName, qty, user = 'Admin', details = '', category = 'General') => {
@@ -421,6 +446,7 @@ export const InventoryProvider = ({ children }) => {
 
     try {
       await batch.commit();
+      await fetchAuxiliaryData();
       toast.success(`Personal importado: ${personnelArray.length} trabajadores añadidos`);
     } catch (e) {
       console.error("Bulk upload error:", e);
@@ -434,6 +460,7 @@ export const InventoryProvider = ({ children }) => {
         ...workerData,
         createdAt: serverTimestamp()
       });
+      await fetchAuxiliaryData();
       toast.success(`Trabajador añadido: ${workerData.name}`);
     } catch (e) {
       toast.error("Error al añadir trabajador");
@@ -443,6 +470,7 @@ export const InventoryProvider = ({ children }) => {
   const deleteWorker = useCallback(async (workerId) => {
     try {
       await deleteDoc(doc(db, 'personnel', workerId));
+      await fetchAuxiliaryData();
       toast.info("Trabajador eliminado de la lista");
     } catch (e) {
       toast.error("Error al eliminar trabajador");
@@ -458,6 +486,7 @@ export const InventoryProvider = ({ children }) => {
         return;
       }
       await addDoc(collection(db, 'brands'), { name, createdAt: serverTimestamp() });
+      await fetchAuxiliaryData();
       toast.success(`Marca añadida: ${name}`);
     } catch (e) {
       toast.error("Error al añadir marca");
@@ -467,6 +496,7 @@ export const InventoryProvider = ({ children }) => {
   const deleteBrand = useCallback(async (id) => {
     try {
       await deleteDoc(doc(db, 'brands', id));
+      await fetchAuxiliaryData();
       toast.info("Marca eliminada");
     } catch (e) {
       toast.error("Error al eliminar marca");
@@ -476,6 +506,7 @@ export const InventoryProvider = ({ children }) => {
   const addLocation = useCallback(async (name, zone = '') => {
     try {
       await addDoc(collection(db, 'locations'), { name, zone, createdAt: serverTimestamp() });
+      await fetchAuxiliaryData();
       toast.success(`Ubicación añadida: ${name}`);
     } catch (e) {
       toast.error("Error al añadir ubicación");
@@ -485,6 +516,7 @@ export const InventoryProvider = ({ children }) => {
   const deleteLocation = useCallback(async (id) => {
     try {
       await deleteDoc(doc(db, 'locations', id));
+      await fetchAuxiliaryData();
       toast.info("Ubicación eliminada");
     } catch (e) {
       toast.error("Error al eliminar ubicación");
@@ -668,7 +700,7 @@ export const InventoryProvider = ({ children }) => {
 
   // ─── Context Value (memoized) ───
   const contextValue = useMemo(() => ({
-    items, movements, personnel, brands, locations, loading, 
+    items, movements, personnel, brands, locations, loading, globalStats,
     updateStock, addItem, deleteItem, editItem, 
     loanItem, returnItem, bulkAddItems, bulkAddPersonnel,
     addWorker, deleteWorker, reportMaintenance, auditStock,
@@ -677,7 +709,7 @@ export const InventoryProvider = ({ children }) => {
     lastSync, connectionStatus, annulMovement,
     fetchMoreItems: () => {}, hasMore: false
   }), [
-    items, movements, personnel, brands, locations, loading,
+    items, movements, personnel, brands, locations, loading, globalStats,
     updateStock, addItem, deleteItem, editItem,
     loanItem, returnItem, bulkAddItems, bulkAddPersonnel,
     addWorker, deleteWorker, reportMaintenance, auditStock,

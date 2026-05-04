@@ -81,6 +81,18 @@ h1, h2, h3, h4 {
   padding: 2rem;
   background-color: hsl(var(--bg-main));
   transition: background-color 0.3s;
+  
+  /* Aurora Background Global */
+  background: linear-gradient(
+    135deg, 
+    hsla(var(--bg-main), 1) 0%, 
+    hsla(var(--primary), 0.05) 25%, 
+    hsla(var(--bg-main), 1) 50%,
+    hsla(var(--success), 0.05) 75%,
+    hsla(var(--bg-main), 1) 100%
+  );
+  background-size: 400% 400%;
+  animation: aurora 20s linear infinite;
 }
 
 /* Scrollbar */
@@ -123,6 +135,54 @@ h1, h2, h3, h4 {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+@keyframes aurora {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes glowPulse {
+  0% { box-shadow: 0 0 5px hsla(var(--primary), 0.2); }
+  50% { box-shadow: 0 0 20px hsla(var(--primary), 0.5); }
+  100% { box-shadow: 0 0 5px hsla(var(--primary), 0.2); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+}
+
+@keyframes shine {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.bg-aurora-soft {
+  background: linear-gradient(
+    135deg, 
+    hsla(var(--bg-main), 1) 0%, 
+    hsla(var(--primary), 0.05) 25%, 
+    hsla(var(--bg-main), 1) 50%,
+    hsla(var(--success), 0.05) 75%,
+    hsla(var(--bg-main), 1) 100%
+  );
+  background-size: 400% 400%;
+  animation: aurora 20s linear infinite;
 }
 
 /* ─── Global Cupertino Modal System ─── */

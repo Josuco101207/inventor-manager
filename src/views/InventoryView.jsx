@@ -14,6 +14,8 @@ import { List } from 'react-window';
 import { exportToExcel } from '../utils/exportUtils';
 import { processInventoryExcel } from '../utils/importUtils';
 import { toast } from 'sonner';
+import './ToolsView.css';
+import './ParquesView.css';
 import './InventoryView.css';
 
 /**
@@ -203,104 +205,183 @@ const InventoryView = ({ categoryTitle }) => {
   );
 
   return (
-    <main className="inv-view">
+    <main className="tools-view animate-fade-in relative min-h-screen">
       <Header />
       
-      {/* Header Section */}
-      <header className="inv-header">
-        <div className="inv-header-left">
-          <h1 className="inv-title">{categoryTitle}</h1>
-          <p className="inv-subtitle">{stats.total} artículos en total</p>
+      <header className="tools-header mb-8">
+        <div className="tools-title-group">
+          <h2>{categoryTitle}</h2>
+          <p>Control de suministros • {stats.total} artículos ({stats.filtered} filtrados)</p>
         </div>
-        <div className="inv-header-actions">
+        
+        <div className="tools-actions">
+          <div className="search-box-wrapper">
+            <Search size={18} />
+            <input 
+              type="text" 
+              placeholder="Buscar artículo..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <button className="btn-scan-qr" onClick={() => exportToExcel(filteredItems, `inv_${categoryTitle}`, categoryTitle)}>
+            <Download size={18} />
+            <span>Exportar</span>
+          </button>
+
+          <label className="btn-scan-qr cursor-pointer">
+            <Upload size={18} />
+            <span>Importar</span>
+            <input 
+              type="file" 
+              className="hidden" 
+              accept=".xlsx,.xls" 
+              onChange={async (e) => {
+                const data = await processInventoryExcel(e.target.files[0]);
+                if (data) bulkAddItems(data, categoryTitle, userData?.name || 'Admin');
+              }}
+            />
+          </label>
+
           {canAddTo(categoryTitle) && (
-            <button className="inv-btn-primary" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
-              <Plus size={18} /> Nuevo Artículo
+            <button className="btn-primary-tools" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
+              <Plus size={18} />
+              <span>Nuevo</span>
             </button>
           )}
-          <button className="inv-btn-secondary" onClick={() => exportToExcel(filteredItems, `inv_${categoryTitle}`, categoryTitle)}>
-            <Download size={18} /> Exportar
-          </button>
         </div>
       </header>
 
-      {/* Stats Bar */}
-      <div className="inv-stats-bar">
-        <div className="inv-stat">
-          <Package size={16} />
-          <span className="inv-stat-value">{stats.filtered}</span>
-          <span className="inv-stat-label">Resultados</span>
-        </div>
-        {stats.critical > 0 && (
-          <div className="inv-stat inv-stat-warning">
-            <AlertTriangle size={16} />
-            <span className="inv-stat-value">{stats.critical}</span>
-            <span className="inv-stat-label">Stock Crítico</span>
+      {subcategories.length > 1 && (
+        <div className="subcat-nav-wrapper">
+          <button 
+            className="subcat-nav-btn left" 
+            onClick={() => {
+              const el = document.querySelector('.subcat-pills');
+              el.scrollBy({ left: -200, behavior: 'smooth' });
+            }}
+          >
+            <ChevronDown size={20} style={{ transform: 'rotate(90deg)' }} />
+          </button>
+          
+          <div className="subcat-pills scrollbar-hide">
+            {subcategories.map(sub => (
+              <button
+                key={sub}
+                onClick={() => setActiveSubcategory(sub)}
+                className={`pill ${activeSubcategory === sub ? 'active' : ''}`}
+              >
+                {sub === 'TODAS' ? 'Todas las Categorías' : sub}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
 
-      {/* Search & Filters */}
-      <div className="inv-toolbar">
-        <div className="inv-search">
-          <Search size={18} className="inv-search-icon" />
-          <input 
-            type="text" 
-            placeholder="Buscar por nombre, código, marca..." 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            autoFocus
-          />
+          <button 
+            className="subcat-nav-btn right" 
+            onClick={() => {
+              const el = document.querySelector('.subcat-pills');
+              el.scrollBy({ left: 200, behavior: 'smooth' });
+            }}
+          >
+            <ChevronDown size={20} style={{ transform: 'rotate(-90deg)' }} />
+          </button>
         </div>
-        {subcategories.length > 2 && (
-          <div className="inv-filter">
-            <Filter size={16} />
-            <select value={activeSubcategory} onChange={(e) => setActiveSubcategory(e.target.value)}>
-              {subcategories.map(sub => <option key={sub} value={sub}>{sub}</option>)}
-            </select>
-            <ChevronDown size={14} className="inv-filter-chevron" />
-          </div>
-        )}
-      </div>
+      )}
 
-      {/* Table */}
-      <div className="inv-table-wrapper">
-        {/* Table Header */}
-        <div className="inv-table-head">
-          <div className="inv-th inv-th-name">Artículo</div>
-          <div className="inv-th inv-th-location">Ubicación</div>
-          <div className="inv-th inv-th-stock">Stock</div>
-          <div className="inv-th inv-th-min">Mín</div>
-          <div className="inv-th inv-th-actions">Acciones</div>
+      {isFiltering && (
+        <div className="parques-loading-overlay">
+          <Loader2 className="animate-spin" size={32} />
         </div>
+      )}
 
-        {/* Virtual List */}
-        <div className="inv-table-body" ref={containerRef}>
+      <div className="parques-container" style={{ height: 'auto', minHeight: '400px' }}>
+        <div className="parques-header-row">
+          <div className="col-art">Artículo / Detalle</div>
+          <div className="col-stock">Stock Actual</div>
+          <div className="col-ref">Ubicación</div>
+          <div className="col-act">Acciones</div>
+        </div>
+        
+        <div className="parques-body scrollbar-hide" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           {filteredItems.length > 0 ? (
-            <List
-              style={{ height: containerHeight, width: '100%' }}
-              rowCount={filteredItems.length}
-              rowHeight={72}
-              rowProps={rowData}
-              rowComponent={InventoryRow}
-              overscanCount={8}
-              onRowsRendered={({ stopIndex }) => {
-                if (stopIndex >= filteredItems.length - 10 && hasMore) {
-                  fetchMoreItems();
-                }
-              }}
-            />
+            filteredItems.map((item, index) => {
+              const isCritical = (item.qty || 0) <= (item.threshold || 0);
+              const isLow = !isCritical && (item.qty || 0) <= (item.threshold || 0) * 1.5;
+              const progress = Math.min(100, ((item.qty || 0) / ((item.threshold || 0) * 2)) * 100);
+              
+              return (
+                <div key={item.id || index} className="parques-row">
+                  <div className="col-art">
+                    <div className="park-name-group">
+                      <span className="park-name">{item.name}</span>
+                      <div className="park-meta">
+                        <span className="park-badge-sub">{item.subcategory}</span>
+                        {item.marca && <span className="park-brand">{item.marca}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-stock">
+                    <div className="stock-display">
+                      <div className="stock-value-group">
+                        <span className={`stock-num ${isCritical ? 'text-red-500' : isLow ? 'text-orange-500' : 'text-green-500'}`}>
+                          {item.qty || 0}
+                        </span>
+                        <span className="stock-unit">{item.unit || 'pz'}</span>
+                      </div>
+                      <div className="stock-progress-bg">
+                        <div 
+                          className={`stock-progress-bar ${isCritical ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-green-500'}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-ref">
+                    <div className="ref-content" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'hsl(var(--text-muted))' }}>
+                      <Landmark size={14} />
+                      <span className="badge-min">{item.location || 'General'}</span>
+                    </div>
+                  </div>
+
+                  <div className="col-act">
+                    <div className="actions-group">
+                      {isStaff && (
+                        <>
+                          <button className="btn-icon-action btn-icon-blue" onClick={() => handlers.handleAction(item)}>
+                            <Activity size={18} />
+                          </button>
+                          <button className="btn-icon-action btn-icon-orange" onClick={() => handlers.handleAudit(item)}>
+                            <ClipboardCheck size={18} />
+                          </button>
+                        </>
+                      )}
+                      {(isAdmin || canEditIn(categoryTitle)) && (
+                        <button className="btn-icon-action btn-icon-gray" onClick={() => handlers.handleEdit(item)}>
+                          <Edit3 size={18} />
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button className="btn-icon-action btn-icon-gray" onClick={() => handlers.handleDelete(item)}>
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           ) : (
-            <div className="inv-empty">
-              <Layers size={56} />
-              <h3>Sin resultados</h3>
-              <p>No se encontraron artículos con los filtros actuales.</p>
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
+              <Package size={64} className="opacity-10" />
+              <p className="font-bold text-xl opacity-30">No se encontraron artículos</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modals */}
       <ActionModal 
         isOpen={isStockModalOpen} onClose={() => setIsStockModalOpen(false)} item={selectedItem}
         personnel={personnel}

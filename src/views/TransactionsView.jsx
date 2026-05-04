@@ -6,8 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpCircle, ArrowDownCircle, RefreshCw, ClipboardCheck,
   HandMetal, Calendar, ChevronRight, Search, Loader2,
-  X, Package, Users, ExternalLink, Activity, Filter
+  X, Package, Users, ExternalLink, Activity, Filter, ChevronDown
 } from 'lucide-react';
+import './ToolsView.css';
+import './ParquesView.css';
 import './TransactionsView.css';
 
 // Maps a category string to a route path
@@ -84,194 +86,123 @@ const TransactionsView = () => {
   const isToday = selectedDate === todayStr;
 
   return (
-    <div className="transactions-view animate-fade-in">
+    <div className="tools-view animate-fade-in relative min-h-screen">
       <Header />
-
-      <div className="txn-page-wrapper">
-        {/* Page Title */}
-        <div className="txn-page-header">
-          <div className="txn-title-group">
-            <h2 className="txn-title">Transacciones Cloud</h2>
-            <p className="txn-subtitle">
-              {isToday ? 'Movimientos de hoy' : `Movimientos del ${new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`}
-            </p>
+      
+      <header className="tools-header mb-8">
+        <div className="tools-title-group">
+          <h2>Transacciones Cloud</h2>
+          <p>
+            {isToday ? 'Movimientos registrados hoy' : `Movimientos del ${new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+          </p>
+        </div>
+        
+        <div className="tools-actions">
+          <div className="search-box-wrapper">
+            <Search size={18} />
+            <input 
+              type="text" 
+              placeholder="Buscar transacción..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
-          <div className="txn-header-controls">
-            {/* Date Picker */}
-            <div className="txn-date-picker-wrapper">
-              <Calendar size={16} className="txn-date-icon" />
-              <input
-                type="date"
-                className="txn-date-input"
-                value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
-                max={todayStr}
-              />
-              {!isToday && (
-                <button
-                  className="txn-today-btn"
-                  onClick={() => setSelectedDate(todayStr)}
-                  title="Volver a hoy"
-                >
-                  Hoy <X size={12} />
-                </button>
-              )}
-            </div>
-
-            {/* Search */}
-            <div className="txn-search-wrapper">
-              <Search size={15} className="txn-search-icon" />
-              <input
-                type="text"
-                placeholder="Buscar artículo, acción..."
-                className="txn-search-input"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-              {searchTerm && (
-                <button className="txn-search-clear" onClick={() => setSearchTerm('')}>
-                  <X size={12} />
-                </button>
-              )}
-            </div>
+          <div className="btn-scan-qr">
+            <Calendar size={18} />
+            <input
+              type="date"
+              style={{ background: 'transparent', border: 'none', color: 'inherit', outline: 'none', cursor: 'pointer' }}
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              max={todayStr}
+            />
+            {!isToday && (
+              <button className="pill" style={{ marginLeft: '8px', padding: '4px 8px' }} onClick={() => setSelectedDate(todayStr)}>Hoy</button>
+            )}
           </div>
         </div>
+      </header>
 
-        {/* Summary chips */}
-        <div className="txn-summary-chips">
-          <div className="txn-chip txn-chip-total">
-            <Activity size={14} />
-            <span>{filteredMovements.length} movimientos</span>
-          </div>
-          <div className="txn-chip txn-chip-entradas">
-            <ArrowUpCircle size={14} />
-            <span>{filteredMovements.filter(m => m.action === 'Entrada').length} entradas</span>
-          </div>
-          <div className="txn-chip txn-chip-salidas">
-            <ArrowDownCircle size={14} />
-            <span>{filteredMovements.filter(m => m.action === 'Salida').length} salidas</span>
-          </div>
+      <div className="parques-container" style={{ height: 'auto', minHeight: '400px' }}>
+        <div className="parques-header-row">
+          <div className="col-art" style={{ flex: '1.5' }}>Acción / Artículo</div>
+          <div className="col-stock" style={{ flex: '2' }}>Detalle / Responsable</div>
+          <div className="col-ref" style={{ flex: '1.5' }}>Fecha y Hora</div>
+          <div className="col-act">Acciones</div>
         </div>
-
-        {/* Table Card */}
-        <div className="txn-card">
+        
+        <div className="parques-body scrollbar-hide" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           {loading ? (
-            <div className="txn-empty-state">
-              <Loader2 size={40} className="animate-spin text-blue-400" />
-              <p>Cargando movimientos...</p>
+            <div className="flex flex-col items-center justify-center py-20 text-blue-500 gap-4">
+              <Loader2 className="animate-spin" size={32} />
+              <p>Cargando transacciones...</p>
             </div>
-          ) : filteredMovements.length === 0 ? (
-            <div className="txn-empty-state">
-              <Package size={52} className="txn-empty-icon" />
-              <h3>Sin movimientos</h3>
-              <p>
-                {isToday
-                  ? 'No hay movimientos registrados hoy.'
-                  : 'No hay movimientos para la fecha seleccionada.'}
-              </p>
-            </div>
+          ) : filteredMovements.length > 0 ? (
+            filteredMovements.map((mov, index) => {
+              const cfg = getActionConfig(mov.action);
+              const Icon = cfg.icon;
+              const movDate = mov.timestamp?.toDate();
+              
+              return (
+                <div key={mov.id || index} className="parques-row">
+                  <div className="col-art" style={{ flex: '1.5' }}>
+                    <div className="park-name-group">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="parques-avatar" style={{ backgroundColor: cfg.bg, color: cfg.color, width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Icon size={16} />
+                        </div>
+                        <span className="park-name" style={{ color: cfg.color }}>{cfg.label}</span>
+                      </div>
+                      <div className="park-meta">
+                        <span className="park-badge-sub" onClick={() => handleArticleClick(mov)} style={{ cursor: 'pointer' }}>
+                          {mov.item}
+                        </span>
+                        <span className="park-brand">{mov.category || '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-stock" style={{ flex: '2' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{mov.details || 'Sin detalles'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'hsl(var(--text-soft))' }}>
+                        <Users size={12} />
+                        <span>{mov.user || 'Admin'}</span>
+                        {mov.qty && <span className="park-badge-sub" style={{ background: 'hsla(var(--text-soft), 0.1)', color: 'inherit' }}>{mov.qty} uds</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-ref" style={{ flex: '1.5' }}>
+                    <div className="stock-display">
+                      <span className="park-name" style={{ fontSize: '0.85rem' }}>{movDate?.toLocaleDateString()}</span>
+                      <span className="stock-unit">{movDate?.toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="col-act">
+                    <div className="actions-group">
+                      {isAdmin && !mov.annulled && mov.action !== 'Anulación' && (
+                        <button 
+                          className="btn-icon-action btn-icon-gray text-red-500 hover:!bg-red-500 hover:text-white" 
+                          onClick={() => {
+                            if(window.confirm(`¿Anular movimiento de ${mov.item}?`)) annulMovement(mov.id, userData?.name || 'Admin');
+                          }}
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                      {mov.annulled && <span className="park-badge-sub" style={{ background: 'hsl(var(--danger))', color: 'white' }}>ANULADO</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           ) : (
-            <div className="txn-table-wrapper">
-              <table className="txn-table">
-                <thead>
-                  <tr>
-                    <th>Acción</th>
-                    <th>Artículo</th>
-                    <th>Detalle / Recibe</th>
-                    <th>Entrega (Admin)</th>
-                    <th className="text-center">Cant.</th>
-                    <th>Fecha y Hora</th>
-                    {isAdmin && <th className="text-right">Acciones</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMovements.map(mov => {
-                    const cfg = getActionConfig(mov.action);
-                    const Icon = cfg.icon;
-                    const movDate = mov.timestamp?.toDate();
-                    return (
-                      <tr key={mov.id} className="txn-row">
-                        {/* Acción */}
-                        <td>
-                          <span
-                            className="txn-action-badge"
-                            style={{ color: cfg.color, backgroundColor: cfg.bg }}
-                          >
-                            <Icon size={12} />
-                            {cfg.label}
-                          </span>
-                        </td>
-
-                        {/* Artículo — clickable */}
-                        <td>
-                          <button
-                            className="txn-article-btn"
-                            onClick={() => handleArticleClick(mov)}
-                            title={`Ver ${mov.item} en inventario`}
-                          >
-                            <span className="txn-article-name">{mov.item}</span>
-                            <div className="txn-article-sub">{mov.category || '—'}</div>
-                            <ExternalLink size={13} className="txn-article-arrow" />
-                          </button>
-                        </td>
-
-                        {/* Detalle */}
-                        <td>
-                          <span className="txn-detail-main">{mov.details || '—'}</span>
-                        </td>
-
-                        {/* Entrega admin */}
-                        <td>
-                          <span className="txn-user-badge">
-                            <Users size={12} />
-                            {mov.user || 'Admin'}
-                          </span>
-                        </td>
-
-                        {/* Cantidad */}
-                        <td className="text-center">
-                          <span className="txn-qty">{mov.qty ?? '—'}</span>
-                        </td>
-
-                        {/* Fecha y Hora */}
-                        <td>
-                          {movDate ? (
-                            <div className="txn-date-col">
-                              <span className="txn-date-main">
-                                {movDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                              </span>
-                              <span className="txn-date-time">
-                                {movDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                              </span>
-                            </div>
-                          ) : '—'}
-                        </td>
-
-                        {/* Acciones para Admin */}
-                        {isAdmin && (
-                          <td className="text-right">
-                            {mov.annulled ? (
-                              <span className="txn-annulled-tag">ANULADO</span>
-                            ) : mov.action !== 'Anulación' ? (
-                              <button 
-                                className="txn-annul-btn"
-                                onClick={() => {
-                                  if(window.confirm(`¿Seguro que deseas ANULAR este movimiento de ${mov.item}? Se revertirá el stock correspondiente.`)) {
-                                    annulMovement(mov.id, userData?.name || 'Admin');
-                                  }
-                                }}
-                              >
-                                <X size={12} /> ANULAR
-                              </button>
-                            ) : null}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
+              <Activity size={48} className="opacity-10" />
+              <p className="font-bold text-xl opacity-30">No hay movimientos para mostrar</p>
             </div>
           )}
         </div>

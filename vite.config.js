@@ -74,4 +74,16 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          ui: ['lucide-react', 'recharts', 'sonner', 'react-window'],
+          utils: ['xlsx', 'qrcode.react']
+        }
+      }
+    }
+  }
 })
