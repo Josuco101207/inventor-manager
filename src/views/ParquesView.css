@@ -357,3 +357,92 @@
   border-color: hsl(var(--primary));
   color: hsl(var(--primary));
 }
+
+/* ─── Responsive Tables (Mobile & Tablet) ─── */
+@media (max-width: 768px) {
+  .parques-header-row {
+    display: none;
+  }
+
+  /* InventoryView Row */
+  .inv-row {
+    height: auto;
+    padding: 1.25rem;
+  }
+
+  .inv-row-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .inv-cell {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    flex: none !important;
+  }
+
+  .inv-cell-name {
+    margin-bottom: 0.5rem;
+  }
+
+  .inv-cell-stock, .inv-cell-location, .inv-cell-min {
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid hsla(var(--border-color), 0.1);
+  }
+
+  .inv-cell-stock::before { content: "Stock:"; font-size: 0.75rem; font-weight: 800; color: hsl(var(--text-soft)); text-transform: uppercase; width: 80px; flex-shrink: 0; }
+  .inv-cell-location::before { content: "Ubicación:"; font-size: 0.75rem; font-weight: 800; color: hsl(var(--text-soft)); text-transform: uppercase; width: 80px; flex-shrink: 0; }
+  .inv-cell-min::before { content: "Mínimo:"; font-size: 0.75rem; font-weight: 800; color: hsl(var(--text-soft)); text-transform: uppercase; width: 80px; flex-shrink: 0; }
+
+  .inv-cell-actions {
+    margin-top: 0.5rem;
+    justify-content: flex-end !important;
+  }
+
+  /* ParquesView Row */
+  .parques-row {
+    height: auto;
+    padding: 1.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .parques-row > div {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  .col-stock, .col-ref {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid hsla(var(--border-color), 0.1);
+    text-align: left !important;
+  }
+
+  .col-stock .stock-display {
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .col-stock::before { content: "Stock:"; font-size: 0.75rem; font-weight: 800; color: hsl(var(--text-soft)); text-transform: uppercase; width: 80px; flex-shrink: 0; }
+  .col-ref::before { content: "Referencia:"; font-size: 0.75rem; font-weight: 800; color: hsl(var(--text-soft)); text-transform: uppercase; width: 80px; flex-shrink: 0; }
+  
+  .col-act {
+    margin-top: 0.5rem;
+    padding-right: 0 !important;
+  }
+
+  .col-act .actions-group {
+    justify-content: flex-end;
+  }
+}
