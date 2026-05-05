@@ -25,18 +25,17 @@ const ToolCard = memo(({
   onEdit, onDelete, onLoan, onReturn, onFault, onRepair, onQR, index
 }) => (
   <div 
-  <div 
-    className={`tool-card animate-slide-up ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50/10' : ''}`}
+    className={`tool-card animate-slide-up ${isSelected ? 'is-selected' : ''}`}
     style={{ animationDelay: `${(index % 10) * 0.05}s` }}
   >
     <div className={`tool-status-ribbon ${getStatusClass(tool.status)}`}></div>
 
     {/* Selection Checkbox */}
     {isStaff && tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && (
-      <div className="absolute top-4 left-4 z-10">
+      <div className="tool-selection-box">
         <input 
           type="checkbox" 
-          className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+          className="tool-checkbox"
           checked={isSelected}
           onChange={() => onSelectToggle(tool.id)}
         />
@@ -318,23 +317,23 @@ const ToolsView = () => {
 
       {/* Floating Action Bar for Bulk Selection */}
       {selectedToolIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center gap-6 animate-slide-up">
-          <div className="flex items-center gap-2">
-            <span className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+        <div className="bulk-actions-bar animate-slide-up">
+          <div className="bulk-info">
+            <span className="bulk-count">
               {selectedToolIds.length}
             </span>
-            <span className="text-gray-700 dark:text-gray-300 font-semibold text-sm">seleccionadas</span>
+            <span className="bulk-text">seleccionadas</span>
           </div>
           
-          <div className="flex items-center gap-2 border-l pl-6 border-gray-200 dark:border-gray-700">
+          <div className="bulk-buttons">
             <button 
-              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-semibold px-3 py-1"
+              className="btn-bulk-cancel"
               onClick={() => setSelectedToolIds([])}
             >
               Cancelar
             </button>
             <button 
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
+              className="btn-bulk-action"
               onClick={() => setIsBulkLoanModalOpen(true)}
             >
               <ArrowUpRight size={16} /> Prestar Lote
