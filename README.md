@@ -10,4 +10,4 @@ Sistema profesional de gestión de inventarios y préstamos de herramientas.
 - Control de mantenimiento y fallas.
 
 ## Desarrollado por
-Alfonso - 2024
+Jonathan Suarez - 2026
