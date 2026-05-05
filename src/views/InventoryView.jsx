@@ -10,11 +10,11 @@ import {
   ClipboardCheck, Activity, Layers, Printer, ChevronDown, Landmark,
   RotateCcw, HandMetal, Package, AlertTriangle
 } from 'lucide-react';
-import { List } from 'react-window';
 import { exportToExcel } from '../utils/exportUtils';
 import { processInventoryExcel } from '../utils/importUtils';
 import { toast } from 'sonner';
-import './ToolsView.css';
+// Eliminada virtualización compleja para máxima compatibilidad
+import './ToolsView.css'; 
 import './ParquesView.css';
 import './InventoryView.css';
 
@@ -22,8 +22,7 @@ import './InventoryView.css';
  * Componente de Fila Optimizado para react-window v2.
  * Recibe props directamente (no via data).
  */
-const InventoryRow = React.memo(({ index, style, items, categoryTitle, isAdmin, isStaff, canEditIn, handlers }) => {
-  const item = items[index];
+const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff, canEditIn, handlers }) => {
   if (!item) return null;
 
   const { handleDelete, handleEdit, handleAction, handleAudit } = handlers;
@@ -32,7 +31,8 @@ const InventoryRow = React.memo(({ index, style, items, categoryTitle, isAdmin, 
                      (item.qty || 0) <= (item.threshold || 0) * 2 ? 'low' : 'optimal';
 
   return (
-    <div style={style} className="inv-row">
+    <div className="inv-row animate-slide-up">
+
       <div className="inv-row-inner">
         {/* Name + Meta */}
         <div className="inv-cell inv-cell-name">
@@ -49,12 +49,6 @@ const InventoryRow = React.memo(({ index, style, items, categoryTitle, isAdmin, 
           </div>
         </div>
 
-        {/* Location */}
-        <div className="inv-cell inv-cell-location">
-          <Landmark size={13} className="inv-location-icon" />
-          <span>{item.location || 'General'}</span>
-        </div>
-
         {/* Stock */}
         <div className="inv-cell inv-cell-stock">
           <div className="inv-stock-value">
@@ -64,6 +58,12 @@ const InventoryRow = React.memo(({ index, style, items, categoryTitle, isAdmin, 
           <span className={`inv-stock-badge inv-stock-${stockLevel}`}>
             {stockLevel === 'critical' ? 'Crítico' : stockLevel === 'low' ? 'Bajo' : 'Óptimo'}
           </span>
+        </div>
+
+        {/* Location */}
+        <div className="inv-cell inv-cell-location">
+          <Landmark size={13} className="inv-location-icon" />
+          <span>{item.location || 'General'}</span>
         </div>
 
         {/* Min */}
@@ -103,8 +103,8 @@ const InventoryView = ({ categoryTitle }) => {
   const { items, personnel, updateStock, addItem, deleteItem, editItem, loanItem, returnItem, bulkAddItems, auditStock, loading, fetchMoreItems, hasMore } = useInventory();
   const { isAdmin, isStaff, userData, canAddTo, canEditIn } = useAuth();
   const location = useLocation();
-  const containerRef = useRef(null);
-  const [containerHeight, setContainerHeight] = useState(500);
+  const [visibleCount, setVisibleCount] = useState(40);
+  const observerTarget = useRef(null);
   
   // Estados de UI
   const [selectedItem, setSelectedItem] = useState(null);
@@ -121,24 +121,26 @@ const InventoryView = ({ categoryTitle }) => {
   const [isFiltering, setIsFiltering] = useState(false);
   const workerRef = useRef(null);
 
-  // Medir altura del contenedor
+  // Infinite Scroll Observer
   useEffect(() => {
-    const updateHeight = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setContainerHeight(Math.max(300, window.innerHeight - rect.top - 40));
-      }
-    };
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, [loading]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => Math.min(prev + 40, filteredItems.length));
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    );
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [filteredItems.length]);
 
   // Inicializar Worker (solo una vez)
   useEffect(() => {
     workerRef.current = new Worker(new URL('../workers/filterWorker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
       setFilteredItems(e.data);
+      setVisibleCount(40); // Reset al filtrar
       setIsFiltering(false);
     };
     return () => workerRef.current.terminate();
@@ -225,9 +227,17 @@ const InventoryView = ({ categoryTitle }) => {
             />
           </div>
 
-          <button className="btn-scan-qr" onClick={() => exportToExcel(filteredItems, `inv_${categoryTitle}`, categoryTitle)}>
+          <button className="btn-scan-qr" onClick={() => exportToExcel(filteredItems, `inv_${categoryTitle}_filtrado`, categoryTitle)}>
+            <Filter size={18} />
+            <span>Filtrados</span>
+          </button>
+
+          <button className="btn-scan-qr" onClick={() => {
+            const allItems = items.filter(i => i.category === categoryTitle);
+            exportToExcel(allItems, `inv_${categoryTitle}_total`, categoryTitle);
+          }}>
             <Download size={18} />
-            <span>Exportar</span>
+            <span>Exportar Todo</span>
           </button>
 
           <label className="btn-scan-qr cursor-pointer">
@@ -239,7 +249,7 @@ const InventoryView = ({ categoryTitle }) => {
               accept=".xlsx,.xls" 
               onChange={async (e) => {
                 const data = await processInventoryExcel(e.target.files[0]);
-                if (data) bulkAddItems(data, categoryTitle, userData?.name || 'Admin');
+                if (data) bulkAddItems(data, categoryTitle, userData?.name || 'Alfonso');
               }}
             />
           </label>
@@ -295,84 +305,37 @@ const InventoryView = ({ categoryTitle }) => {
         </div>
       )}
 
-      <div className="parques-container" style={{ height: 'auto', minHeight: '400px' }}>
+      <div className="parques-container">
         <div className="parques-header-row">
           <div className="col-art">Artículo / Detalle</div>
           <div className="col-stock">Stock Actual</div>
           <div className="col-ref">Ubicación</div>
+          <div className="col-min">Mín</div>
           <div className="col-act">Acciones</div>
         </div>
         
-        <div className="parques-body scrollbar-hide" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <div className="parques-body">
           {filteredItems.length > 0 ? (
-            filteredItems.map((item, index) => {
-              const isCritical = (item.qty || 0) <= (item.threshold || 0);
-              const isLow = !isCritical && (item.qty || 0) <= (item.threshold || 0) * 1.5;
-              const progress = Math.min(100, ((item.qty || 0) / ((item.threshold || 0) * 2)) * 100);
-              
-              return (
-                <div key={item.id || index} className="parques-row">
-                  <div className="col-art">
-                    <div className="park-name-group">
-                      <span className="park-name">{item.name}</span>
-                      <div className="park-meta">
-                        <span className="park-badge-sub">{item.subcategory}</span>
-                        {item.marca && <span className="park-brand">{item.marca}</span>}
-                      </div>
-                    </div>
-                  </div>
+            <>
+              {filteredItems.slice(0, visibleCount).map((item, index) => (
+                <InventoryRow 
+                  key={item.id}
+                  item={item}
+                  index={index} 
+                  categoryTitle={rowData.categoryTitle}
+                  isAdmin={rowData.isAdmin}
+                  isStaff={rowData.isStaff}
+                  canEditIn={rowData.canEditIn}
+                  handlers={rowData.handlers}
+                />
+              ))}
 
-                  <div className="col-stock">
-                    <div className="stock-display">
-                      <div className="stock-value-group">
-                        <span className={`stock-num ${isCritical ? 'text-red-500' : isLow ? 'text-orange-500' : 'text-green-500'}`}>
-                          {item.qty || 0}
-                        </span>
-                        <span className="stock-unit">{item.unit || 'pz'}</span>
-                      </div>
-                      <div className="stock-progress-bg">
-                        <div 
-                          className={`stock-progress-bar ${isCritical ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-green-500'}`}
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="col-ref">
-                    <div className="ref-content" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'hsl(var(--text-muted))' }}>
-                      <Landmark size={14} />
-                      <span className="badge-min">{item.location || 'General'}</span>
-                    </div>
-                  </div>
-
-                  <div className="col-act">
-                    <div className="actions-group">
-                      {isStaff && (
-                        <>
-                          <button className="btn-icon-action btn-icon-blue" onClick={() => handlers.handleAction(item)}>
-                            <Activity size={18} />
-                          </button>
-                          <button className="btn-icon-action btn-icon-orange" onClick={() => handlers.handleAudit(item)}>
-                            <ClipboardCheck size={18} />
-                          </button>
-                        </>
-                      )}
-                      {(isAdmin || canEditIn(categoryTitle)) && (
-                        <button className="btn-icon-action btn-icon-gray" onClick={() => handlers.handleEdit(item)}>
-                          <Edit3 size={18} />
-                        </button>
-                      )}
-                      {isAdmin && (
-                        <button className="btn-icon-action btn-icon-gray" onClick={() => handlers.handleDelete(item)}>
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
+              {visibleCount < filteredItems.length && (
+                <div ref={observerTarget} className="flex justify-center py-10">
+                  <Loader2 className="animate-spin text-blue-500" size={32} />
                 </div>
-              );
-            })
+              )}
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
               <Package size={64} className="opacity-10" />
@@ -385,12 +348,12 @@ const InventoryView = ({ categoryTitle }) => {
       <ActionModal 
         isOpen={isStockModalOpen} onClose={() => setIsStockModalOpen(false)} item={selectedItem}
         personnel={personnel}
-        onConfirm={(id, qty, details) => { updateStock(id, qty, userData?.name || 'Admin', details); setIsStockModalOpen(false); }}
+        onConfirm={(id, qty, details) => { updateStock(id, qty, userData?.name || 'Alfonso', details); setIsStockModalOpen(false); }}
       />
 
       <AddItemModal 
         isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} category={categoryTitle} initialData={selectedItem}
-        onSave={(data) => { if (selectedItem) editItem(selectedItem.id, data, userData?.name || 'Admin'); else addItem(data, userData?.name || 'Admin'); setIsAddModalOpen(false); }}
+        onSave={(data) => { if (selectedItem) editItem(selectedItem.id, data, userData?.name || 'Alfonso'); else addItem(data, userData?.name || 'Alfonso'); setIsAddModalOpen(false); }}
       />
     </main>
   );

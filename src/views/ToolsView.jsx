@@ -8,8 +8,9 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { 
   Search, Plus, QrCode, ArrowUpRight, ArrowDownLeft, AlertTriangle, 
-  Printer, X, Edit3, Trash2, Loader2, Wrench, ScanLine
+  Printer, X, Edit3, Trash2, Loader2, Wrench, ScanLine, RotateCcw, Download
 } from 'lucide-react';
+import { exportToExcel } from '../utils/exportUtils';
 import './ToolsView.css';
 
 const getStatusClass = (status) => {
@@ -20,7 +21,7 @@ const getStatusClass = (status) => {
 
 const ToolCard = memo(({ 
   tool, isAdmin, isStaff, canEdit, 
-  onEdit, onDelete, onLoan, onReturn, onFault, onQR, index
+  onEdit, onDelete, onLoan, onReturn, onFault, onRepair, onQR, index
 }) => (
   <div 
     className="tool-card animate-slide-up" 
@@ -64,6 +65,13 @@ const ToolCard = memo(({
       <span className={`tool-state-badge ${getStatusClass(tool.status)}`}>
         {tool.status || 'Disponible'}
       </span>
+      {tool.observaciones && (
+        <div className="tool-note-box mt-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border-l-4 border-yellow-500">
+          <p className="text-[11px] font-medium text-gray-600 dark:text-gray-400 leading-tight">
+            <strong>Nota:</strong> {tool.observaciones}
+          </p>
+        </div>
+      )}
     </div>
 
     {tool.status === 'Prestado' && tool.borrowedBy && (
@@ -85,6 +93,11 @@ const ToolCard = memo(({
               <ArrowDownLeft size={16} /> Devolver
             </button>
           )}
+          {tool.status === 'Mantenimiento' && (
+            <button className="btn-tool-action btn-return bg-green-500 hover:bg-green-600" onClick={() => onRepair(tool)}>
+              <RotateCcw size={16} /> Regresar Almacén
+            </button>
+          )}
           {tool.status !== 'Mantenimiento' && (
             <button className="btn-tool-action btn-fault" onClick={() => onFault(tool)}>
               <AlertTriangle size={16} /> Falla
@@ -97,7 +110,7 @@ const ToolCard = memo(({
 ));
 
 const ToolsView = () => {
-  const { items, personnel, addItem, editItem, deleteItem, loanItem, returnItem, reportMaintenance, loading } = useInventory();
+  const { items, personnel, addItem, editItem, deleteItem, loanItem, returnItem, reportMaintenance, completeMaintenance, loading } = useInventory();
   const { isAdmin, isStaff, canEditIn, canAddTo, userData } = useAuth();
   const location = useLocation();
   
@@ -111,11 +124,11 @@ const ToolsView = () => {
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
   const [isFaultModalOpen, setIsFaultModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [showLoanedOnly, setShowLoanedOnly] = useState(false);
   
   // Forms state
   const [borrowerName, setBorrowerName] = useState('');
   const [faultReason, setFaultReason] = useState('');
-  const [voucherData, setVoucherData] = useState(null);
 
   // Worker y paginación
   const workerRef = useRef(null);
@@ -148,9 +161,10 @@ const ToolsView = () => {
       categoryTitle: 'Herramientas',
       activeSubcategory: 'TODAS',
       selectedBrand: 'Todas',
-      selectedLocation: 'Todas'
+      selectedLocation: 'Todas',
+      statusFilter: showLoanedOnly ? 'Prestado' : null
     });
-  }, [items, debouncedSearch, loading]);
+  }, [items, debouncedSearch, loading, showLoanedOnly]);
 
   // Intersection Observer para Infinite Scroll
   useEffect(() => {
@@ -179,7 +193,7 @@ const ToolsView = () => {
     );
   }
 
-  const userName = userData?.name || userData?.displayName || 'Admin';
+  const userName = userData?.name || userData?.displayName || 'Alfonso';
 
   const handleDelete = useCallback((id, name) => {
     if (window.confirm(`¿Eliminar la herramienta "${name}" permanentemente?`)) {
@@ -190,12 +204,6 @@ const ToolsView = () => {
   const handleLoanConfirm = async () => {
     if (!borrowerName) return;
     await loanItem(selectedTool.id, borrowerName, userName);
-    setVoucherData({
-      item: selectedTool,
-      borrower: borrowerName,
-      admin: userName,
-      date: new Date().toLocaleString()
-    });
     setIsLoanModalOpen(false);
     setBorrowerName('');
   };
@@ -212,6 +220,12 @@ const ToolsView = () => {
     setIsFaultModalOpen(false);
     setFaultReason('');
   };
+
+  const handleRepairConfirm = useCallback(async (tool) => {
+    if (window.confirm(`¿Confirmar que ${tool.name} ha sido reparada y regresa al almacén?`)) {
+      await completeMaintenance(tool.id, userName);
+    }
+  }, [completeMaintenance, userName]);
 
   const visibleTools = filteredTools.slice(0, visibleCount);
   const canEditTools = canEditIn('Herramientas');
@@ -238,11 +252,30 @@ const ToolsView = () => {
           </div>
           
           <button 
+            className={`btn-scan-qr ${showLoanedOnly ? 'bg-blue-500 text-white border-blue-500' : ''}`}
+            onClick={() => setShowLoanedOnly(!showLoanedOnly)}
+            title="Filtrar Prestadas"
+          >
+            <ArrowUpRight size={18} /> {showLoanedOnly ? 'Viendo Prestadas' : 'Prestadas'}
+          </button>
+
+          <button 
             className="btn-scan-qr"
             onClick={() => setIsScannerOpen(true)}
             title="Escanear QR"
           >
             <ScanLine size={18} /> Escanear
+          </button>
+
+          <button 
+            className="btn-scan-qr"
+            onClick={() => {
+              const allTools = items.filter(i => i.category === 'Herramientas');
+              exportToExcel(allTools, 'todas_las_herramientas', 'Herramientas');
+            }}
+            title="Exportar Todo a Excel"
+          >
+            <Download size={18} /> Exportar
           </button>
           
           {canAddTo('Herramientas') && (
@@ -267,6 +300,7 @@ const ToolsView = () => {
             onLoan={(t) => { setSelectedTool(t); setIsLoanModalOpen(true); }}
             onReturn={handleReturnConfirm}
             onFault={(t) => { setSelectedTool(t); setIsFaultModalOpen(true); }}
+            onRepair={handleRepairConfirm}
             onQR={(t) => { setSelectedTool(t); setIsQRModalOpen(true); }}
           />
         ))}
@@ -388,25 +422,7 @@ const ToolsView = () => {
         </div>
       )}
 
-      {voucherData && (
-        <div className="modal-overlay no-print">
-          <div className="modal-card animate-scale-up">
-            <header className="modal-header">
-              <h3 className="justify-center">¡Préstamo Listo!</h3>
-              <p className="text-center">El registro fue guardado exitosamente.</p>
-            </header>
-            
-            <div className="w-24 h-24 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-10">
-              <Printer size={40} />
-            </div>
 
-            <div className="flex gap-4">
-              <button className="btn-apple-secondary flex-1" onClick={() => setVoucherData(null)}>Cerrar</button>
-              <button className="btn-apple-primary flex-1" onClick={() => window.print()}>Imprimir Vale</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {isScannerOpen && (
         <div className="modal-overlay">

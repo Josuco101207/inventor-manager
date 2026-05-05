@@ -15,21 +15,11 @@ import {
 import { db } from "./config";
 
 /**
- * CAPA 1: Servicio de Datos Optimizado para Tablets (Low RAM)
- * 
- * Estrategias implementadas:
- * 1. Cache-First con verificación de antigüedad (reduce lecturas de red 90%)
- * 2. Paginación de ventana deslizante (mantiene bajo el footprint de RAM)
- * 3. Monitor de conexión para UI reactiva
- * 4. Listener inteligente que filtra escrituras pendientes
+ * Servicio para manejar la conexión con la base de datos.
  */
 export const OptimizedDataService = {
   
-  /**
-   * Obtiene datos con estrategia Cache-First.
-   * Si la caché tiene datos, los retorna inmediato y deja que el listener
-   * de onSnapshot actualice en background.
-   */
+  // Obtener datos prioritizando la velocidad
   async getCollectionOptimized(collectionName, constraints = [], pageSize = 500) {
     const collRef = collection(db, collectionName);
     const q = query(collRef, ...constraints, limit(pageSize));
@@ -39,23 +29,20 @@ export const OptimizedDataService = {
       const cacheSnapshot = await getDocsFromCache(q);
       
       if (!cacheSnapshot.empty) {
-        console.log(`[PWA] Cache HIT: ${collectionName} (${cacheSnapshot.size} docs)`);
+        console.log(`Cache: ${collectionName} (${cacheSnapshot.size})`);
         return { snapshot: cacheSnapshot, fromCache: true };
       }
     } catch (e) {
-      console.warn(`[PWA] Cache MISS: ${collectionName}, falling back to network`);
+      console.warn(`Cache MISS: ${collectionName}`);
     }
 
     // 2. Fallback a servidor
     const serverSnapshot = await getDocsFromServer(q);
-    console.log(`[PWA] Network FETCH: ${collectionName} (${serverSnapshot.size} docs)`);
+    console.log(`Network FETCH: ${collectionName} (${serverSnapshot.size})`);
     return { snapshot: serverSnapshot, fromCache: false };
   },
 
-  /**
-   * Paginación de cursor para cargas incrementales.
-   * Mantiene baja la huella de RAM cargando en bloques.
-   */
+  // Paginación de datos
   async getPaginatedBatch(collectionName, lastVisible = null, constraints = [], pageSize = 50) {
     let q;
     if (lastVisible) {
@@ -67,11 +54,7 @@ export const OptimizedDataService = {
     return await getDocs(q);
   },
 
-  /**
-   * Listener con limpieza automática.
-   * Solo emite cuando no hay escrituras pendientes (evita renders con datos parciales).
-   * Incluye handler de error para reconexión automática.
-   */
+  // Suscribirse a cambios en tiempo real
   subscribeWithCleanup(collectionName, constraints, onData, onError) {
     const q = query(collection(db, collectionName), ...constraints);
     return onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
@@ -80,15 +63,12 @@ export const OptimizedDataService = {
         onData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })), snapshot);
       }
     }, (error) => {
-      console.error(`[PWA] Listener error (${collectionName}):`, error);
+      console.error(`Error de conexión (${collectionName}):`, error);
       if (onError) onError(error);
     });
   },
 
-  /**
-   * Monitor de estado de conexión.
-   * Detecta offline/online para UI reactiva.
-   */
+  // Monitorear internet
   monitorConnection(onStatusChange) {
     const handleOnline = () => {
       enableNetwork(db).then(() => onStatusChange('online'));
@@ -109,10 +89,7 @@ export const OptimizedDataService = {
     };
   },
 
-  /**
-   * Obtiene el conteo total de documentos sin descargarlos.
-   * Muy eficiente (1/1000 de lectura por doc).
-   */
+  // Contar documentos de forma rápida
   async getCollectionCount(collectionName, constraints = []) {
     const { getCountFromServer } = await import("firebase/firestore");
     const q = query(collection(db, collectionName), ...constraints);

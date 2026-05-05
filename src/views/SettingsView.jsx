@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Building2, Save, MapPin, Phone, Globe, Trash2, AlertOctagon, Plus, Tag, Map, Bell, Moon, History, ChevronRight, X } from 'lucide-react';
+import { Building2, Save, MapPin, Phone, Globe, Trash2, AlertOctagon, Plus, Tag, Map, Bell, Moon, History, ChevronRight, X, FileSpreadsheet } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
+import { exportFullDatabase } from '../utils/exportUtils';
 import { toast } from 'sonner';
 import './SettingsView.css';
 
 const SettingsView = () => {
-  const { brands, locations, addBrand, deleteBrand, addLocation, deleteLocation, clearDatabaseCategories } = useInventory();
+  const { items, brands, locations, addBrand, deleteBrand, addLocation, deleteLocation, clearDatabaseCategories } = useInventory();
   const { isAdmin } = useAuth();
   const [newBrand, setNewBrand] = useState('');
   const [newLocName, setNewLocName] = useState('');
@@ -156,6 +157,17 @@ const SettingsView = () => {
                   >
                     Vaciar Inventario {categoryToClear}
                   </button>
+
+                  <div className="mt-8 pt-8 border-t border-slate-200">
+                    <h4 className="font-bold text-slate-900 mb-1">Respaldo Total</h4>
+                    <p className="text-sm text-slate-500 mb-6">Descarga una copia completa de toda la base de datos en un solo archivo Excel (múltiples pestañas).</p>
+                    <button 
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
+                      onClick={() => exportFullDatabase(items)}
+                    >
+                      <FileSpreadsheet size={20} /> Exportar Toda la Herramienta
+                    </button>
+                  </div>
                 </div>
               )}
             </section>

@@ -80,15 +80,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => signOut(auth);
 
-  /**
-   * CAPA 3: Inactivity Timer — Optimizado para Tablets
-   * 
-   * CAMBIOS vs. versión anterior:
-   * 1. Throttle de 2s en activity listener — reduce de ~60 calls/sec a 0.5 calls/sec
-   * 2. visibilitychange ya NO cierra sesión al cambiar de pestaña (destructivo en tablets)
-   *    Solo cierra si la app está oculta por más de 10 minutos
-   * 3. Limpieza completa de timers y listeners
-   */
+  // Temporizador de inactividad para seguridad
   useEffect(() => {
     if (!user) return;
 

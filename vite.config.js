@@ -25,10 +25,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        
-        // CAPA 4: Service Worker de Alto Rendimiento
         runtimeCaching: [
-          // Firebase Storage — Stale-While-Revalidate (imágenes de inventario)
+          // Imágenes de Firebase
           {
             urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
@@ -38,7 +36,7 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] }
             }
           },
-          // Google Fonts — CacheFirst (raramente cambian)
+          // Google Fonts
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
             handler: 'CacheFirst',
@@ -48,7 +46,7 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] }
             }
           },
-          // Firebase Auth — NetworkFirst (sesiones críticas)
+          // Firebase Auth
           {
             urlPattern: /^https:\/\/(www\.googleapis\.com\/identitytoolkit|securetoken\.googleapis\.com)\/.*/i,
             handler: 'NetworkFirst',
@@ -59,7 +57,7 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] }
             }
           },
-          // Firestore REST — NetworkFirst (datos de inventario)
+          // Firestore API
           {
             urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
             handler: 'NetworkFirst',

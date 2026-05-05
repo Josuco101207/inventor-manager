@@ -24,15 +24,7 @@ const InventoryContext = createContext();
 export const useInventory = () => useContext(InventoryContext);
 
 /**
- * CAPA 1+2: Proveedor de Inventario Optimizado
- * 
- * Optimizaciones implementadas:
- * 1. Cache-First initial load (reduce lecturas de red 90%)
- * 2. Movements limitados a 200 docs (vs 1000 anterior, -80% RAM)
- * 3. Connection monitor para UI reactiva offline
- * 4. Optimistic UI en updateStock con rollback
- * 5. useCallback en todos los handlers para estabilidad de refs
- * 6. Limpieza completa de listeners en unmount
+ * Contexto principal para manejar los datos del inventario.
  */
 export const InventoryProvider = ({ children }) => {
   const { user } = useAuth();
@@ -69,7 +61,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [user]);
 
-  // ─── CAPA EXTRA: Conteo Global sin Descarga (Dashboard Real-time) ───
+  // Cargar estadísticas del dashboard
   useEffect(() => {
     if (!user) return;
     const fetchStats = async () => {
@@ -133,14 +125,14 @@ export const InventoryProvider = ({ children }) => {
     return cleanup;
   }, []);
 
-  // ─── CAPA 1: Items — Cache-First + Real-time Sync (LIMITADO A 500) ───
+  // Cargar artículos en tiempo real
   useEffect(() => {
     if (!user) return;
     
     let cancelled = false;
     
     // Optimizamos el listener global con un límite de seguridad
-    const constraints = [orderBy('name', 'asc'), limit(500)];
+    const constraints = [orderBy('name', 'asc'), limit(2000)];
 
     const unsubscribe = OptimizedDataService.subscribeWithCleanup('items', constraints, (data, snapshot) => {
       if (!cancelled) {
@@ -154,7 +146,7 @@ export const InventoryProvider = ({ children }) => {
     return () => { cancelled = true; unsubscribe(); };
   }, [user]);
 
-  // ─── Movements — Reducido a 100 docs para máxima eficiencia ───
+  // Cargar movimientos recientes
   useEffect(() => {
     if (!user) return;
 
@@ -176,7 +168,7 @@ export const InventoryProvider = ({ children }) => {
     return () => unsubscribe();
   }, [user]);
 
-  // ─── Colecciones Auxiliares — Carga Única Cache-First (Sin Listeners Activos) ───
+  // Cargar datos secundarios (una sola vez)
   const fetchAuxiliaryData = useCallback(async () => {
     try {
       // Usamos la estrategia optimizada para cargar una sola vez y ahorrar lecturas
@@ -201,7 +193,7 @@ export const InventoryProvider = ({ children }) => {
   }, [user, fetchAuxiliaryData]);
 
   // ─── Helpers ───
-  const addMovement = useCallback(async (action, itemName, qty, user = 'Admin', details = '', category = 'General') => {
+  const addMovement = useCallback(async (action, itemName, qty, user = 'Alfonso', details = '', category = 'General') => {
     try {
       const relatedItem = itemsRef.current.find(i => i.name === itemName);
       const subcategory = relatedItem?.subcategory || '';
@@ -222,7 +214,7 @@ export const InventoryProvider = ({ children }) => {
   }, []);
 
   // ─── CAPA 4: Optimistic UI — Stock Update ───
-  const updateStock = useCallback(async (itemId, change, userName = 'Admin', customDetails = '') => {
+  const updateStock = useCallback(async (itemId, change, userName = 'Alfonso', customDetails = '') => {
     const currentItems = itemsRef.current;
     const itemIndex = currentItems.findIndex(i => i.id === itemId);
     if (itemIndex === -1) return;
@@ -273,7 +265,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const loanItem = useCallback(async (itemId, borrower, userName = 'Admin') => {
+  const loanItem = useCallback(async (itemId, borrower, userName = 'Alfonso') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item || (item.qty || 0) <= 0) {
       toast.error("No hay stock disponible para préstamo");
@@ -303,7 +295,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const returnItem = useCallback(async (itemId, userName = 'Admin') => {
+  const returnItem = useCallback(async (itemId, userName = 'Alfonso') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -330,7 +322,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const reportMaintenance = useCallback(async (itemId, reason, userName = 'Admin') => {
+  const reportMaintenance = useCallback(async (itemId, reason, userName = 'Alfonso') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -340,8 +332,8 @@ export const InventoryProvider = ({ children }) => {
 
       await updateDoc(itemRef, {
         qty: remainingQty,
-        observaciones: `Último reporte: ${reason} (Por: ${userName})`,
-        status: remainingQty === 0 ? 'Mantenimiento' : 'Disponible'
+        observaciones: `Falla: ${reason} (Reportó: ${userName})`,
+        status: 'Mantenimiento'
       });
       await addMovement('Falla/Manto', item.name, 1, userName, reason, item.category);
       toast.warning(`Reporte registrado: 1x ${item.name} retirado por falla`);
@@ -350,7 +342,27 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const auditStock = useCallback(async (itemId, physicalQty, userName = 'Admin', reason = '') => {
+  const completeMaintenance = useCallback(async (itemId, userName = 'Alfonso') => {
+    const item = itemsRef.current.find(i => i.id === itemId);
+    if (!item) return;
+
+    try {
+      const itemRef = doc(db, 'items', itemId);
+      const newQty = (item.qty || 0) + 1;
+
+      await updateDoc(itemRef, {
+        qty: newQty,
+        status: 'Disponible',
+        observaciones: `Reparado el ${new Date().toLocaleDateString()} por ${userName}`
+      });
+      await addMovement('Entrada', item.name, 1, userName, 'Reparado / Fin de mantenimiento', item.category);
+      toast.success(`Herramienta reparada: ${item.name} vuelve a estar disponible`);
+    } catch (e) {
+      toast.error("Error al completar mantenimiento");
+    }
+  }, [addMovement]);
+
+  const auditStock = useCallback(async (itemId, physicalQty, userName = 'Alfonso', reason = '') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -370,7 +382,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const addItem = useCallback(async (newItem, userName = 'Admin') => {
+  const addItem = useCallback(async (newItem, userName = 'Alfonso') => {
     try {
       await addDoc(collection(db, 'items'), {
         ...newItem,
@@ -385,7 +397,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const deleteItem = useCallback(async (itemId, userName = 'Admin') => {
+  const deleteItem = useCallback(async (itemId, userName = 'Alfonso') => {
     try {
       const item = itemsRef.current.find(i => i.id === itemId);
       await deleteDoc(doc(db, 'items', itemId));
@@ -396,7 +408,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const editItem = useCallback(async (itemId, updatedFields, userName = 'Admin') => {
+  const editItem = useCallback(async (itemId, updatedFields, userName = 'Alfonso') => {
     try {
       const item = itemsRef.current.find(i => i.id === itemId);
       const itemRef = doc(db, 'items', itemId);
@@ -574,7 +586,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [isAutoWiping]);
 
-  const deleteItemsByCategory = useCallback(async (category, userName = 'Admin') => {
+  const deleteItemsByCategory = useCallback(async (category, userName = 'Alfonso') => {
     try {
       const categoryItems = itemsRef.current.filter(i => i.category === category);
       if (categoryItems.length === 0) {
@@ -605,7 +617,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const clearDatabaseCategories = useCallback(async (categories, userName = 'Admin') => {
+  const clearDatabaseCategories = useCallback(async (categories, userName = 'Alfonso') => {
     try {
       toast.loading("LIMPIANDO ÁREAS SELECCIONADAS...", { id: 'clear-db' });
       
@@ -703,7 +715,7 @@ export const InventoryProvider = ({ children }) => {
     items, movements, personnel, brands, locations, loading, globalStats,
     updateStock, addItem, deleteItem, editItem, 
     loanItem, returnItem, bulkAddItems, bulkAddPersonnel,
-    addWorker, deleteWorker, reportMaintenance, auditStock,
+    addWorker, deleteWorker, reportMaintenance, completeMaintenance, auditStock,
     addBrand, deleteBrand, addLocation, deleteLocation,
     wipeAllData, deleteItemsByCategory, clearDatabaseCategories, isAutoWiping,
     lastSync, connectionStatus, annulMovement,
@@ -712,7 +724,7 @@ export const InventoryProvider = ({ children }) => {
     items, movements, personnel, brands, locations, loading, globalStats,
     updateStock, addItem, deleteItem, editItem,
     loanItem, returnItem, bulkAddItems, bulkAddPersonnel,
-    addWorker, deleteWorker, reportMaintenance, auditStock,
+    addWorker, deleteWorker, reportMaintenance, completeMaintenance, auditStock,
     addBrand, deleteBrand, addLocation, deleteLocation,
     wipeAllData, deleteItemsByCategory, clearDatabaseCategories,
     isAutoWiping, lastSync, connectionStatus, annulMovement

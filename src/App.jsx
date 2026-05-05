@@ -65,7 +65,7 @@ const RootApp = () => {
         </div>
         <h2 className="text-2xl font-black mb-2">Acceso Restringido</h2>
         <p className="text-muted max-w-xs mx-auto mb-8">
-          No tienes permisos para ver esta sección. Contacta a un administrador para solicitar acceso.
+          No tienes permisos para ver esta sección. Contacta a Alfonso para solicitar acceso.
         </p>
         <button className="btn-apple-primary px-8" onClick={() => window.location.href = '/'}>
           Volver al Inicio

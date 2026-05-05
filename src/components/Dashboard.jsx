@@ -232,7 +232,7 @@ const Dashboard = () => {
                   {/* Col 4: User + Time */}
                   <div className="mov-col-meta">
                     <span className="mov-user-tag">
-                      <User size={10} /> {mov.user || 'Admin'}
+                      <User size={10} /> {mov.user || 'Alfonso'}
                     </span>
                     <span className="mov-time-tag">
                       {mov.timestamp?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}

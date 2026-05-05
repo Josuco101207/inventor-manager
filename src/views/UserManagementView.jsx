@@ -123,7 +123,7 @@ const UserManagementView = () => {
   };
 
   const handleDelete = async (u) => {
-    if (u.role === 'admin') return toast.error('No puedes eliminar a un administrador');
+    if (u.role === 'admin') return toast.error('No puedes eliminar a Alfonso');
     if (window.confirm(`¿Eliminar acceso para ${u.email}?`)) {
       await deleteDoc(doc(db, 'users', u.id));
       toast.info('Perfil eliminado');

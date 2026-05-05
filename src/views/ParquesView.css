@@ -4,10 +4,15 @@
   box-shadow: var(--shadow-lg);
   border: 1px solid hsla(var(--border-color), 0.3);
   overflow: hidden;
-  backdrop-filter: blur(20px) saturate(180%);
   display: flex;
   flex-direction: column;
-  height: 600px; /* Fallback height */
+  background: hsla(var(--bg-main), 0.5);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 1px solid hsla(var(--border-color), 0.2);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  margin-top: 1rem;
+  min-height: 400px;
 }
 
 .parques-header-row {
@@ -22,10 +27,135 @@
   color: hsl(var(--text-soft));
 }
 
-.col-art { flex: 2; padding: 0 1rem; }
-.col-stock { flex: 1; text-align: center; }
+.col-art { flex: 2.5; padding: 0 1rem; }
+.col-stock { width: 120px; text-align: center; }
 .col-ref { flex: 1; text-align: center; }
-.col-act { flex: 1; text-align: right; padding-right: 1rem; }
+.col-min { width: 80px; text-align: center; }
+.col-act { width: 180px; text-align: right; padding-right: 1rem; }
+
+.inv-row {
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  height: 85px;
+  border-bottom: 1px solid hsla(var(--border-color), 0.2);
+  transition: all 0.3s ease;
+}
+
+.inv-row-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.inv-cell {
+  display: flex;
+  align-items: center;
+}
+
+.inv-cell-name { flex: 2.5; gap: 1rem; }
+.inv-cell-stock { width: 120px; justify-content: center; flex-direction: column; }
+.inv-cell-location { flex: 1; justify-content: center; gap: 0.5rem; color: hsl(var(--text-soft)); font-weight: 600; }
+.inv-cell-min { width: 80px; justify-content: center; }
+.inv-cell-actions { width: 180px; justify-content: flex-end; gap: 0.5rem; }
+
+.inv-item-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: hsla(var(--primary), 0.1);
+  color: hsl(var(--primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.inv-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.inv-item-name {
+  font-weight: 800;
+  color: hsl(var(--text-main));
+  font-size: 0.95rem;
+}
+
+.inv-item-meta {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.inv-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.inv-tag-blue { background: hsla(var(--primary), 0.1); color: hsl(var(--primary)); }
+.inv-tag-subtle { background: hsla(var(--border-color), 0.3); color: hsl(var(--text-soft)); }
+.inv-tag-mono { font-family: monospace; background: hsla(var(--bg-main), 0.8); color: hsl(var(--text-muted)); }
+
+.inv-stock-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}
+
+.inv-stock-num { font-size: 1.1rem; font-weight: 900; }
+.inv-stock-unit { font-size: 0.65rem; font-weight: 700; color: hsl(var(--text-soft)); text-transform: uppercase; }
+
+.inv-stock-badge {
+  font-size: 8px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-top: 0.2rem;
+}
+
+.inv-stock-critical { background: hsla(var(--danger), 0.1); color: hsl(var(--danger)); }
+.inv-stock-low { background: hsla(var(--warning), 0.1); color: hsl(var(--warning)); }
+.inv-stock-optimal { background: hsla(var(--success), 0.1); color: hsl(var(--success)); }
+
+.inv-min-value {
+  font-weight: 700;
+  color: hsl(var(--text-soft));
+  background: hsla(var(--bg-main), 0.8);
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
+.inv-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.inv-btn:hover { transform: translateY(-2px); }
+.inv-btn-move { background: hsla(var(--primary), 0.1); color: hsl(var(--primary)); }
+.inv-btn-move:hover { background: hsl(var(--primary)); color: white; }
+.inv-btn-audit { background: hsla(var(--warning), 0.1); color: hsl(var(--warning)); }
+.inv-btn-audit:hover { background: hsl(var(--warning)); color: white; }
+.inv-btn-edit { background: hsla(var(--border-color), 0.5); color: hsl(var(--text-muted)); }
+.inv-btn-edit:hover { background: hsl(var(--text-main)); color: white; }
+.inv-btn-delete { background: transparent; color: hsl(var(--danger)); }
+.inv-btn-delete:hover { background: hsl(var(--danger)); color: white; }
+
 
 .parques-row {
   display: flex;

@@ -162,6 +162,34 @@ export const exportToExcel = async (data, filename, category = "General") => {
   saveAs(new Blob([finalBuffer]), `${filename}.xlsx`);
 };
 
+export const exportFullDatabase = async (items) => {
+  const workbook = new ExcelJS.Workbook();
+  const categories = [...new Set(items.map(i => i.category))];
+
+  for (const cat of categories) {
+    const catItems = items.filter(i => i.category === cat);
+    const sheet = workbook.addWorksheet(cat.substring(0, 30));
+    
+    // Header
+    const keys = Object.keys(catItems[0] || {});
+    const headerRow = sheet.addRow(keys.map(k => k.toUpperCase()));
+    headerRow.font = { bold: true };
+    
+    catItems.forEach(item => {
+      sheet.addRow(keys.map(k => {
+        const val = item[k];
+        if (val && val.toDate) return val.toDate().toLocaleString();
+        return val;
+      }));
+    });
+    
+    sheet.columns.forEach(col => { col.width = 25; });
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveAs(new Blob([buffer]), `inventario_completo_${new Date().toLocaleDateString()}.xlsx`);
+};
+
 export const exportToCSV = (data, filename) => {
   if (!data || data.length === 0) return;
   const keys = Object.keys(data[0]);

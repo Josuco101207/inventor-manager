@@ -1,13 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 /**
- * CAPA 3: Componente de Imagen Optimizado para Tablets
- * 
- * Optimizaciones:
- * - IntersectionObserver con rootMargin para pre-carga antes de ser visible
- * - loading="lazy" + decoding="async" para no bloquear el Main Thread
- * - Shimmer placeholder nativo (sin librería externa)
- * - Cleanup completo del observer en unmount (previene memory leaks)
+ * Componente para cargar imágenes de forma eficiente.
  */
 const OptimizedImage = ({ src, alt, className }) => {
   const [isLoaded, setIsLoaded] = useState(false);

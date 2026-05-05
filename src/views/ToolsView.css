@@ -1,9 +1,7 @@
 .tools-view {
-  min-height: 100vh;
-  background-color: hsl(var(--bg-main));
-  padding: 3rem 2rem 5rem 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
   position: relative;
 }
 

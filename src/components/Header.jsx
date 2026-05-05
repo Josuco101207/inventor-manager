@@ -163,7 +163,7 @@ const Header = () => {
         <div className="user-profile">
           <div className="user-info">
             <span className="user-name">{userName}</span>
-            <span className="user-role">{isAdmin ? 'Administrador' : 'Operador'}</span>
+            <span className="user-role">{isAdmin ? 'Alfonso' : 'Operador'}</span>
           </div>
           <div className="header-avatar">
             {userInitials}

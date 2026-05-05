@@ -13,20 +13,21 @@ import {
 import { exportToExcel } from '../utils/exportUtils';
 import { processParquesExcel } from '../utils/importUtils';
 import { toast } from 'sonner';
-import { List } from 'react-window';
-import { AutoSizer } from 'react-virtualized-auto-sizer';
+// Eliminada virtualización compleja para máxima compatibilidad
 import './ToolsView.css'; 
 import './ParquesView.css';
 
 const TableRow = memo(({ 
   item, index, isAdmin, isStaff, canEdit, 
-  onEdit, onDelete, onAction, onAudit, style 
+  onEdit, onDelete, onAction, onAudit 
 }) => {
+  if (!item) return null;
+
   const isCritical = (item.qty || 0) <= (item.threshold || 0);
   const isLow = !isCritical && (item.qty || 0) <= (item.threshold || 0) * 2;
 
   return (
-    <div style={style} className="parques-row animate-slide-up">
+    <div className="parques-row animate-slide-up">
       <div className="col-art">
         <div className="park-name-group">
           <span className="park-name">{item.name}</span>
@@ -107,6 +108,23 @@ const ParquesView = () => {
   const workerRef = useRef(null);
   const [filteredItems, setFilteredItems] = useState([]);
 
+  const [visibleCount, setVisibleCount] = useState(40);
+  const observerTarget = useRef(null);
+
+  // Infinite Scroll Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => Math.min(prev + 40, filteredItems.length));
+        }
+      },
+      { threshold: 0.1, rootMargin: '200px' }
+    );
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [filteredItems.length]);
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 150);
     return () => clearTimeout(timer);
@@ -114,7 +132,10 @@ const ParquesView = () => {
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('../workers/filterWorker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => setFilteredItems(e.data);
+    workerRef.current.onmessage = (e) => {
+      setFilteredItems(e.data);
+      setVisibleCount(40); // Reset al filtrar
+    };
     return () => workerRef.current.terminate();
   }, []);
 
@@ -168,7 +189,7 @@ const ParquesView = () => {
   }
 
   return (
-    <main className="tools-view animate-fade-in relative min-h-screen">
+    <main className="tools-view animate-fade-in relative min-h-screen p-8 flex flex-col">
       <Header />
       
       <header className="tools-header mb-8">
@@ -243,7 +264,7 @@ const ParquesView = () => {
         </div>
       )}
 
-      <div className="parques-container" style={{ height: 'auto', minHeight: '400px' }}>
+      <div className="parques-container">
         <div className="parques-header-row">
           <div className="col-art">Artículo / Sede</div>
           <div className="col-stock">Stock Actual</div>
@@ -251,29 +272,37 @@ const ParquesView = () => {
           <div className="col-act">Acciones</div>
         </div>
         
-        <div className="parques-body scrollbar-hide" style={{ maxHeight: '600px', overflowY: 'auto' }}>
-          {filteredItems.map((item, index) => (
-            <TableRow 
-              key={item.id || index}
-              item={item}
-              index={index}
-              isAdmin={isAdmin}
-              isStaff={isStaff}
-              canEdit={canEditIn('Parques')}
-              onEdit={(item) => { setSelectedItem(item); setIsAddModalOpen(true); }}
-              onDelete={(id, name) => { if (window.confirm(`¿Eliminar ${name}?`)) deleteItem(id, userName); }}
-              onAction={(item) => { setSelectedItem(item); setIsStockModalOpen(true); }}
-              onAudit={(item) => { setSelectedItem(item); setIsAuditModalOpen(true); }}
-            />
-          ))}
+        <div className="parques-body">
+          {filteredItems.length > 0 ? (
+            <>
+              {filteredItems.slice(0, visibleCount).map((item, index) => (
+                <TableRow 
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  isAdmin={isAdmin}
+                  isStaff={isStaff}
+                  canEdit={canEditIn('Parques')}
+                  onEdit={(item) => { setSelectedItem(item); setIsAddModalOpen(true); }}
+                  onDelete={(id, name) => { if (window.confirm(`¿Eliminar ${name}?`)) deleteItem(id, userName); }}
+                  onAction={(item) => { setSelectedItem(item); setIsStockModalOpen(true); }}
+                  onAudit={(item) => { setSelectedItem(item); setIsAuditModalOpen(true); }}
+                />
+              ))}
+              
+              {visibleCount < filteredItems.length && (
+                <div ref={observerTarget} className="flex justify-center py-10">
+                  <Loader2 className="animate-spin text-blue-500" size={32} />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-4 py-20">
+              <Package size={64} className="opacity-10" />
+              <p className="font-bold text-xl opacity-30">No se encontraron artículos</p>
+            </div>
+          )}
         </div>
-        
-        {filteredItems.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-4 py-20">
-            <Package size={64} className="opacity-10" />
-            <p className="font-bold text-xl opacity-30">No se encontraron artículos</p>
-          </div>
-        )}
       </div>
 
       <ActionModal 

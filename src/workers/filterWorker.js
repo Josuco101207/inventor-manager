@@ -1,14 +1,8 @@
 /**
- * Web Worker para filtrado masivo de inventario.
- * Off-Main-Thread: Filtrado + Ordenamiento + Limpieza de payload.
- * 
- * OPTIMIZACIONES:
- * - Pre-cálculo de sortKey para evitar .toLowerCase() en cada comparación
- * - Filtros categóricos evaluados primero (cortocircuito rápido)
- * - Limpieza de campos internos antes del postMessage (reduce transferencia)
+ * Worker para filtrar el inventario.
  */
 self.onmessage = (e) => {
-  const { items, searchTerm, categoryTitle, activeSubcategory, selectedBrand, selectedLocation } = e.data;
+  const { items, searchTerm, categoryTitle, activeSubcategory, selectedBrand, selectedLocation, statusFilter } = e.data;
 
   if (!items || !Array.isArray(items)) {
     self.postMessage([]);
@@ -17,16 +11,16 @@ self.onmessage = (e) => {
 
   const searchLow = searchTerm ? searchTerm.toLowerCase().trim() : '';
 
-  // 1. Filtrado en un solo paso con cortocircuito por categoría
   const filtered = [];
   for (let i = 0, len = items.length; i < len; i++) {
     const item = items[i];
     
-    // Filtros categóricos primero (O(1) string comparison, early exit)
+    // Filtros por categoría
     if (item.category !== categoryTitle) continue;
     if (activeSubcategory !== 'TODAS' && item.subcategory !== activeSubcategory) continue;
     if (selectedBrand !== 'Todas' && item.marca !== selectedBrand) continue;
     if (selectedLocation !== 'Todas' && item.location !== selectedLocation) continue;
+    if (statusFilter && item.status !== statusFilter) continue;
     
     // Búsqueda textual solo si hay término
     if (searchLow) {
@@ -45,7 +39,7 @@ self.onmessage = (e) => {
     filtered.push(item);
   }
 
-  // 2. Ordenamiento con claves pre-calculadas (evita .toLowerCase() en cada comparación de sort)
+  // Ordenar resultados
   const len = filtered.length;
   const keys = new Array(len);
   for (let i = 0; i < len; i++) {
