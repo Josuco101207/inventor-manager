@@ -295,6 +295,42 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
+  const bulkLoanItems = useCallback(async (itemIds, borrower, userName = 'Alfonso') => {
+    const availableItems = itemsRef.current.filter(i => itemIds.includes(i.id) && (i.qty || 0) > 0);
+    if (availableItems.length === 0) {
+      toast.error("Ninguna de las herramientas seleccionadas tiene stock");
+      return;
+    }
+
+    const batch = writeBatch(db);
+    availableItems.forEach(item => {
+      const itemRef = doc(db, 'items', item.id);
+      const qtyNum = parseInt(item.qty) || 0;
+      const prestadosNum = parseInt(item.prestados) || (item.status === 'Prestado' ? 1 : 0);
+      const remainingQty = Math.max(qtyNum - 1, 0);
+      const totalLent = prestadosNum + 1;
+      
+      batch.update(itemRef, {
+        qty: remainingQty,
+        prestados: totalLent,
+        status: remainingQty <= 0 ? 'Prestado' : 'Disponible',
+        borrowedBy: borrower || null,
+        lentBy: userName || null,
+        loanDate: serverTimestamp()
+      });
+    });
+
+    try {
+      await batch.commit();
+      for (const item of availableItems) {
+        await addMovement('Préstamo', item.name, 1, userName, borrower, item.category);
+      }
+      toast.success(`${availableItems.length} herramientas prestadas a ${borrower}`);
+    } catch (e) {
+      toast.error("Error al registrar préstamos masivos");
+    }
+  }, [addMovement]);
+
   const returnItem = useCallback(async (itemId, userName = 'Alfonso') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
@@ -714,7 +750,7 @@ export const InventoryProvider = ({ children }) => {
   const contextValue = useMemo(() => ({
     items, movements, personnel, brands, locations, loading, globalStats,
     updateStock, addItem, deleteItem, editItem, 
-    loanItem, returnItem, bulkAddItems, bulkAddPersonnel,
+    loanItem, bulkLoanItems, returnItem, bulkAddItems, bulkAddPersonnel,
     addWorker, deleteWorker, reportMaintenance, completeMaintenance, auditStock,
     addBrand, deleteBrand, addLocation, deleteLocation,
     wipeAllData, deleteItemsByCategory, clearDatabaseCategories, isAutoWiping,
@@ -723,7 +759,7 @@ export const InventoryProvider = ({ children }) => {
   }), [
     items, movements, personnel, brands, locations, loading, globalStats,
     updateStock, addItem, deleteItem, editItem,
-    loanItem, returnItem, bulkAddItems, bulkAddPersonnel,
+    loanItem, bulkLoanItems, returnItem, bulkAddItems, bulkAddPersonnel,
     addWorker, deleteWorker, reportMaintenance, completeMaintenance, auditStock,
     addBrand, deleteBrand, addLocation, deleteLocation,
     wipeAllData, deleteItemsByCategory, clearDatabaseCategories,

@@ -21,13 +21,27 @@ const getStatusClass = (status) => {
 
 const ToolCard = memo(({ 
   tool, isAdmin, isStaff, canEdit, 
+  isSelected, onSelectToggle,
   onEdit, onDelete, onLoan, onReturn, onFault, onRepair, onQR, index
 }) => (
   <div 
-    className="tool-card animate-slide-up" 
+  <div 
+    className={`tool-card animate-slide-up ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50/10' : ''}`}
     style={{ animationDelay: `${(index % 10) * 0.05}s` }}
   >
     <div className={`tool-status-ribbon ${getStatusClass(tool.status)}`}></div>
+
+    {/* Selection Checkbox */}
+    {isStaff && tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && (
+      <div className="absolute top-4 left-4 z-10">
+        <input 
+          type="checkbox" 
+          className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+          checked={isSelected}
+          onChange={() => onSelectToggle(tool.id)}
+        />
+      </div>
+    )}
     
     {(isAdmin || canEdit) && (
       <div className="tool-admin-actions">
@@ -110,18 +124,20 @@ const ToolCard = memo(({
 ));
 
 const ToolsView = () => {
-  const { items, personnel, addItem, editItem, deleteItem, loanItem, returnItem, reportMaintenance, completeMaintenance, loading } = useInventory();
+  const { items, personnel, addItem, editItem, deleteItem, loanItem, bulkLoanItems, returnItem, reportMaintenance, completeMaintenance, loading } = useInventory();
   const { isAdmin, isStaff, canEditIn, canAddTo, userData } = useAuth();
   const location = useLocation();
   
   const [searchTerm, setSearchTerm] = useState(location.state?.prefillSearch || '');
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   const [selectedTool, setSelectedTool] = useState(null);
+  const [selectedToolIds, setSelectedToolIds] = useState([]);
   
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
+  const [isBulkLoanModalOpen, setIsBulkLoanModalOpen] = useState(false);
   const [isFaultModalOpen, setIsFaultModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [showLoanedOnly, setShowLoanedOnly] = useState(false);
@@ -208,6 +224,20 @@ const ToolsView = () => {
     setBorrowerName('');
   };
 
+  const handleBulkLoanConfirm = async () => {
+    if (!borrowerName || selectedToolIds.length === 0) return;
+    await bulkLoanItems(selectedToolIds, borrowerName, userName);
+    setIsBulkLoanModalOpen(false);
+    setBorrowerName('');
+    setSelectedToolIds([]); // Limpiar selección tras préstamo
+  };
+
+  const toggleToolSelection = useCallback((id) => {
+    setSelectedToolIds(prev => 
+      prev.includes(id) ? prev.filter(tid => tid !== id) : [...prev, id]
+    );
+  }, []);
+
   const handleReturnConfirm = useCallback(async (tool) => {
     if (window.confirm(`¿Confirmar devolución de ${tool.name}?`)) {
       await returnItem(tool.id, userName);
@@ -286,6 +316,33 @@ const ToolsView = () => {
         </div>
       </header>
 
+      {/* Floating Action Bar for Bulk Selection */}
+      {selectedToolIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 px-6 py-3 flex items-center gap-6 animate-slide-up">
+          <div className="flex items-center gap-2">
+            <span className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
+              {selectedToolIds.length}
+            </span>
+            <span className="text-gray-700 dark:text-gray-300 font-semibold text-sm">seleccionadas</span>
+          </div>
+          
+          <div className="flex items-center gap-2 border-l pl-6 border-gray-200 dark:border-gray-700">
+            <button 
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-semibold px-3 py-1"
+              onClick={() => setSelectedToolIds([])}
+            >
+              Cancelar
+            </button>
+            <button 
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
+              onClick={() => setIsBulkLoanModalOpen(true)}
+            >
+              <ArrowUpRight size={16} /> Prestar Lote
+            </button>
+          </div>
+        </div>
+      )}
+
       <section className="tools-grid">
         {visibleTools.map((tool, index) => (
           <ToolCard 
@@ -295,6 +352,8 @@ const ToolsView = () => {
             isAdmin={isAdmin}
             isStaff={isStaff}
             canEdit={canEditTools}
+            isSelected={selectedToolIds.includes(tool.id)}
+            onSelectToggle={toggleToolSelection}
             onEdit={(t) => { setSelectedTool(t); setIsAddModalOpen(true); }}
             onDelete={handleDelete}
             onLoan={(t) => { setSelectedTool(t); setIsLoanModalOpen(true); }}
@@ -387,6 +446,38 @@ const ToolsView = () => {
             <div className="flex gap-4">
               <button className="btn-apple-secondary flex-1" onClick={() => setIsLoanModalOpen(false)}>Cancelar</button>
               <button className="btn-apple-primary flex-1" onClick={handleLoanConfirm} disabled={!borrowerName}>Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isBulkLoanModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-card animate-scale-up">
+            <header className="modal-header">
+              <h3>
+                <ArrowUpRight className="text-blue-500" size={28} />
+                Préstamo Múltiple
+              </h3>
+              <p>¿A quién se le entregan las <strong>{selectedToolIds.length}</strong> herramientas seleccionadas?</p>
+            </header>
+
+            <div className="f-group">
+              <label>Nombre del Trabajador</label>
+              <input 
+                type="text" 
+                className="f-input" 
+                placeholder="Escribe el nombre aquí..." 
+                list="personnel-list"
+                value={borrowerName} 
+                onChange={(e) => setBorrowerName(e.target.value)} 
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <button className="btn-apple-secondary flex-1" onClick={() => setIsBulkLoanModalOpen(false)}>Cancelar</button>
+              <button className="btn-apple-primary flex-1" onClick={handleBulkLoanConfirm} disabled={!borrowerName}>Confirmar</button>
             </div>
           </div>
         </div>
