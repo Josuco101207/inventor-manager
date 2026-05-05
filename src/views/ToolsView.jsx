@@ -44,15 +44,12 @@ const ToolCard = memo(({
     )}
 
     <div className="tool-card-header">
-      {/* Selection Checkbox */}
+      {/* Selection Checkbox Custom */}
       {isStaff && tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && (
-        <div className="tool-selection-box">
-          <input 
-            type="checkbox" 
-            className="tool-checkbox"
-            checked={isSelected}
-            onChange={() => onSelectToggle(tool.id)}
-          />
+        <div className="tool-selection-box" onClick={(e) => { e.stopPropagation(); onSelectToggle(tool.id); }}>
+          <div className={`tool-checkbox-custom ${isSelected ? 'checked' : ''}`}>
+            {isSelected && <span className="check-mark">✓</span>}
+          </div>
         </div>
       )}
       <div className="tool-info">
