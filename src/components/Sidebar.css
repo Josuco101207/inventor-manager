@@ -1,6 +1,9 @@
 .sidebar {
   width: 260px;
   height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
   background-color: hsla(var(--bg-card), 0.8);
   backdrop-filter: blur(20px) saturate(180%);
   border-right: 1px solid hsl(var(--border-color));
