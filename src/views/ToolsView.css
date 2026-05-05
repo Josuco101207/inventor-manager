@@ -216,6 +216,11 @@
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.tool-card.has-selection-mode .tool-info {
+  padding-left: 2.5rem;
 }
 
 .tool-qr-button {
@@ -605,19 +610,20 @@
 
 .tool-selection-box {
   position: absolute;
-  top: 1.5rem;
-  left: 1.5rem;
+  top: 0;
+  left: 0;
   z-index: 30;
 }
 
 .tool-checkbox {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 6px;
   border: 2px solid hsla(var(--border-color), 0.8);
   cursor: pointer;
   accent-color: hsl(var(--primary));
   transition: all 0.2s;
+  background: hsla(var(--bg-card), 0.8);
 }
 
 .tool-checkbox:hover {

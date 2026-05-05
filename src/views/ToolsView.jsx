@@ -25,22 +25,10 @@ const ToolCard = memo(({
   onEdit, onDelete, onLoan, onReturn, onFault, onRepair, onQR, index
 }) => (
   <div 
-    className={`tool-card animate-slide-up ${isSelected ? 'is-selected' : ''}`}
+    className={`tool-card animate-slide-up ${isSelected ? 'is-selected' : ''} ${isStaff ? 'has-selection-mode' : ''}`}
     style={{ animationDelay: `${(index % 10) * 0.05}s` }}
   >
     <div className={`tool-status-ribbon ${getStatusClass(tool.status)}`}></div>
-
-    {/* Selection Checkbox */}
-    {isStaff && tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && (
-      <div className="tool-selection-box">
-        <input 
-          type="checkbox" 
-          className="tool-checkbox"
-          checked={isSelected}
-          onChange={() => onSelectToggle(tool.id)}
-        />
-      </div>
-    )}
     
     {(isAdmin || canEdit) && (
       <div className="tool-admin-actions">
@@ -56,6 +44,17 @@ const ToolCard = memo(({
     )}
 
     <div className="tool-card-header">
+      {/* Selection Checkbox */}
+      {isStaff && tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && (
+        <div className="tool-selection-box">
+          <input 
+            type="checkbox" 
+            className="tool-checkbox"
+            checked={isSelected}
+            onChange={() => onSelectToggle(tool.id)}
+          />
+        </div>
+      )}
       <div className="tool-info">
         <span className="tool-brand">{tool.marca || 'GENÉRICO'}</span>
         <h3 className="tool-name">{tool.name}</h3>
