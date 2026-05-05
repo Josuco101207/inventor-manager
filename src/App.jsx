@@ -13,7 +13,7 @@ const AnalyticsView = lazy(() => import('./views/AnalyticsView'));
 const TransactionsView = lazy(() => import('./views/TransactionsView'));
 const ToolsView = lazy(() => import('./views/ToolsView'));
 
-import { InventoryProvider, useInventory } from './context/InventoryContext';
+import { InventoryProvider } from './context/InventoryContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster, toast } from 'sonner';
@@ -80,31 +80,33 @@ const RootApp = () => {
 
   return (
     <Router>
-      <div className="app-container">
-        <Sidebar />
-        <main className="main-content">
-          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%' }}><Loader2 className="animate-spin" style={{ color: 'hsl(var(--primary))' }} size={40} /></div>}>
-            <Routes>
-              <Route path="/" element={<ViewProtectedRoute viewId="dashboard"><Dashboard /></ViewProtectedRoute>} />
-              <Route path="/tornilleria" element={<ViewProtectedRoute viewId="tornilleria"><InventoryView categoryTitle="Tornillería" /></ViewProtectedRoute>} />
-              <Route path="/papeleria" element={<ViewProtectedRoute viewId="papeleria"><InventoryView categoryTitle="Papelería" /></ViewProtectedRoute>} />
-              <Route path="/herramientas" element={<ViewProtectedRoute viewId="herramientas"><ToolsView /></ViewProtectedRoute>} />
-              <Route path="/impresion-3d" element={<ViewProtectedRoute viewId="impresion-3d"><InventoryView categoryTitle="Impresión 3D" /></ViewProtectedRoute>} />
-              <Route path="/electronica" element={<ViewProtectedRoute viewId="electronica"><InventoryView categoryTitle="Electrónica" /></ViewProtectedRoute>} />
-              <Route path="/general" element={<ViewProtectedRoute viewId="general"><InventoryView categoryTitle="Inventario General" /></ViewProtectedRoute>} />
-              <Route path="/almacen-temporal" element={<ViewProtectedRoute viewId="almacen-temporal"><InventoryView categoryTitle="Almacén Temporal" /></ViewProtectedRoute>} />
-              <Route path="/parques" element={<ViewProtectedRoute viewId="parques"><ParquesView /></ViewProtectedRoute>} />
-              <Route path="/analytics" element={<ViewProtectedRoute viewId="analytics"><AnalyticsView /></ViewProtectedRoute>} />
-              <Route path="/transactions" element={<ViewProtectedRoute viewId="transactions"><TransactionsView /></ViewProtectedRoute>} />
-              <Route path="/settings" element={isAdmin ? <SettingsView /> : <Navigate to="/" />} />
-              <Route path="/profile" element={<ProfileView />} />
-              <Route path="/users" element={isAdmin ? <UserManagementView /> : <Navigate to="/" />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </main>
-      </div>
-      <Toaster position="top-right" richColors closeButton />
+      <InventoryProvider>
+        <div className="app-container">
+          <Sidebar />
+          <main className="main-content">
+            <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%' }}><Loader2 className="animate-spin" style={{ color: 'hsl(var(--primary))' }} size={40} /></div>}>
+              <Routes>
+                <Route path="/" element={<ViewProtectedRoute viewId="dashboard"><Dashboard /></ViewProtectedRoute>} />
+                <Route path="/tornilleria" element={<ViewProtectedRoute viewId="tornilleria"><InventoryView categoryTitle="Tornillería" /></ViewProtectedRoute>} />
+                <Route path="/papeleria" element={<ViewProtectedRoute viewId="papeleria"><InventoryView categoryTitle="Papelería" /></ViewProtectedRoute>} />
+                <Route path="/herramientas" element={<ViewProtectedRoute viewId="herramientas"><ToolsView /></ViewProtectedRoute>} />
+                <Route path="/impresion-3d" element={<ViewProtectedRoute viewId="impresion-3d"><InventoryView categoryTitle="Impresión 3D" /></ViewProtectedRoute>} />
+                <Route path="/electronica" element={<ViewProtectedRoute viewId="electronica"><InventoryView categoryTitle="Electrónica" /></ViewProtectedRoute>} />
+                <Route path="/general" element={<ViewProtectedRoute viewId="general"><InventoryView categoryTitle="Inventario General" /></ViewProtectedRoute>} />
+                <Route path="/almacen-temporal" element={<ViewProtectedRoute viewId="almacen-temporal"><InventoryView categoryTitle="Almacén Temporal" /></ViewProtectedRoute>} />
+                <Route path="/parques" element={<ViewProtectedRoute viewId="parques"><ParquesView /></ViewProtectedRoute>} />
+                <Route path="/analytics" element={<ViewProtectedRoute viewId="analytics"><AnalyticsView /></ViewProtectedRoute>} />
+                <Route path="/transactions" element={<ViewProtectedRoute viewId="transactions"><TransactionsView /></ViewProtectedRoute>} />
+                <Route path="/settings" element={isAdmin ? <SettingsView /> : <Navigate to="/" />} />
+                <Route path="/profile" element={<ProfileView />} />
+                <Route path="/users" element={isAdmin ? <UserManagementView /> : <Navigate to="/" />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </main>
+        </div>
+        <Toaster position="top-right" richColors closeButton />
+      </InventoryProvider>
     </Router>
   );
 };
@@ -113,9 +115,7 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <InventoryProvider>
-          <RootApp />
-        </InventoryProvider>
+        <RootApp />
       </ThemeProvider>
     </AuthProvider>
   );

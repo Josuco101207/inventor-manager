@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
+import { useLocation } from 'react-router-dom';
 import { db } from '../firebase/config';
 import { 
   collection, 
@@ -14,7 +15,8 @@ import {
   serverTimestamp,
   writeBatch,
   getDocs,
-  where
+  where,
+  runTransaction
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { OptimizedDataService } from '../firebase/optimizedFirestore';
@@ -28,6 +30,10 @@ export const useInventory = () => useContext(InventoryContext);
  */
 export const InventoryProvider = ({ children }) => {
   const { user } = useAuth();
+  const location = useLocation();
+  const pathname = location?.pathname || '';
+  // Movimientos sólo se necesitan en pantallas donde se muestran listas/gráficas
+  const shouldSubscribeMovements = pathname === '/' || pathname === '/transactions' || pathname === '/analytics';
   const [items, setItems] = useState([]);
   const [movements, setMovements] = useState([]);
   const [personnel, setPersonnel] = useState([]);
@@ -37,12 +43,6 @@ export const InventoryProvider = ({ children }) => {
   const [isAutoWiping, setIsAutoWiping] = useState(false);
   const [lastSync, setLastSync] = useState(new Date());
   const [connectionStatus, setConnectionStatus] = useState('online');
-  const [globalStats, setGlobalStats] = useState({ 
-    items: 0, 
-    movements: 0, 
-    critical: 0,
-    activity: [] 
-  });
   
   // Ref para acceso estable a items en callbacks (evita stale closures)
   const itemsRef = useRef(items);
@@ -56,66 +56,9 @@ export const InventoryProvider = ({ children }) => {
       setPersonnel([]);
       setBrands([]);
       setLocations([]);
-      setGlobalStats({ items: 0, movements: 0, critical: 0, activity: [] });
       setLoading(true);
     }
   }, [user]);
-
-  // Cargar estadísticas del dashboard
-  useEffect(() => {
-    if (!user) return;
-    const fetchStats = async () => {
-      try {
-        // 1. Conteos Básicos
-        const [itemCount, moveCount] = await Promise.all([
-          OptimizedDataService.getCollectionCount('items'),
-          OptimizedDataService.getCollectionCount('movements')
-        ]);
-
-        // 2. Conteo de Stock Crítico (Estimado o por flag si existe)
-        // Nota: Firestore no permite comparar dos campos en un query.
-        // Como solución temporal eficiente, filtramos los 500 cargados + un query de qty=0
-        const outOfStockCount = await OptimizedDataService.getCollectionCount('items', [where('qty', '==', 0)]);
-        const localCritical = itemsRef.current.filter(i => (i.qty || 0) <= (i.threshold || 0) && (i.qty || 0) > 0).length;
-
-        // 3. Actividad de los últimos 7 días (Conteos individuales)
-        const last7Days = [6, 5, 4, 3, 2, 1, 0].map(i => {
-          const d = new Date();
-          d.setHours(0,0,0,0);
-          d.setDate(d.getDate() - i);
-          const nextD = new Date(d);
-          nextD.setDate(d.getDate() + 1);
-          return { d, nextD, name: d.toLocaleDateString('es-ES', { weekday: 'short' }) };
-        });
-
-        const activityPromises = last7Days.map(day => 
-          OptimizedDataService.getCollectionCount('movements', [
-            where('timestamp', '>=', day.d),
-            where('timestamp', '<', day.nextD)
-          ])
-        );
-        const activityCounts = await Promise.all(activityPromises);
-        
-        const activityData = last7Days.map((day, idx) => ({
-          name: day.name,
-          movimientos: activityCounts[idx]
-        }));
-
-        setGlobalStats({ 
-          items: itemCount, 
-          movements: moveCount, 
-          critical: outOfStockCount + localCritical,
-          activity: activityData 
-        });
-      } catch (e) {
-        console.error("Stats fetch error:", e);
-      }
-    };
-    fetchStats();
-    // Refrescar cada 5 minutos o cuando cambie el inventario local significativamente
-    const interval = setInterval(fetchStats, 300000); 
-    return () => clearInterval(interval);
-  }, [user, items.length]); // Refrescar si cambia el tamaño local significativamente
 
   // ─── Connection Monitor ───
   useEffect(() => {
@@ -131,8 +74,8 @@ export const InventoryProvider = ({ children }) => {
     
     let cancelled = false;
     
-    // Optimizamos el listener global con un límite de seguridad
-    const constraints = [orderBy('name', 'asc'), limit(2000)];
+    // Stock real: suscribimos a todos los artículos (sin límite)
+    const constraints = [orderBy('name', 'asc')];
 
     const unsubscribe = OptimizedDataService.subscribeWithCleanup('items', constraints, (data, snapshot) => {
       if (!cancelled) {
@@ -149,8 +92,20 @@ export const InventoryProvider = ({ children }) => {
   // Cargar movimientos recientes
   useEffect(() => {
     if (!user) return;
+    if (!shouldSubscribeMovements) return;
 
-    const q = query(collection(db, 'movements'), orderBy('timestamp', 'desc'), limit(100));
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    // Para cubrir 7 días incluyendo hoy: [hoy-6 ... hoy]
+    startDate.setDate(startDate.getDate() - 6);
+
+    // Mantener sólo los últimos 7 días para que `globalStats.activity` y la UI sean exactas
+    const q = query(
+      collection(db, 'movements'),
+      where('timestamp', '>=', startDate),
+      orderBy('timestamp', 'desc'),
+      limit(500)
+    );
     const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
       if (!snapshot.metadata.hasPendingWrites) {
         console.log(`[Firestore] Movements Sync (From Cache: ${snapshot.metadata.fromCache})`);
@@ -166,7 +121,7 @@ export const InventoryProvider = ({ children }) => {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, shouldSubscribeMovements]);
 
   // Cargar datos secundarios (una sola vez)
   const fetchAuxiliaryData = useCallback(async () => {
@@ -193,13 +148,14 @@ export const InventoryProvider = ({ children }) => {
   }, [user, fetchAuxiliaryData]);
 
   // ─── Helpers ───
-  const addMovement = useCallback(async (action, itemName, qty, user = 'Alfonso', details = '', category = 'General') => {
+  const addMovement = useCallback(async (action, itemName, qty, user = 'Alfonso', details = '', category = 'General', itemId = null) => {
     try {
       const relatedItem = itemsRef.current.find(i => i.name === itemName);
       const subcategory = relatedItem?.subcategory || '';
 
       await addDoc(collection(db, 'movements'), {
         action,
+        itemId,
         item: itemName,
         user,
         details,
@@ -241,7 +197,19 @@ export const InventoryProvider = ({ children }) => {
 
     try {
       const itemRef = doc(db, 'items', itemId);
-      await updateDoc(itemRef, { qty: newQty });
+      await runTransaction(db, async (transaction) => {
+        const itemSnap = await transaction.get(itemRef);
+        if (!itemSnap.exists()) {
+          throw new Error('ITEM_NOT_FOUND');
+        }
+        const remoteItem = itemSnap.data();
+        const remoteQty = parseInt(remoteItem.qty, 10) || 0;
+        const remoteNewQty = remoteQty + change;
+        if (remoteNewQty < 0) {
+          throw new Error('INSUFFICIENT_STOCK');
+        }
+        transaction.update(itemRef, { qty: remoteNewQty });
+      });
       
       const defaultDetails = `${change > 0 ? 'Reposición' : 'Gasto'} de material`;
       await addMovement(
@@ -250,7 +218,8 @@ export const InventoryProvider = ({ children }) => {
         Math.abs(change), 
         userName, 
         customDetails || defaultDetails,
-        item.category
+        item.category,
+        itemId
       );
       toast.success(`${change > 0 ? 'Entrada' : 'Salida'} registrada: ${item.name}`);
     } catch (e) {
@@ -261,7 +230,11 @@ export const InventoryProvider = ({ children }) => {
         if (idx !== -1) rollback[idx] = { ...rollback[idx], qty: oldQty };
         return rollback;
       });
-      toast.error("Error de sincronización — datos revertidos");
+      if (e.message === 'INSUFFICIENT_STOCK') {
+        toast.error("Stock insuficiente para registrar la salida");
+      } else {
+        toast.error("Error de sincronización — datos revertidos");
+      }
     }
   }, [addMovement]);
 
@@ -274,24 +247,38 @@ export const InventoryProvider = ({ children }) => {
 
     try {
       const itemRef = doc(db, 'items', itemId);
-      const qtyNum = parseInt(item.qty) || 0;
-      const prestadosNum = parseInt(item.prestados) || (item.status === 'Prestado' ? 1 : 0);
-      
-      const remainingQty = Math.max(qtyNum - 1, 0);
-      const totalLent = prestadosNum + 1;
-      
-      await updateDoc(itemRef, {
-        qty: remainingQty,
-        prestados: totalLent,
-        status: remainingQty <= 0 ? 'Prestado' : 'Disponible',
-        borrowedBy: borrower || null,
-        lentBy: userName || null,
-        loanDate: serverTimestamp()
+      const result = await runTransaction(db, async (transaction) => {
+        const itemSnap = await transaction.get(itemRef);
+        if (!itemSnap.exists()) {
+          throw new Error('ITEM_NOT_FOUND');
+        }
+        const remoteItem = itemSnap.data();
+        const qtyNum = parseInt(remoteItem.qty, 10) || 0;
+        if (qtyNum <= 0) {
+          throw new Error('NO_STOCK');
+        }
+        const prestadosNum = parseInt(remoteItem.prestados, 10) || (remoteItem.status === 'Prestado' ? 1 : 0);
+        const remainingQty = qtyNum - 1;
+        const totalLent = prestadosNum + 1;
+
+        transaction.update(itemRef, {
+          qty: remainingQty,
+          prestados: totalLent,
+          status: remainingQty <= 0 ? 'Prestado' : 'Disponible',
+          borrowedBy: borrower || null,
+          lentBy: userName || null,
+          loanDate: serverTimestamp()
+        });
+        return { remainingQty };
       });
-      await addMovement('Préstamo', item.name, 1, userName, borrower, item.category);
-      toast.success(`Herramienta prestada a ${borrower} (Disponibles: ${remainingQty})`);
+      await addMovement('Préstamo', item.name, 1, userName, borrower, item.category, itemId);
+      toast.success(`Herramienta prestada a ${borrower} (Disponibles: ${result.remainingQty})`);
     } catch (e) {
-      toast.error("Error al registrar préstamo");
+      if (e.message === 'NO_STOCK') {
+        toast.error("No hay stock disponible para préstamo");
+      } else {
+        toast.error("Error al registrar préstamo");
+      }
     }
   }, [addMovement]);
 
@@ -301,24 +288,39 @@ export const InventoryProvider = ({ children }) => {
 
     try {
       const itemRef = doc(db, 'items', itemId);
-      const qtyNum = parseInt(item.qty) || 0;
-      const prestadosNum = parseInt(item.prestados) || (item.status === 'Prestado' ? 1 : 0);
+      const result = await runTransaction(db, async (transaction) => {
+        const itemSnap = await transaction.get(itemRef);
+        if (!itemSnap.exists()) {
+          throw new Error('ITEM_NOT_FOUND');
+        }
+        const remoteItem = itemSnap.data();
+        const qtyNum = parseInt(remoteItem.qty, 10) || 0;
+        const prestadosNum = parseInt(remoteItem.prestados, 10) || (remoteItem.status === 'Prestado' ? 1 : 0);
+        if (prestadosNum <= 0) {
+          throw new Error('NO_LOANS');
+        }
 
-      const newQty = qtyNum + 1;
-      const newLent = Math.max(prestadosNum - 1, 0);
+        const newQty = qtyNum + 1;
+        const newLent = prestadosNum - 1;
 
-      await updateDoc(itemRef, {
-        qty: newQty,
-        prestados: newLent,
-        status: 'Disponible',
-        borrowedBy: newLent === 0 ? null : (item.borrowedBy || null),
-        lentBy: newLent === 0 ? null : (item.lentBy || null),
-        loanDate: newLent === 0 ? null : (item.loanDate || null)
+        transaction.update(itemRef, {
+          qty: newQty,
+          prestados: newLent,
+          status: 'Disponible',
+          borrowedBy: newLent === 0 ? null : (remoteItem.borrowedBy || null),
+          lentBy: newLent === 0 ? null : (remoteItem.lentBy || null),
+          loanDate: newLent === 0 ? null : (remoteItem.loanDate || null)
+        });
+        return { newQty };
       });
-      await addMovement('Devolución', item.name, 1, userName, 'Devuelto a almacén', item.category);
-      toast.success(`Herramienta devuelta (En almacén: ${newQty})`);
+      await addMovement('Devolución', item.name, 1, userName, 'Devuelto a almacén', item.category, itemId);
+      toast.success(`Herramienta devuelta (En almacén: ${result.newQty})`);
     } catch (e) {
-      toast.error("Error al registrar devolución");
+      if (e.message === 'NO_LOANS') {
+        toast.error("No hay préstamos activos para devolver");
+      } else {
+        toast.error("Error al registrar devolución");
+      }
     }
   }, [addMovement]);
 
@@ -335,7 +337,7 @@ export const InventoryProvider = ({ children }) => {
         observaciones: `Falla: ${reason} (Reportó: ${userName})`,
         status: 'Mantenimiento'
       });
-      await addMovement('Falla/Manto', item.name, 1, userName, reason, item.category);
+      await addMovement('Falla/Manto', item.name, 1, userName, reason, item.category, itemId);
       toast.warning(`Reporte registrado: 1x ${item.name} retirado por falla`);
     } catch (e) {
       toast.error("Error al reportar mantenimiento");
@@ -355,7 +357,7 @@ export const InventoryProvider = ({ children }) => {
         status: 'Disponible',
         observaciones: `Reparado el ${new Date().toLocaleDateString()} por ${userName}`
       });
-      await addMovement('Entrada', item.name, 1, userName, 'Reparado / Fin de mantenimiento', item.category);
+      await addMovement('Entrada', item.name, 1, userName, 'Reparado / Fin de mantenimiento', item.category, itemId);
       toast.success(`Herramienta reparada: ${item.name} vuelve a estar disponible`);
     } catch (e) {
       toast.error("Error al completar mantenimiento");
@@ -373,9 +375,7 @@ export const InventoryProvider = ({ children }) => {
       
       const finalReason = reason ? `Audit: ${reason}` : `Conteo físico: ${physicalQty} (Ajuste: ${diff > 0 ? '+' : ''}${diff})`;
 
-      await addMovement(
-        'Auditoría', item.name, Math.abs(diff), userName, finalReason, item.category
-      );
+      await addMovement('Auditoría', item.name, Math.abs(diff), userName, finalReason, item.category, itemId);
       toast.success("Auditoría registrada exitosamente");
     } catch (e) {
       toast.error("Error al registrar auditoría");
@@ -401,7 +401,7 @@ export const InventoryProvider = ({ children }) => {
     try {
       const item = itemsRef.current.find(i => i.id === itemId);
       await deleteDoc(doc(db, 'items', itemId));
-      await addMovement('Eliminación', item?.name || 'Desconocido', 0, userName, 'Artículo eliminado del inventario', item?.category || 'General');
+      await addMovement('Eliminación', item?.name || 'Desconocido', 0, userName, 'Artículo eliminado del inventario', item?.category || 'General', itemId);
       toast.info(`Artículo eliminado: ${item?.name}`);
     } catch (e) {
       toast.error("Error al eliminar artículo");
@@ -663,52 +663,118 @@ export const InventoryProvider = ({ children }) => {
     if (!mov || mov.annulled) return;
 
     try {
-      const item = itemsRef.current.find(i => i.name === mov.item && i.category === mov.category);
-      
-      if (item) {
-        const itemRef = doc(db, 'items', item.id);
-        let qtyChange = 0;
-        let extraFields = {};
-        
-        if (mov.action === 'Entrada' || mov.action === 'Alta') {
-          qtyChange = -(parseInt(mov.qty) || 0);
-        } else if (mov.action === 'Salida') {
-          qtyChange = (parseInt(mov.qty) || 0);
-        } else if (mov.action === 'Préstamo') {
-          qtyChange = 1;
-          extraFields.prestados = Math.max((parseInt(item.prestados) || 0) - 1, 0);
-          if (extraFields.prestados === 0) extraFields.status = 'Disponible';
-        } else if (mov.action === 'Devolución') {
-          qtyChange = -1;
-          extraFields.prestados = (parseInt(item.prestados) || 0) + 1;
+      const movementRef = doc(db, 'movements', movementId);
+      await runTransaction(db, async (transaction) => {
+        const movementSnap = await transaction.get(movementRef);
+        if (!movementSnap.exists()) {
+          throw new Error('MOVEMENT_NOT_FOUND');
+        }
+        const latestMovement = movementSnap.data();
+        if (latestMovement.annulled) {
+          throw new Error('ALREADY_ANNULLED');
         }
 
-        if (qtyChange !== 0 || Object.keys(extraFields).length > 0) {
-          await updateDoc(itemRef, { 
-            qty: (parseInt(item.qty) || 0) + qtyChange,
-            ...extraFields
-          });
-        }
-      }
+        const movementItemId = latestMovement.itemId || mov.itemId;
+        if (movementItemId) {
+          const itemRef = doc(db, 'items', movementItemId);
+          const itemSnap = await transaction.get(itemRef);
+          if (itemSnap.exists()) {
+            const itemData = itemSnap.data();
+            let qtyChange = 0;
+            const extraFields = {};
 
-      await updateDoc(doc(db, 'movements', movementId), {
-        annulled: true,
-        annulledBy: adminName,
-        annulledAt: serverTimestamp()
+            if (latestMovement.action === 'Entrada' || latestMovement.action === 'Alta') {
+              qtyChange = -(parseInt(latestMovement.qty, 10) || 0);
+            } else if (latestMovement.action === 'Salida') {
+              qtyChange = parseInt(latestMovement.qty, 10) || 0;
+            } else if (latestMovement.action === 'Préstamo') {
+              qtyChange = 1;
+              extraFields.prestados = Math.max((parseInt(itemData.prestados, 10) || 0) - 1, 0);
+              if (extraFields.prestados === 0) extraFields.status = 'Disponible';
+            } else if (latestMovement.action === 'Devolución') {
+              qtyChange = -1;
+              extraFields.prestados = (parseInt(itemData.prestados, 10) || 0) + 1;
+            }
+
+            const nextQty = (parseInt(itemData.qty, 10) || 0) + qtyChange;
+            if (nextQty < 0) {
+              throw new Error('INVALID_QTY_AFTER_ANNUL');
+            }
+
+            if (qtyChange !== 0 || Object.keys(extraFields).length > 0) {
+              transaction.update(itemRef, {
+                qty: nextQty,
+                ...extraFields
+              });
+            }
+          }
+        }
+
+        transaction.update(movementRef, {
+          annulled: true,
+          annulledBy: adminName,
+          annulledAt: serverTimestamp()
+        });
       });
 
       await addMovement(
         'Anulación', mov.item, mov.qty, adminName,
         `Reversión de ${mov.action}. Movimiento #${movementId.substring(0,5)}`,
-        mov.category
+        mov.category,
+        mov.itemId || null
       );
 
       toast.success("Movimiento anulado correctamente");
     } catch (e) {
       console.error("Annul error:", e);
-      toast.error("Error al anular movimiento");
+      if (e.message === 'ALREADY_ANNULLED') {
+        toast.error("Este movimiento ya fue anulado");
+      } else if (e.message === 'INVALID_QTY_AFTER_ANNUL') {
+        toast.error("No se puede anular: la reversión dejaría stock negativo");
+      } else {
+        toast.error("Error al anular movimiento");
+      }
     }
   }, [movements, addMovement]);
+
+  // ─── KPIs locales (sin lecturas extra) ───
+  const globalStats = useMemo(() => {
+    const critical = items.reduce((acc, i) => {
+      const qty = parseInt(i.qty, 10) || 0;
+      const threshold = parseInt(i.threshold, 10) || 0;
+      if (qty === 0) return acc + 1;
+      if (qty > 0 && qty <= threshold) return acc + 1;
+      return acc;
+    }, 0);
+
+    const last7Days = [6, 5, 4, 3, 2, 1, 0].map(i => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      const nextD = new Date(d);
+      nextD.setDate(d.getDate() + 1);
+      return { d, nextD, name: d.toLocaleDateString('es-ES', { weekday: 'short' }) };
+    });
+
+    const activity = last7Days.map(day => {
+      const movimientos = movements.reduce((acc, m) => {
+        const ts = m.timestamp?.toDate?.();
+        if (!ts) return acc;
+        const t = ts instanceof Date ? ts : new Date(ts);
+        if (t >= day.d && t < day.nextD) return acc + 1;
+        return acc;
+      }, 0);
+
+      return { name: day.name, movimientos };
+    });
+
+    return {
+      items: items.length,
+      movements: movements.length,
+      critical,
+      activity
+    };
+  }, [items, movements]);
 
   // ─── Context Value (memoized) ───
   const contextValue = useMemo(() => ({

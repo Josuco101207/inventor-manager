@@ -3,7 +3,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDWOFFslHI0eSqyUf_tb1D1VlzMZmNemmM",
   authDomain: "inventor-manager-a0b4d.firebaseapp.com",
   projectId: "inventor-manager-a0b4d",
@@ -12,7 +12,7 @@ const firebaseConfig = {
   appId: "1:213399034117:web:3e30a5421c516b05fe7f6c"
 };
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ 
     tabManager: persistentMultipleTabManager()

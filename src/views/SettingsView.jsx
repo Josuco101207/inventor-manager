@@ -40,13 +40,13 @@ const SettingsView = () => {
   );
 
   return (
-    <div className="settings-view animate-fade-in w-full bg-slate-50/50 min-h-screen">
+    <div className="settings-view animate-fade-in w-full min-h-screen">
       <Header />
       
       <div className="max-w-6xl mx-auto px-6 py-8">
         <header className="mb-10">
-          <h2 className="text-3xl font-black tracking-tight text-slate-900">Ajustes</h2>
-          <p className="text-slate-500 font-medium mt-1">Personaliza la experiencia y gestión del sistema</p>
+          <h2 className="text-4xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>Ajustes</h2>
+          <p className="font-medium mt-2" style={{ color: 'var(--text-muted)' }}>Personaliza la experiencia y gestión del sistema</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -63,7 +63,7 @@ const SettingsView = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="f-group">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 block px-1">Nombre Comercial</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider mb-2 block px-1" style={{ color: 'var(--text-muted)' }}>Nombre Comercial</label>
                     <input 
                       type="text" 
                       value={companyInfo.name} 
@@ -72,7 +72,7 @@ const SettingsView = () => {
                     />
                   </div>
                   <div className="f-group">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 block px-1">Moneda</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider mb-2 block px-1" style={{ color: 'var(--text-muted)' }}>Moneda</label>
                     <select className="cupertino-input cursor-pointer" value={companyInfo.currency} onChange={(e) => setCompanyInfo({...companyInfo, currency: e.target.value})}>
                       <option value="MXN">Peso Mexicano (MXN)</option>
                       <option value="USD">Dólar Estadounidense (USD)</option>
@@ -82,9 +82,9 @@ const SettingsView = () => {
                 </div>
 
                 <div className="f-group">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 block px-1">Dirección Fiscal</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider mb-2 block px-1" style={{ color: 'var(--text-muted)' }}>Dirección Fiscal</label>
                   <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} size={18} />
                     <input 
                       type="text" 
                       value={companyInfo.address} 
@@ -96,9 +96,9 @@ const SettingsView = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="f-group">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 block px-1">Teléfono</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider mb-2 block px-1" style={{ color: 'var(--text-muted)' }}>Teléfono</label>
                     <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} size={18} />
                       <input 
                         type="text" 
                         value={companyInfo.phone} 
@@ -108,9 +108,9 @@ const SettingsView = () => {
                     </div>
                   </div>
                   <div className="f-group">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 block px-1">Sitio Web</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider mb-2 block px-1" style={{ color: 'var(--text-muted)' }}>Sitio Web</label>
                     <div className="relative">
-                      <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <Globe className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} size={18} />
                       <input 
                         type="text" 
                         value={companyInfo.website} 
@@ -132,11 +132,11 @@ const SettingsView = () => {
                     <AlertOctagon size={20} />
                     <span className="font-bold uppercase tracking-widest text-[10px]">Área de Seguridad</span>
                   </div>
-                  <h4 className="font-bold text-slate-900 mb-1">Mantenimiento de Base de Datos</h4>
-                  <p className="text-sm text-slate-500 mb-6">Esta acción eliminará de forma irreversible el historial y artículos de la categoría seleccionada.</p>
+                  <h4 className="font-bold mb-1" style={{ color: 'var(--text-main)' }}>Mantenimiento de Base de Datos</h4>
+                  <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>Esta acción eliminará de forma irreversible el historial y artículos de la categoría seleccionada.</p>
                   
                   <div className="f-group mb-4">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 block px-1">Seleccionar Área a Vaciar</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider mb-2 block px-1" style={{ color: 'var(--text-muted)' }}>Seleccionar Área a Vaciar</label>
                     <select 
                       className="cupertino-input cursor-pointer border-red-100 focus:border-red-500" 
                       value={categoryToClear} 
@@ -158,9 +158,9 @@ const SettingsView = () => {
                     Vaciar Inventario {categoryToClear}
                   </button>
 
-                  <div className="mt-8 pt-8 border-t border-slate-200">
-                    <h4 className="font-bold text-slate-900 mb-1">Respaldo Total</h4>
-                    <p className="text-sm text-slate-500 mb-6">Descarga una copia completa de toda la base de datos en un solo archivo Excel (múltiples pestañas).</p>
+                  <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800">
+                    <h4 className="font-bold mb-1" style={{ color: 'var(--text-main)' }}>Respaldo Total</h4>
+                    <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>Descarga una copia completa de toda la base de datos en un solo archivo Excel (múltiples pestañas).</p>
                     <button 
                       className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
                       onClick={() => exportFullDatabase(items)}
@@ -176,7 +176,7 @@ const SettingsView = () => {
           {/* Sidebar Column */}
           <div className="space-y-8">
             <section className="settings-card-cupertino">
-              <h3 className="text-lg font-bold mb-6">Preferencias</h3>
+              <h3 className="text-lg font-bold mb-6" style={{ color: 'var(--text-main)' }}>Preferencias</h3>
               <div className="cupertino-group">
                 <div className="cupertino-row">
                   <div className="cupertino-label">
@@ -203,9 +203,9 @@ const SettingsView = () => {
             </section>
 
             <section className="settings-card-cupertino">
-              <h3 className="text-lg font-bold mb-6 flex items-center justify-between">
+              <h3 className="text-lg font-bold mb-6 flex items-center justify-between" style={{ color: 'var(--text-main)' }}>
                 Marcas
-                <Tag size={18} className="text-slate-400" />
+                <Tag size={18} style={{ color: 'var(--text-muted)' }} />
               </h3>
               <div className="flex gap-2 mb-6">
                 <input 
@@ -232,9 +232,9 @@ const SettingsView = () => {
             </section>
 
             <section className="settings-card-cupertino">
-              <h3 className="text-lg font-bold mb-6 flex items-center justify-between">
+              <h3 className="text-lg font-bold mb-6 flex items-center justify-between" style={{ color: 'var(--text-main)' }}>
                 Ubicaciones
-                <Map size={18} className="text-slate-400" />
+                <Map size={18} style={{ color: 'var(--text-muted)' }} />
               </h3>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-2">

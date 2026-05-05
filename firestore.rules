@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasUserDoc() {
+      return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return hasUserDoc() && userDoc().data.role == 'admin';
+    }
+
+    function isStaff() {
+      return hasUserDoc() &&
+        (userDoc().data.role == 'admin' || userDoc().data.role == 'almacenista');
+    }
+
+    function allowedCategories() {
+      return userDoc().data.allowedCategories;
+    }
+
+    function canWriteCategory(category) {
+      return isAdmin() || (isStaff() && category in allowedCategories());
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+
+      // Bloquea cualquier escritura que intente persistir contraseñas.
+      allow create: if signedIn()
+        && !('password' in request.resource.data)
+        && (isAdmin() || request.auth.uid == userId);
+
+      allow update: if signedIn()
+        && !('password' in request.resource.data)
+        && (
+          isAdmin()
+          || (
+            request.auth.uid == userId
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.allowedCategories == resource.data.allowedCategories
+            && request.resource.data.editableCategories == resource.data.editableCategories
+            && request.resource.data.allowedViews == resource.data.allowedViews
+          )
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    match /items/{itemId} {
+      allow read: if signedIn();
+      allow create: if isStaff() && canWriteCategory(request.resource.data.category);
+      allow update, delete: if isStaff() && canWriteCategory(resource.data.category);
+    }
+
+    match /movements/{movementId} {
+      allow read: if signedIn();
+      allow create: if isStaff() && canWriteCategory(request.resource.data.category);
+      allow update: if isStaff() && canWriteCategory(resource.data.category);
+      allow delete: if isAdmin();
+    }
+
+    match /personnel/{docId} {
+      allow read: if signedIn();
+      allow write: if isStaff();
+    }
+
+    match /brands/{docId} {
+      allow read: if signedIn();
+      allow write: if isStaff();
+    }
+
+    match /locations/{docId} {
+      allow read: if signedIn();
+      allow write: if isStaff();
+    }
+  }
+}

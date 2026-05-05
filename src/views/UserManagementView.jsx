@@ -1,24 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
-import { db } from '../firebase/config';
-import { collection, onSnapshot, query, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db, firebaseConfig } from '../firebase/config';
+import { collection, onSnapshot, query, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, deleteField } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import {
   UserPlus, Trash2, Shield, Mail, Key, Loader2,
-  Warehouse, User, ChevronDown, ChevronUp, Lock, PlusCircle, Edit3, X, Eye, EyeOff,
+  Warehouse, User, ChevronDown, ChevronUp, Lock, Edit3, X, Eye,
   LayoutDashboard, Wrench, PenTool, Package, Printer, Cpu, Layers, Archive, Landmark, History, Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDWOFFslHI0eSqyUf_tb1D1VlzMZmNemmM",
-  authDomain: "inventor-manager-a0b4d.firebaseapp.com",
-  projectId: "inventor-manager-a0b4d",
-  storageBucket: "inventor-manager-a0b4d.firebasestorage.app",
-  messagingSenderId: "213399034117",
-  appId: "1:213399034117:web:3e30a5421c516b05fe7f6c"
-};
 
 const ALL_CATEGORIES = [
   'Tornillería', 'Papelería', 'Herramientas', 'Impresión 3D',
@@ -68,10 +60,8 @@ const UserManagementView = () => {
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
   const [expandedUserId, setExpandedUserId] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [showPasswords, setShowPasswords] = useState({});
   const [isChangeModalOpen, setIsChangeModalOpen] = useState(false);
   const [changingPasswordUser, setChangingPasswordUser] = useState(null);
-  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
@@ -82,6 +72,15 @@ const UserManagementView = () => {
       data.sort((a, b) => (a.displayName || a.name || '').toLowerCase().localeCompare((b.displayName || b.name || '').toLowerCase()));
       setUsers(data);
       setLoading(false);
+
+      const legacyDocs = snapshot.docs.filter((d) => Object.prototype.hasOwnProperty.call(d.data(), 'password'));
+      if (legacyDocs.length > 0) {
+        Promise.all(
+          legacyDocs.map((d) => updateDoc(doc(db, 'users', d.id), { password: deleteField() }))
+        ).catch(() => {
+          toast.error('No se pudieron limpiar todas las contraseñas heredadas');
+        });
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -99,7 +98,6 @@ const UserManagementView = () => {
         allowedCategories: [...ALL_CATEGORIES], 
         editableCategories: [],
         allowedViews: ['dashboard', 'tornilleria', 'papeleria', 'herramientas', 'impresion-3d', 'electronica', 'general', 'almacen-temporal', 'parques'],
-        password: newUser.password,
         createdAt: serverTimestamp()
       });
       await signOut(secondaryAuth);
@@ -171,59 +169,32 @@ const UserManagementView = () => {
     finally { setSaving(false); }
   };
 
-  const handleChangePassword = async (e) => {
+  const handleAdminPasswordChange = async (e) => {
     e.preventDefault();
-    if (!changingPasswordUser || !newPassword) return;
+    if (!changingPasswordUser?.id || !newPassword) return;
+    if (newPassword.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
     setIsUpdatingPassword(true);
-
-    const secondaryApp = initializeApp(firebaseConfig, `UpdatePass_${Date.now()}`);
-    const secondaryAuth = getAuth(secondaryApp);
-
     try {
-      const authToUse = changingPasswordUser.password || currentPasswordInput;
-      
-      if (!authToUse) {
-        throw new Error("Se requiere la contraseña actual para usuarios antiguos.");
-      }
-
-      const { signInWithEmailAndPassword, updatePassword } = await import('firebase/auth');
-      const cred = await signInWithEmailAndPassword(secondaryAuth, changingPasswordUser.email, authToUse);
-      await updatePassword(cred.user, newPassword);
-
-      // Update in Firestore
-      await updateDoc(doc(db, 'users', changingPasswordUser.id), {
-        password: newPassword
+      const functions = getFunctions(undefined, 'us-central1');
+      const changeUserPasswordByAdmin = httpsCallable(functions, 'changeUserPasswordByAdmin');
+      await changeUserPasswordByAdmin({
+        uid: changingPasswordUser.id,
+        newPassword
       });
-
-      await signOut(secondaryAuth);
-      toast.success(`Contraseña de ${changingPasswordUser.email} actualizada`);
+      toast.success(`Contraseña actualizada para ${changingPasswordUser.email}`);
       setIsChangeModalOpen(false);
+      setChangingPasswordUser(null);
       setNewPassword('');
-      setCurrentPasswordInput('');
     } catch (err) {
-      const msg = err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' 
-        ? "La contraseña actual es incorrecta." 
-        : err.message;
-      toast.error(msg);
+      const message = err?.message || 'No fue posible actualizar la contraseña';
+      toast.error(message);
     } finally {
       setIsUpdatingPassword(false);
-      deleteApp(secondaryApp).catch(console.error);
     }
-  };
-
-  const sendResetEmail = async (email) => {
-    const { getAuth, sendPasswordResetEmail } = await import('firebase/auth');
-    try {
-      await sendPasswordResetEmail(getAuth(), email);
-      toast.success("Correo de restablecimiento enviado");
-      setIsChangeModalOpen(false);
-    } catch (err) {
-      toast.error("Error al enviar correo");
-    }
-  };
-
-  const togglePasswordVisibility = (uid) => {
-    setShowPasswords(prev => ({ ...prev, [uid]: !prev[uid] }));
   };
 
   const roleStyle = (role) => ({
@@ -290,12 +261,9 @@ const UserManagementView = () => {
                           <p style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Mail size={11} /> {u.email}
                           </p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', padding: '1px 6px', borderRadius: 4, cursor: 'pointer' }} onClick={() => togglePasswordVisibility(u.id)}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', padding: '1px 6px', borderRadius: 4 }}>
                             <Key size={10} color="#64748b" />
-                            <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 700, color: '#475569' }}>
-                              {showPasswords[u.id] ? (u.password || '---') : '••••••••'}
-                            </span>
-                            {showPasswords[u.id] ? <EyeOff size={10} color="#94a3b8" /> : <Eye size={10} color="#94a3b8" />}
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#475569' }}>Gestionada por Firebase Auth</span>
                           </div>
                         </div>
                       </div>
@@ -326,7 +294,7 @@ const UserManagementView = () => {
                       <button onClick={() => toggleRole(u)} title="Cambiar rol" style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '6px 10px', color: '#475569', cursor: 'pointer' }}>
                         <Shield size={13} />
                       </button>
-                      <button onClick={() => { setChangingPasswordUser(u); setIsChangeModalOpen(true); }} title="Cambiar Contraseña" style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '6px 10px', color: '#475569', cursor: 'pointer' }}>
+                      <button onClick={() => { setChangingPasswordUser(u); setNewPassword(''); setIsChangeModalOpen(true); }} title="Cambiar Contraseña" style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '6px 10px', color: '#475569', cursor: 'pointer' }}>
                         <Key size={13} />
                       </button>
                       <button onClick={() => handleDelete(u)} title="Eliminar" style={{ background: '#fff1f1', border: '1.5px solid #fecaca', borderRadius: 10, padding: '6px 10px', color: '#dc2626', cursor: 'pointer' }}>
@@ -459,7 +427,7 @@ const UserManagementView = () => {
               </div>
               <div className="f-group">
                 <label>Contraseña temporal</label>
-                <input type="text" required className="w-full" placeholder="Mín 6 caracteres" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+                <input type="password" required className="w-full" placeholder="Mín 6 caracteres" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
               </div>
               <div className="f-group">
                 <label>Rol</label>
@@ -486,53 +454,29 @@ const UserManagementView = () => {
               <h3 className="text-xl font-bold">Cambiar Contraseña</h3>
               <button onClick={() => setIsChangeModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={20} /></button>
             </div>
-            <p className="text-sm text-muted mb-6">Establece una nueva contraseña para <strong>{changingPasswordUser?.email}</strong>.</p>
-            <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
-              {!changingPasswordUser?.password && (
-                <div className="f-group">
-                  <label style={{ color: '#ea580c' }}>Contraseña Actual (Requerida por ser usuario antiguo)</label>
-                  <div className="relative">
-                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                      type="text" 
-                      required 
-                      placeholder="Contraseña que usa actualmente" 
-                      className="w-full" 
-                      style={{ borderColor: '#fed7aa', background: '#fffcf9' }}
-                      value={currentPasswordInput} 
-                      onChange={e => setCurrentPasswordInput(e.target.value)} 
-                    />
-                  </div>
-                </div>
-              )}
+            <p className="text-sm text-muted mb-6">Cambiarás la contraseña directamente desde un endpoint seguro de administrador para <strong>{changingPasswordUser?.email}</strong>.</p>
+            <form onSubmit={handleAdminPasswordChange} className="flex flex-col gap-4">
               <div className="f-group">
                 <label>Nueva Contraseña</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="Mín 6 caracteres" 
-                    className="w-full" 
-                    value={newPassword} 
-                    onChange={e => setNewPassword(e.target.value)} 
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder="Mín 6 caracteres"
+                    className="w-full"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
                   />
                 </div>
               </div>
-              <div className="flex flex-col gap-3 mt-2">
-                <div className="flex gap-4">
-                  <button type="button" className="btn-secondary flex-1" onClick={() => { setIsChangeModalOpen(false); setCurrentPasswordInput(''); }}>Cancelar</button>
-                  <button type="submit" className="btn-primary flex-1 flex justify-center items-center gap-2" disabled={isUpdatingPassword}>
-                    {isUpdatingPassword ? <Loader2 className="animate-spin" size={18} /> : 'Actualizar'}
-                  </button>
-                </div>
-                
-                <button 
-                  type="button" 
-                  onClick={() => sendResetEmail(changingPasswordUser.email)}
-                  style={{ background: 'none', border: 'none', color: '#0071e3', fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  O enviar correo de restablecimiento
+              <div className="flex gap-4">
+                <button type="button" className="btn-secondary flex-1" onClick={() => { setIsChangeModalOpen(false); setNewPassword(''); }}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary flex-1 flex justify-center items-center gap-2" disabled={isUpdatingPassword}>
+                  {isUpdatingPassword ? <Loader2 className="animate-spin" size={18} /> : 'Actualizar'}
                 </button>
               </div>
             </form>

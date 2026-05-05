@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Wrench, PenTool, Package, Printer, Cpu, Landmark, AlertTriangle, 
   Loader2, Archive, DollarSign, BarChart3, Layers, ArrowUpCircle,
-  ArrowDownCircle, Calendar, X, RefreshCw, ClipboardCheck, Activity, User, Zap
+  ArrowDownCircle, Calendar, X, RefreshCw, ClipboardCheck, Activity, User, Zap, ChevronRight
 } from 'lucide-react';
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
@@ -246,19 +246,57 @@ const Dashboard = () => {
       </div>
 
       {isCriticalModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-card animate-scale-up">
-            <header className="modal-header">
-              <h3><AlertTriangle className="text-red-500" /> Stock Crítico (Top 500)</h3>
-              <button onClick={() => setIsCriticalModalOpen(false)}><X /></button>
-            </header>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {lowStockItems.map(item => (
-                <div key={item.id} className="flex justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl">
-                  <span>{item.name}</span>
-                  <span className="font-bold text-red-500">{item.qty} / {item.threshold}</span>
+        <div className="modal-overlay" onClick={() => setIsCriticalModalOpen(false)}>
+          <div className="crit-modal-card animate-scale-up" onClick={e => e.stopPropagation()}>
+            <header className="crit-modal-header">
+              <div className="crit-modal-title-group">
+                <div className="crit-modal-icon">
+                  <AlertTriangle size={24} />
                 </div>
-              ))}
+                <div>
+                  <h3 className="crit-modal-title">Stock Crítico</h3>
+                  <p className="crit-modal-subtitle">Artículos por debajo del límite sugerido</p>
+                </div>
+              </div>
+              <button className="crit-modal-close" onClick={() => setIsCriticalModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </header>
+            
+            <div className="crit-modal-list">
+              {lowStockItems.length === 0 ? (
+                <div className="crit-modal-empty">
+                  <div className="crit-empty-icon">
+                    <Package size={32} />
+                  </div>
+                  <h4 className="crit-empty-title">Stock Saludable</h4>
+                  <p className="crit-empty-subtitle">Ningún artículo en estado crítico.</p>
+                </div>
+              ) : (
+                <div className="crit-modal-list-inner">
+                  {lowStockItems.map(item => (
+                    <div key={item.id} className="crit-item-row" onClick={() => navigate(categoryToRoute(item.category))} style={{ cursor: 'pointer' }}>
+                      <div className="crit-item-info">
+                        <span className="crit-item-name">{item.name}</span>
+                        <span className="crit-item-cat">{item.category || 'General'} {item.subcategory ? `• ${item.subcategory}` : ''}</span>
+                      </div>
+                      <div className="crit-item-actions">
+                        <div className="crit-item-stats">
+                          <span className="crit-item-stats-label">Stock Actual</span>
+                          <div className="crit-item-stats-values">
+                            <span className="crit-item-qty">{item.qty || 0}</span>
+                            <span className="crit-item-thresh">/ {item.threshold || 0}</span>
+                            <span className="crit-item-unit">{item.unit || 'pz'}</span>
+                          </div>
+                        </div>
+                        <button className="crit-item-go-btn" title="Ir a la categoría">
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

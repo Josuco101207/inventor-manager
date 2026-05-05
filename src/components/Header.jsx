@@ -23,6 +23,7 @@ const Header = () => {
   const navigate = useNavigate();
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchRef = useRef(null);
@@ -45,14 +46,20 @@ const Header = () => {
     setSelectedIndex(-1);
   }, [searchQuery]);
 
+  // Debounce para evitar filtrar en cada keypress (mejora rendimiento en listas grandes)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim() || !items) return [];
-    const q = searchQuery.toLowerCase();
+    if (!debouncedSearchQuery.trim() || !items) return [];
+    const q = debouncedSearchQuery.toLowerCase();
     return items.filter(item => {
       const safeMatch = (val) => val && String(val).toLowerCase().includes(q);
       return safeMatch(item.name) || safeMatch(item.codigo) || safeMatch(item.marca) || safeMatch(item.modelo) || safeMatch(item.item_number);
     }).slice(0, 8); // Mostrar top 8
-  }, [searchQuery, items]);
+  }, [debouncedSearchQuery, items]);
 
   const handleResultClick = (item) => {
     const route = categoryToRoute(item.category);
@@ -109,7 +116,7 @@ const Header = () => {
           onFocus={() => setIsSearchOpen(true)}
         />
         
-        {isSearchOpen && searchQuery.trim() !== '' && (
+        {isSearchOpen && debouncedSearchQuery.trim() !== '' && (
           <div className="search-results-dropdown animate-slide-up">
             {searchResults.length > 0 ? (
               searchResults.map((item, index) => (
@@ -128,7 +135,7 @@ const Header = () => {
               ))
             ) : (
               <div className="search-result-no-results">
-                No se encontraron resultados para "{searchQuery}"
+                No se encontraron resultados para "{debouncedSearchQuery}"
               </div>
             )}
           </div>
