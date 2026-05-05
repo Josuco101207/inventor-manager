@@ -357,3 +357,110 @@
   border-color: hsl(var(--primary));
   color: hsl(var(--primary));
 }
+
+/* ─── Responsive para PWA / Dispositivos Móviles ─── */
+@media (max-width: 768px) {
+  .parques-container {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    margin-top: 0;
+  }
+
+  .parques-header-row {
+    display: none; /* Ocultar encabezados de columna en móvil */
+  }
+
+  .parques-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+
+  .inv-row, .parques-row {
+    flex-direction: column;
+    height: auto;
+    padding: 1.25rem;
+    background: hsla(var(--bg-card), 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid hsla(var(--border-color), 0.5);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .inv-row-inner {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .inv-cell {
+    width: 100% !important;
+    justify-content: flex-start;
+    flex: none !important;
+  }
+
+  .inv-cell-name {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid hsla(var(--border-color), 0.3);
+  }
+
+  /* Contenedores para alineación en móvil */
+  .inv-cell-stock, .inv-cell-location, .inv-cell-min {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+  }
+
+  .inv-cell-stock::before {
+    content: 'Stock Actual';
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: hsl(var(--text-soft));
+    text-transform: uppercase;
+  }
+
+  .inv-cell-location::before {
+    content: 'Ubicación';
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: hsl(var(--text-soft));
+    text-transform: uppercase;
+  }
+
+  .inv-cell-min::before {
+    content: 'Stock Mínimo';
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: hsl(var(--text-soft));
+    text-transform: uppercase;
+  }
+
+  .inv-cell-actions {
+    border-top: 1px solid hsla(var(--border-color), 0.3);
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+    justify-content: space-between; /* Distribuir botones */
+  }
+
+  .inv-btn {
+    flex: 1; /* Botones más anchos para tap fácil */
+    height: 44px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .inv-row, .parques-row {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+  
+  .inv-item-name {
+    font-size: 1.1rem;
+  }
+}
