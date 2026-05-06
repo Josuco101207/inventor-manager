@@ -16,11 +16,13 @@
 }
 
 .inv-grid-5 {
-  grid-template-columns: minmax(200px, 2.5fr) 130px 1fr 100px 180px !important;
+  grid-template-columns: minmax(450px, 3fr) 140px 1fr 100px 180px !important;
+  column-gap: 2rem;
 }
 
 .inv-grid-4 {
-  grid-template-columns: minmax(200px, 2.5fr) 130px 1fr 180px !important;
+  grid-template-columns: minmax(450px, 3fr) 140px 1fr 180px !important;
+  column-gap: 2rem;
 }
 
 .parques-header-row {
