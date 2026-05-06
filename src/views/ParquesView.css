@@ -16,20 +16,20 @@
 }
 
 .inv-grid-5 {
-  grid-template-columns: minmax(450px, 3fr) 140px 1fr 100px 180px !important;
-  column-gap: 2rem;
+  grid-template-columns: minmax(200px, 2.5fr) 140px 1fr 100px 180px !important;
+  column-gap: 1.5rem;
 }
 
 .inv-grid-4 {
-  grid-template-columns: minmax(450px, 3fr) 140px 1fr 180px !important;
-  column-gap: 2rem;
+  grid-template-columns: minmax(200px, 2.5fr) 140px 1fr 180px !important;
+  column-gap: 1.5rem;
 }
 
 .parques-header-row {
   display: grid;
   /* grid-template-columns set by modifier classes */
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.5rem 1rem calc(1.5rem + 180px); /* Shifted right by 180px */
   background: hsla(var(--bg-main), 0.5);
   border-bottom: 1px solid hsla(var(--border-color), 0.5);
   font-size: 10px;
@@ -47,7 +47,7 @@
 
 .inv-row {
   display: block; /* Removed flex from wrapper */
-  padding: 0 1.5rem;
+  padding: 0 1.5rem 0 calc(1.5rem + 180px); /* Shifted right by 180px */
   border-bottom: 1px solid hsla(var(--border-color), 0.2);
   transition: all 0.3s ease;
 }
@@ -168,7 +168,7 @@
   display: grid;
   /* grid-template-columns set by modifier classes */
   align-items: center;
-  padding: 0 1.5rem;
+  padding: 0 1.5rem 0 calc(1.5rem + 180px); /* Shifted right by 180px */
   height: 85px; /* Consistent height */
   border-bottom: 1px solid hsla(var(--border-color), 0.2);
   transition: all 0.3s ease;
