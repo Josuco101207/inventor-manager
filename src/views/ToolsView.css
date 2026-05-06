@@ -1,5 +1,5 @@
 .tools-view {
-  padding: 0;
+  padding: 0 2rem 0 5rem;
   display: flex;
   flex-direction: column;
   position: relative;
