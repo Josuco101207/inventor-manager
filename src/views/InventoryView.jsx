@@ -27,75 +27,72 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
 
   const { handleDelete, handleEdit, handleAction, handleAudit } = handlers;
 
-  const stockLevel = (item.qty || 0) <= (item.threshold || 0) ? 'critical' : 
-                     (item.qty || 0) <= (item.threshold || 0) * 2 ? 'low' : 'optimal';
+  const isCritical = (item.qty || 0) <= (item.threshold || 0);
+  const isLow = !isCritical && (item.qty || 0) <= (item.threshold || 0) * 2;
+  const stockClass = isCritical ? 'critical' : isLow ? 'low' : 'ok';
 
   return (
-    <div className="inv-row animate-slide-up">
-
-      <div className="inv-row-inner grid-base grid-inv-5">
-        {/* Name + Meta */}
-        <div className="inv-cell col-art">
-          <div className="inv-item-avatar">
-            {item.name ? item.name.charAt(0).toUpperCase() : '?'}
-          </div>
-          <div className="inv-item-info">
-            <span className="inv-item-name">{item.name}</span>
-            <div className="inv-item-meta">
-              {item.subcategory && <span className="inv-tag inv-tag-blue">{item.subcategory}</span>}
-              {item.marca && <span className="inv-tag inv-tag-subtle">{item.marca}</span>}
-              {item.item_number && <span className="inv-tag inv-tag-mono">#{item.item_number}</span>}
-            </div>
+    <div className="invt-grid-row invt-data-row">
+      {/* Name + Meta */}
+      <div className="invt-cell-art">
+        <div className="invt-avatar">
+          {item.name ? item.name.charAt(0).toUpperCase() : '?'}
+        </div>
+        <div className="invt-item-info">
+          <span className="invt-item-name">{item.name || 'Sin nombre'}</span>
+          <div className="invt-item-tags">
+            {item.subcategory && <span className="invt-tag invt-tag-blue">{item.subcategory}</span>}
+            {item.marca && <span className="invt-tag invt-tag-gray">{item.marca}</span>}
+            {item.item_number && <span className="invt-tag invt-tag-mono">#{item.item_number}</span>}
           </div>
         </div>
+      </div>
 
-        {/* Stock */}
-        <div className="inv-cell col-stock">
-          <div className="inv-stock-value">
-            <span className="inv-stock-num">{item.qty || 0}</span>
-            <span className="inv-stock-unit">{item.unit || 'pz'}</span>
-          </div>
-          <span className={`inv-stock-badge inv-stock-${stockLevel}`}>
-            {stockLevel === 'critical' ? 'Crítico' : stockLevel === 'low' ? 'Bajo' : 'Óptimo'}
-          </span>
+      {/* Stock */}
+      <div className="invt-cell-stock">
+        <div className="invt-stock-row">
+          <span className={`invt-stock-num stock-${stockClass}`}>{item.qty || 0}</span>
+          <span className="invt-stock-unit">{item.unit || 'pz'}</span>
         </div>
+        <div className="invt-stock-bar-bg">
+          <div 
+            className={`invt-stock-bar bar-${stockClass}`}
+            style={{ width: `${Math.min(((item.qty || 0) / Math.max((item.threshold || 1) * 3, 1)) * 100, 100)}%` }}
+          />
+        </div>
+      </div>
 
-        {/* Location */}
-        <div className="inv-cell col-ref">
-          <Landmark size={13} className="inv-location-icon" />
-          <span>{item.location || 'General'}</span>
+      {/* Referencia (Location + Min) */}
+      <div className="invt-cell-ref">
+        <span className="invt-badge-min">Mín: {item.threshold || 0}</span>
+        <div className="invt-loc-text">
+          <Landmark size={12} className="invt-loc-icon" />
+          {item.location || 'General'}
         </div>
+      </div>
 
-        {/* Min */}
-        <div className="inv-cell col-min">
-          <span className="inv-min-value">{item.threshold || 0}</span>
-        </div>
-
-        {/* Actions */}
-        <div className="inv-cell col-act">
-          <div className="actions-group">
-            {isStaff && (
-              <>
-                <button className="inv-btn inv-btn-move" onClick={() => handleAction(item)} title="Movimiento">
-                  <Activity size={15} />
-                </button>
-                <button className="inv-btn inv-btn-audit" onClick={() => handleAudit(item)} title="Auditar">
-                  <ClipboardCheck size={15} />
-                </button>
-              </>
-            )}
-            {(isAdmin || canEditIn(categoryTitle)) && (
-              <button className="inv-btn inv-btn-edit" onClick={() => handleEdit(item)} title="Editar">
-                <Edit3 size={15} />
-              </button>
-            )}
-            {isAdmin && (
-              <button className="inv-btn inv-btn-delete" onClick={() => handleDelete(item)} title="Eliminar">
-                <Trash2 size={15} />
-              </button>
-            )}
-          </div>
-        </div>
+      {/* Actions */}
+      <div className="invt-cell-act">
+        {isStaff && (
+          <>
+            <button className="invt-btn invt-btn-blue" onClick={() => handleAction(item)} title="Movimiento">
+              <Activity size={15} />
+            </button>
+            <button className="invt-btn invt-btn-orange" onClick={() => handleAudit(item)} title="Auditar">
+              <ClipboardCheck size={15} />
+            </button>
+          </>
+        )}
+        {(isAdmin || canEditIn(categoryTitle)) && (
+          <button className="invt-btn invt-btn-gray" onClick={() => handleEdit(item)} title="Editar">
+            <Edit3 size={15} />
+          </button>
+        )}
+        {isAdmin && (
+          <button className="invt-btn invt-btn-red" onClick={() => handleDelete(item)} title="Eliminar">
+            <Trash2 size={15} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -202,8 +199,8 @@ const InventoryView = ({ categoryTitle }) => {
   }, [items, filteredItems, categoryTitle]);
 
   if (loading) return (
-    <div className="inv-loading">
-      <Loader2 className="inv-loading-spinner" size={48} />
+    <div className="invt-loading">
+      <Loader2 className="invt-loading-spinner" size={48} />
       <p>Cargando inventario...</p>
     </div>
   );
@@ -307,16 +304,15 @@ const InventoryView = ({ categoryTitle }) => {
         </div>
       )}
 
-      <div className="parques-container">
-        <div className="parques-header-row grid-base grid-inv-5">
-          <div className="col-art">Artículo / Detalle</div>
-          <div className="col-stock">Stock Actual</div>
-          <div className="col-ref">Ubicación</div>
-          <div className="col-min">Mín</div>
-          <div className="col-act">Acciones</div>
+      <div className="invt-container">
+        <div className="invt-grid-row invt-header-row">
+          <div>Artículo / Detalle</div>
+          <div style={{ textAlign: 'center' }}>Stock Actual</div>
+          <div style={{ textAlign: 'center' }}>Referencia</div>
+          <div style={{ textAlign: 'right' }}>Acciones</div>
         </div>
         
-        <div className="parques-body">
+        <div className="invt-body">
           {filteredItems.length > 0 ? (
             <>
               {filteredItems.slice(0, visibleCount).map((item, index) => (
@@ -333,15 +329,15 @@ const InventoryView = ({ categoryTitle }) => {
               ))}
 
               {visibleCount < filteredItems.length && (
-                <div ref={observerTarget} className="flex justify-center py-10">
-                  <Loader2 className="animate-spin text-blue-500" size={32} />
+                <div ref={observerTarget} style={{ display: 'flex', justifyContent: 'center', padding: '2.5rem 0' }}>
+                  <Loader2 className="animate-spin" style={{ color: 'hsl(var(--primary))' }} size={32} />
                 </div>
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
-              <Package size={64} className="opacity-10" />
-              <p className="font-bold text-xl opacity-30">No se encontraron artículos</p>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '5rem 0', gap: '1rem', opacity: 0.4 }}>
+              <Package size={64} />
+              <p style={{ fontWeight: 800, fontSize: '1.2rem' }}>No se encontraron artículos</p>
             </div>
           )}
         </div>
