@@ -33,9 +33,9 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
   return (
     <div className="inv-row animate-slide-up">
 
-      <div className="inv-row-inner">
+      <div className="inv-row-inner inv-grid-5">
         {/* Name + Meta */}
-        <div className="inv-cell inv-cell-name">
+        <div className="inv-cell col-art">
           <div className="inv-item-avatar">
             {item.name ? item.name.charAt(0).toUpperCase() : '?'}
           </div>
@@ -50,7 +50,7 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
         </div>
 
         {/* Stock */}
-        <div className="inv-cell inv-cell-stock">
+        <div className="inv-cell col-stock">
           <div className="inv-stock-value">
             <span className="inv-stock-num">{item.qty || 0}</span>
             <span className="inv-stock-unit">{item.unit || 'pz'}</span>
@@ -61,38 +61,40 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
         </div>
 
         {/* Location */}
-        <div className="inv-cell inv-cell-location">
+        <div className="inv-cell col-ref">
           <Landmark size={13} className="inv-location-icon" />
           <span>{item.location || 'General'}</span>
         </div>
 
         {/* Min */}
-        <div className="inv-cell inv-cell-min">
+        <div className="inv-cell col-min">
           <span className="inv-min-value">{item.threshold || 0}</span>
         </div>
 
         {/* Actions */}
-        <div className="inv-cell inv-cell-actions">
-          {isStaff && (
-            <>
-              <button className="inv-btn inv-btn-move" onClick={() => handleAction(item)} title="Movimiento">
-                <Activity size={15} />
+        <div className="inv-cell col-act">
+          <div className="actions-group">
+            {isStaff && (
+              <>
+                <button className="inv-btn inv-btn-move" onClick={() => handleAction(item)} title="Movimiento">
+                  <Activity size={15} />
+                </button>
+                <button className="inv-btn inv-btn-audit" onClick={() => handleAudit(item)} title="Auditar">
+                  <ClipboardCheck size={15} />
+                </button>
+              </>
+            )}
+            {(isAdmin || canEditIn(categoryTitle)) && (
+              <button className="inv-btn inv-btn-edit" onClick={() => handleEdit(item)} title="Editar">
+                <Edit3 size={15} />
               </button>
-              <button className="inv-btn inv-btn-audit" onClick={() => handleAudit(item)} title="Auditar">
-                <ClipboardCheck size={15} />
+            )}
+            {isAdmin && (
+              <button className="inv-btn inv-btn-delete" onClick={() => handleDelete(item)} title="Eliminar">
+                <Trash2 size={15} />
               </button>
-            </>
-          )}
-          {(isAdmin || canEditIn(categoryTitle)) && (
-            <button className="inv-btn inv-btn-edit" onClick={() => handleEdit(item)} title="Editar">
-              <Edit3 size={15} />
-            </button>
-          )}
-          {isAdmin && (
-            <button className="inv-btn inv-btn-delete" onClick={() => handleDelete(item)} title="Eliminar">
-              <Trash2 size={15} />
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -306,7 +308,7 @@ const InventoryView = ({ categoryTitle }) => {
       )}
 
       <div className="parques-container">
-        <div className="parques-header-row">
+        <div className="parques-header-row inv-grid-5">
           <div className="col-art">Artículo / Detalle</div>
           <div className="col-stock">Stock Actual</div>
           <div className="col-ref">Ubicación</div>
