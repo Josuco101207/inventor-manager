@@ -150,7 +150,7 @@
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 2.5rem;
   padding-bottom: 5rem;
-  padding-left: 18rem;
+  padding-left: 8rem;
 }
 
 /* Tool Card */
