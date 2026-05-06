@@ -27,7 +27,7 @@ const TableRow = memo(({
   const isLow = !isCritical && (item.qty || 0) <= (item.threshold || 0) * 2;
 
   return (
-    <div className="parques-row grid-inv-4 animate-slide-up">
+    <div className="parques-row grid-base grid-inv-4 animate-slide-up">
       <div className="col-art">
         <div className="park-name-group">
           <span className="park-name">{item.name}</span>
@@ -265,7 +265,7 @@ const ParquesView = () => {
       )}
 
       <div className="parques-container">
-        <div className="parques-header-row grid-inv-4">
+        <div className="parques-header-row grid-base grid-inv-4">
           <div className="col-art">Artículo / Sede</div>
           <div className="col-stock">Stock Actual</div>
           <div className="col-ref">Referencia</div>

@@ -33,7 +33,7 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
   return (
     <div className="inv-row animate-slide-up">
 
-      <div className="inv-row-inner grid-inv-5">
+      <div className="inv-row-inner grid-base grid-inv-5">
         {/* Name + Meta */}
         <div className="inv-cell col-art">
           <div className="inv-item-avatar">
@@ -308,7 +308,7 @@ const InventoryView = ({ categoryTitle }) => {
       )}
 
       <div className="parques-container">
-        <div className="parques-header-row grid-inv-5">
+        <div className="parques-header-row grid-base grid-inv-5">
           <div className="col-art">Artículo / Detalle</div>
           <div className="col-stock">Stock Actual</div>
           <div className="col-ref">Ubicación</div>
