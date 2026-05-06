@@ -31,23 +31,20 @@ const Sidebar = () => {
   const hasAccess = (viewId) => {
     if (isAdmin) return true;
     if (!userData) return false;
-    // Retrocompatibilidad: Si no tiene el campo, tiene acceso total por defecto
     if (!userData.allowedViews) return true; 
     return userData.allowedViews.includes(viewId);
   };
 
   return (
     <>
-      {/* Hamburger Button — visible only on tablet/mobile */}
       <button 
         className={`hamburger-btn ${isOpen ? 'hamburger-open' : ''}`} 
         onClick={() => setIsOpen(!isOpen)}
-        aria-label="Toggle menu"
+        aria-label="Menu"
       >
-        {isOpen ? <X size={22} /> : <Menu size={22} />}
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Overlay */}
       {isOpen && (
         <div className="sidebar-overlay" onClick={() => setIsOpen(false)} />
       )}
@@ -57,14 +54,8 @@ const Sidebar = () => {
           <div className="logo-icon flex items-center justify-center">
             <Package size={28} color="#ffffff" />
           </div>
-          <div className="flex flex-col">
-            <h1 className="text-xl sidebar-title">Inventario</h1>
-            {isAdmin && (
-              <span className="badge badge-success flex items-center gap-1" style={{ fontSize: '10px', padding: '2px 8px' }}>
-                <ShieldCheck size={10} /> MODO ADMIN
-              </span>
-            )}
-          </div>
+          <h1 className="sidebar-title">Inventario</h1>
+          <p className="text-[10px] text-white/50 font-black tracking-tighter uppercase">@ MODO ADMIN</p>
         </div>
       
         <nav className="sidebar-nav">
@@ -205,6 +196,9 @@ const Sidebar = () => {
               </button>
             </li>
           </ul>
+          <div className="mt-2 text-[10px] text-center opacity-30 font-mono">
+            v1.2.8 - Premium Layout Fix
+          </div>
         </div>
       </aside>
     </>
