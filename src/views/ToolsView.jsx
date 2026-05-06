@@ -214,6 +214,10 @@ const ToolsView = () => {
 
   const handleLoanConfirm = async () => {
     if (!borrowerName) return;
+    
+    // Si el usuario tenía una selección múltiple y el tool actual está en ella,
+    // quizás deberíamos haber usado bulkLoan. Pero si llegó aquí es porque
+    // llamó a loanItem directamente.
     await loanItem(selectedTool.id, borrowerName, userName);
     setIsLoanModalOpen(false);
     setBorrowerName('');
@@ -351,7 +355,15 @@ const ToolsView = () => {
             onSelectToggle={toggleToolSelection}
             onEdit={(t) => { setSelectedTool(t); setIsAddModalOpen(true); }}
             onDelete={handleDelete}
-            onLoan={(t) => { setSelectedTool(t); setIsLoanModalOpen(true); }}
+            onLoan={(t) => { 
+              // Si el item clickeado está en la selección y hay más de uno, ir por lote
+              if (selectedToolIds.includes(t.id) && selectedToolIds.length > 1) {
+                setIsBulkLoanModalOpen(true);
+              } else {
+                setSelectedTool(t); 
+                setIsLoanModalOpen(true);
+              }
+            }}
             onReturn={handleReturnConfirm}
             onFault={(t) => { setSelectedTool(t); setIsFaultModalOpen(true); }}
             onRepair={handleRepairConfirm}
@@ -433,9 +445,6 @@ const ToolsView = () => {
                 onChange={(e) => setBorrowerName(e.target.value)} 
                 autoFocus
               />
-              <datalist id="personnel-list">
-                {personnel.map(p => <option key={p.id} value={p.name} />)}
-              </datalist>
             </div>
 
             <div className="flex gap-4">
@@ -572,6 +581,10 @@ const ToolsView = () => {
           </div>
         </div>
       )}
+      {/* Global Personnel Datalist for all modals */}
+      <datalist id="personnel-list">
+        {personnel.map(p => <option key={p.id} value={p.name} />)}
+      </datalist>
     </main>
   );
 };
