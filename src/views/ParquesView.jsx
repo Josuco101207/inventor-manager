@@ -28,7 +28,11 @@ const TableRow = memo(({
 
   return (
     <div className="parques-row grid-base grid-inv-4 animate-slide-up">
+      {/* Artículo / Sede */}
       <div className="col-art">
+        <div className="inv-item-avatar">
+          {item.name ? item.name.charAt(0).toUpperCase() : '?'}
+        </div>
         <div className="park-name-group">
           <span className="park-name">{item.name}</span>
           <div className="park-meta">
@@ -38,6 +42,7 @@ const TableRow = memo(({
         </div>
       </div>
 
+      {/* Stock Actual */}
       <div className="col-stock">
         <div className="stock-display">
           <div className="stock-value-group">
@@ -49,36 +54,38 @@ const TableRow = memo(({
           <div className="stock-progress-bg">
             <div 
               className={`stock-progress-bar ${isCritical ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-green-500'}`}
-              style={{ width: `${Math.min(((item.qty || 0) / ((item.threshold || 0) * 3)) * 100, 100)}%` }}
+              style={{ width: `${Math.min(((item.qty || 0) / Math.max((item.threshold || 1) * 3, 1)) * 100, 100)}%` }}
             />
           </div>
         </div>
       </div>
 
+      {/* Referencia (Mínimo) */}
       <div className="col-ref">
         <span className="badge-min">Mín: {item.threshold || 0}</span>
       </div>
 
+      {/* Acciones */}
       <div className="col-act">
         <div className="actions-group">
           {isStaff && (
             <>
               <button className="btn-icon-action btn-icon-blue" onClick={() => onAction(item)} title="Movimiento">
-                <Activity size={18} />
+                <Activity size={16} />
               </button>
               <button className="btn-icon-action btn-icon-orange" onClick={() => onAudit(item)} title="Auditar">
-                <ClipboardCheck size={18} />
+                <ClipboardCheck size={16} />
               </button>
             </>
           )}
           {(isAdmin || canEdit) && (
             <button className="btn-icon-action btn-icon-gray" onClick={() => onEdit(item)} title="Editar">
-              <Edit3 size={18} />
+              <Edit3 size={16} />
             </button>
           )}
           {isAdmin && (
-            <button className="btn-icon-action btn-icon-gray text-red-500 hover:text-white hover:!bg-red-500" onClick={() => onDelete(item.id, item.name)} title="Eliminar">
-              <Trash2 size={18} />
+            <button className="btn-icon-action btn-icon-gray" onClick={() => onDelete(item.id, item.name)} title="Eliminar" style={{ color: 'hsl(var(--danger))' }}>
+              <Trash2 size={16} />
             </button>
           )}
         </div>

@@ -2,6 +2,9 @@
   box-sizing: border-box;
 }
 
+/* ═══════════════════════════════════════════
+   PARQUES TABLE CONTAINER
+   ═══════════════════════════════════════════ */
 .parques-container {
   background: hsla(var(--bg-card), 0.5);
   backdrop-filter: blur(24px);
@@ -9,18 +12,20 @@
   border: 1px solid hsla(var(--border-color), 0.2);
   box-shadow: var(--shadow-xl);
   margin-top: 1.5rem;
-  overflow: hidden;
+  overflow-x: auto;
   display: flex;
   flex-direction: column;
 }
 
-/* Shared Grid Utility */
+/* ═══════════════════════════════════════════
+   SHARED GRID BASE
+   ═══════════════════════════════════════════ */
 .grid-base {
   display: grid !important;
   align-items: center;
   padding: 0 2rem !important;
   width: 100% !important;
-  min-width: 900px; /* Force minimum width to prevent collapse */
+  min-width: 800px;
 }
 
 /* 5 Column Grid (InventoryView) */
@@ -30,9 +35,12 @@
 
 /* 4 Column Grid (ParquesView) */
 .grid-inv-4 {
-  grid-template-columns: 2.5fr 150px 150px 200px !important;
+  grid-template-columns: 2.5fr 160px 120px 220px !important;
 }
 
+/* ═══════════════════════════════════════════
+   HEADER ROW
+   ═══════════════════════════════════════════ */
 .parques-header-row {
   height: 54px;
   background: hsla(var(--bg-main), 0.8);
@@ -47,11 +55,17 @@
   z-index: 20;
 }
 
+/* ═══════════════════════════════════════════
+   BODY
+   ═══════════════════════════════════════════ */
 .parques-body {
   overflow-x: auto;
   width: 100%;
 }
 
+/* ═══════════════════════════════════════════
+   ROWS
+   ═══════════════════════════════════════════ */
 .inv-row, .parques-row {
   border-bottom: 1px solid hsla(var(--border-color), 0.1);
   transition: all 0.2s ease;
@@ -63,15 +77,17 @@
 }
 
 .inv-row-inner, .parques-row {
-  height: 88px;
+  height: 72px;
 }
 
-/* Cell Styles */
+/* ═══════════════════════════════════════════
+   COLUMN CELLS
+   ═══════════════════════════════════════════ */
 .col-art { 
   display: flex; 
   align-items: center; 
-  gap: 1.25rem; 
-  padding-right: 1.5rem;
+  gap: 1rem; 
+  padding-right: 1rem;
   overflow: hidden;
 }
 
@@ -102,10 +118,111 @@
   display: flex; 
   align-items: center; 
   justify-content: flex-end; 
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
-/* Item UI Elements */
+/* ═══════════════════════════════════════════
+   PARQUES ROW — ARTICLE CELL ELEMENTS
+   ═══════════════════════════════════════════ */
+.park-name-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.park-name {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: hsl(var(--text-main));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.park-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.park-badge-sub {
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: hsla(var(--primary), 0.15);
+  color: hsl(var(--primary));
+}
+
+.park-brand {
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: hsla(var(--border-color), 0.4);
+  color: hsl(var(--text-soft));
+}
+
+/* ═══════════════════════════════════════════
+   STOCK DISPLAY
+   ═══════════════════════════════════════════ */
+.stock-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.stock-value-group {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.stock-num {
+  font-size: 1.4rem;
+  font-weight: 950;
+}
+
+.stock-unit {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: hsl(var(--text-soft));
+  text-transform: uppercase;
+}
+
+.stock-progress-bg {
+  width: 80%;
+  height: 4px;
+  border-radius: 4px;
+  background: hsla(var(--border-color), 0.3);
+  overflow: hidden;
+}
+
+.stock-progress-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Stock color utilities */
+.text-red-500 { color: hsl(var(--danger, 0 72% 51%)); }
+.text-orange-500 { color: hsl(var(--warning, 25 95% 53%)); }
+.text-green-500 { color: hsl(var(--success, 142 71% 45%)); }
+.bg-red-500 { background-color: hsl(var(--danger, 0 72% 51%)); }
+.bg-orange-500 { background-color: hsl(var(--warning, 25 95% 53%)); }
+.bg-green-500 { background-color: hsl(var(--success, 142 71% 45%)); }
+
+/* ═══════════════════════════════════════════
+   ITEM UI ELEMENTS (shared with InventoryView)
+   ═══════════════════════════════════════════ */
 .inv-item-avatar {
   width: 46px;
   height: 46px;
@@ -188,23 +305,35 @@
   border-radius: 14px;
   font-size: 0.9rem;
   border: 1px solid hsla(var(--border-color), 0.3);
+  white-space: nowrap;
 }
 
-/* Actions */
+/* ═══════════════════════════════════════════
+   ACTIONS — HORIZONTAL ROW
+   ═══════════════════════════════════════════ */
+.actions-group {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
 .inv-btn, .btn-icon-action {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  flex-shrink: 0;
 }
 
 .inv-btn:hover, .btn-icon-action:hover {
-  transform: scale(1.1) translateY(-3px);
+  transform: scale(1.1) translateY(-2px);
   box-shadow: 0 8px 16px -4px rgba(0,0,0,0.2);
 }
 
@@ -220,7 +349,9 @@
 .inv-btn-delete { background: hsla(var(--danger), 0.1); color: hsl(var(--danger)); }
 .inv-btn-delete:hover { background: hsl(var(--danger)); color: white; }
 
-/* Subcategories */
+/* ═══════════════════════════════════════════
+   SUBCATEGORY PILLS
+   ═══════════════════════════════════════════ */
 .subcat-nav-wrapper {
   display: flex;
   align-items: center;
@@ -251,26 +382,35 @@
   transform: translateY(-2px);
 }
 
-/* Responsive */
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
 @media (max-width: 1200px) {
   .parques-container { border-radius: 0; margin: 0; border: none; }
 }
 
 @media (max-width: 768px) {
-  .parques-header-row { display: none; }
+  .parques-header-row { display: none !important; }
+
   .grid-base { 
     display: flex !important; 
     flex-direction: column !important; 
     height: auto !important; 
-    padding: 2rem !important; 
-    gap: 1.5rem; 
-    min-width: 0;
+    padding: 1.5rem !important; 
+    gap: 1rem; 
+    min-width: 0 !important;
   }
+
   .inv-row-inner, .parques-row { height: auto !important; }
+
   .col-art, .col-stock, .col-ref, .col-min, .col-act { 
     width: 100% !important; 
     justify-content: flex-start !important; 
     text-align: left !important; 
     padding: 0 !important;
+  }
+
+  .actions-group {
+    justify-content: flex-start;
   }
 }
