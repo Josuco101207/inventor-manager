@@ -1,5 +1,5 @@
 .tools-view {
-  padding: 0 2rem 0 15rem;
+  padding: 0 2rem;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -150,6 +150,7 @@
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 2.5rem;
   padding-bottom: 5rem;
+  padding-left: 15rem;
 }
 
 /* Tool Card */
