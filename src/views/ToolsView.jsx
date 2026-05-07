@@ -204,7 +204,7 @@ const ToolsView = () => {
     );
   }
 
-  const userName = userData?.name || userData?.displayName || 'Alfonso';
+  const userName = userData?.name || userData?.displayName || 'Jonathan';
 
   const handleDelete = useCallback((id, name) => {
     if (window.confirm(`¿Eliminar la herramienta "${name}" permanentemente?`)) {

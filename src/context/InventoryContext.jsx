@@ -193,7 +193,7 @@ export const InventoryProvider = ({ children }) => {
   }, [user, fetchAuxiliaryData]);
 
   // ─── Helpers ───
-  const addMovement = useCallback(async (action, itemName, qty, user = 'Alfonso', details = '', category = 'General') => {
+  const addMovement = useCallback(async (action, itemName, qty, user = 'Jonathan', details = '', category = 'General') => {
     try {
       const relatedItem = itemsRef.current.find(i => i.name === itemName);
       const subcategory = relatedItem?.subcategory || '';
@@ -214,7 +214,7 @@ export const InventoryProvider = ({ children }) => {
   }, []);
 
   // ─── CAPA 4: Optimistic UI — Stock Update ───
-  const updateStock = useCallback(async (itemId, change, userName = 'Alfonso', customDetails = '') => {
+  const updateStock = useCallback(async (itemId, change, userName = 'Jonathan', customDetails = '') => {
     const currentItems = itemsRef.current;
     const itemIndex = currentItems.findIndex(i => i.id === itemId);
     if (itemIndex === -1) return;
@@ -265,7 +265,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const loanItem = useCallback(async (itemId, borrower, userName = 'Alfonso') => {
+  const loanItem = useCallback(async (itemId, borrower, userName = 'Jonathan') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item || (item.qty || 0) <= 0) {
       toast.error("No hay stock disponible para préstamo");
@@ -295,7 +295,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const bulkLoanItems = useCallback(async (itemIds, borrower, userName = 'Alfonso') => {
+  const bulkLoanItems = useCallback(async (itemIds, borrower, userName = 'Jonathan') => {
     const availableItems = itemsRef.current.filter(i => itemIds.includes(i.id) && (i.qty || 0) > 0);
     if (availableItems.length === 0) {
       toast.error("Ninguna de las herramientas seleccionadas tiene stock");
@@ -331,7 +331,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const returnItem = useCallback(async (itemId, userName = 'Alfonso') => {
+  const returnItem = useCallback(async (itemId, userName = 'Jonathan') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -358,7 +358,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const reportMaintenance = useCallback(async (itemId, reason, userName = 'Alfonso') => {
+  const reportMaintenance = useCallback(async (itemId, reason, userName = 'Jonathan') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -378,7 +378,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const completeMaintenance = useCallback(async (itemId, userName = 'Alfonso') => {
+  const completeMaintenance = useCallback(async (itemId, userName = 'Jonathan') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -398,7 +398,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const auditStock = useCallback(async (itemId, physicalQty, userName = 'Alfonso', reason = '') => {
+  const auditStock = useCallback(async (itemId, physicalQty, userName = 'Jonathan', reason = '') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -418,7 +418,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const addItem = useCallback(async (newItem, userName = 'Alfonso') => {
+  const addItem = useCallback(async (newItem, userName = 'Jonathan') => {
     try {
       await addDoc(collection(db, 'items'), {
         ...newItem,
@@ -433,7 +433,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const deleteItem = useCallback(async (itemId, userName = 'Alfonso') => {
+  const deleteItem = useCallback(async (itemId, userName = 'Jonathan') => {
     try {
       const item = itemsRef.current.find(i => i.id === itemId);
       await deleteDoc(doc(db, 'items', itemId));
@@ -444,7 +444,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const editItem = useCallback(async (itemId, updatedFields, userName = 'Alfonso') => {
+  const editItem = useCallback(async (itemId, updatedFields, userName = 'Jonathan') => {
     try {
       const item = itemsRef.current.find(i => i.id === itemId);
       const itemRef = doc(db, 'items', itemId);
@@ -622,7 +622,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [isAutoWiping]);
 
-  const deleteItemsByCategory = useCallback(async (category, userName = 'Alfonso') => {
+  const deleteItemsByCategory = useCallback(async (category, userName = 'Jonathan') => {
     try {
       const categoryItems = itemsRef.current.filter(i => i.category === category);
       if (categoryItems.length === 0) {
@@ -653,7 +653,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const clearDatabaseCategories = useCallback(async (categories, userName = 'Alfonso') => {
+  const clearDatabaseCategories = useCallback(async (categories, userName = 'Jonathan') => {
     try {
       toast.loading("LIMPIANDO ÁREAS SELECCIONADAS...", { id: 'clear-db' });
       

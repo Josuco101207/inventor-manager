@@ -248,7 +248,7 @@ const InventoryView = ({ categoryTitle }) => {
               accept=".xlsx,.xls" 
               onChange={async (e) => {
                 const data = await processInventoryExcel(e.target.files[0]);
-                if (data) bulkAddItems(data, categoryTitle, userData?.name || 'Alfonso');
+                if (data) bulkAddItems(data, categoryTitle, userData?.name || 'Jonathan');
               }}
             />
           </label>
@@ -346,12 +346,12 @@ const InventoryView = ({ categoryTitle }) => {
       <ActionModal 
         isOpen={isStockModalOpen} onClose={() => setIsStockModalOpen(false)} item={selectedItem}
         personnel={personnel}
-        onConfirm={(id, qty, details) => { updateStock(id, qty, userData?.name || 'Alfonso', details); setIsStockModalOpen(false); }}
+        onConfirm={(id, qty, details) => { updateStock(id, qty, userData?.name || 'Jonathan', details); setIsStockModalOpen(false); }}
       />
 
       <AddItemModal 
         isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} category={categoryTitle} initialData={selectedItem}
-        onSave={(data) => { if (selectedItem) editItem(selectedItem.id, data, userData?.name || 'Alfonso'); else addItem(data, userData?.name || 'Alfonso'); setIsAddModalOpen(false); }}
+        onSave={(data) => { if (selectedItem) editItem(selectedItem.id, data, userData?.name || 'Jonathan'); else addItem(data, userData?.name || 'Jonathan'); setIsAddModalOpen(false); }}
       />
     </main>
   );
