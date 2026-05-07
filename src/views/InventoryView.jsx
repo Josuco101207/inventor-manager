@@ -153,18 +153,23 @@ const InventoryView = ({ categoryTitle }) => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Disparar filtrado cuando cambian los criterios
+  // Disparar filtrado cuando cambian los criterios (con pequeño debounce para evitar saturación)
   useEffect(() => {
     if (!workerRef.current) return;
-    setIsFiltering(true);
-    workerRef.current.postMessage({
-      items,
-      searchTerm: debouncedSearch,
-      categoryTitle,
-      activeSubcategory,
-      selectedBrand,
-      selectedLocation
-    });
+    
+    const filterTimer = setTimeout(() => {
+      setIsFiltering(true);
+      workerRef.current.postMessage({
+        items,
+        searchTerm: debouncedSearch,
+        categoryTitle,
+        activeSubcategory,
+        selectedBrand,
+        selectedLocation
+      });
+    }, 50); // Mínimo delay para agrupar actualizaciones rápidas de Firestore
+    
+    return () => clearTimeout(filterTimer);
   }, [items, debouncedSearch, categoryTitle, activeSubcategory, selectedBrand, selectedLocation]);
 
   const subcategories = useMemo(() => [

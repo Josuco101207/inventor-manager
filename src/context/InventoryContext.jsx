@@ -136,9 +136,13 @@ export const InventoryProvider = ({ children }) => {
 
     const unsubscribe = OptimizedDataService.subscribeWithCleanup('items', constraints, (data, snapshot) => {
       if (!cancelled) {
-        console.log(`[Firestore] Items Sync: ${data.length} docs (From Cache: ${snapshot.metadata.fromCache})`);
         setItems(data);
-        setLastSync(new Date());
+        // Solo actualizamos lastSync si han pasado más de 30 segundos para evitar re-renders masivos
+        const now = new Date();
+        setLastSync(prev => {
+          if (now.getTime() - prev.getTime() > 30000) return now;
+          return prev;
+        });
         setLoading(false);
       }
     });

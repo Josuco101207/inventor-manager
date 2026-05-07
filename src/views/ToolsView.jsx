@@ -163,18 +163,21 @@ const ToolsView = () => {
     return () => workerRef.current.terminate();
   }, []);
 
-  // Postear al worker
+  // Postear al worker con debounce
   useEffect(() => {
     if (!workerRef.current || loading) return;
-    workerRef.current.postMessage({
-      items,
-      searchTerm: debouncedSearch,
-      categoryTitle: 'Herramientas',
-      activeSubcategory: 'TODAS',
-      selectedBrand: 'Todas',
-      selectedLocation: 'Todas',
-      statusFilter: showLoanedOnly ? 'Prestado' : null
-    });
+    const filterTimer = setTimeout(() => {
+      workerRef.current.postMessage({
+        items,
+        searchTerm: debouncedSearch,
+        categoryTitle: 'Herramientas',
+        activeSubcategory: 'TODAS',
+        selectedBrand: 'Todas',
+        selectedLocation: 'Todas',
+        statusFilter: showLoanedOnly ? 'Prestado' : null
+      });
+    }, 50);
+    return () => clearTimeout(filterTimer);
   }, [items, debouncedSearch, loading, showLoanedOnly]);
 
   // Intersection Observer para Infinite Scroll
