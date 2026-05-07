@@ -3,7 +3,7 @@ import { db } from '../firebase/config';
 import { collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
-import { FileText, Plus, Trash2, Save, ChevronDown, AlertCircle, CheckCircle2, List, FilePlus, ArrowLeft, DollarSign } from 'lucide-react';
+import { FileText, Plus, Trash2, Save, ChevronDown, AlertCircle, CheckCircle2, List, FilePlus, ArrowLeft, DollarSign, Loader2 } from 'lucide-react';
 import './InvoicesView.css';
 
 const UNITS = ['PZA', 'KG', 'M', 'LT', 'ML', 'CM', 'ROLLO', 'CAJA', 'PAR', 'JGO', 'BOLSA', 'PAQUETE'];
@@ -21,7 +21,7 @@ const fmt = (n, currency = 'MXN') => {
 };
 
 const InvoicesView = () => {
-  const { userData, isAdmin: isSystemAdmin } = useAuth();
+  const { userData, isAdmin: isSystemAdmin, loading: authLoading } = useAuth();
   const isAdmin = isSystemAdmin || userData?.role === 'admin';
   const canAdd = isAdmin || (userData?.allowedCategories || []).includes('Facturas');
   const canDelete = isAdmin || (userData?.editableCategories || []).includes('Facturas');
@@ -197,6 +197,14 @@ const InvoicesView = () => {
       if (viewingInvoice?.id === id) setViewingInvoice(null);
     } catch { toast.error('Error al eliminar'); }
   }, [viewingInvoice]);
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-slate-950">
+        <Loader2 className="animate-spin text-blue-500" size={48} />
+      </div>
+    );
+  }
 
   // ─── Render: Viewing a saved invoice (read-only) ───
   if (viewingInvoice) {
