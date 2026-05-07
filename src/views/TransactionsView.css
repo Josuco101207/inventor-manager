@@ -200,7 +200,7 @@
 .invt-btn-annul:hover {
   background: hsl(var(--danger));
   color: white;
-  transform: scale(1.1) translateY(-2px);
+  transform: scale(1.08);
   box-shadow: 0 4px 12px hsla(var(--danger), 0.3);
 }
 
