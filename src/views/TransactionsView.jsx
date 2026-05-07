@@ -124,19 +124,19 @@ const TransactionsView = () => {
         </div>
       </header>
 
-      <div className="parques-container" style={{ height: 'auto', minHeight: '400px' }}>
-        <div className="parques-header-row">
-          <div className="col-art" style={{ flex: '1.5' }}>Acción / Artículo</div>
-          <div className="col-stock" style={{ flex: '2' }}>Detalle / Responsable</div>
-          <div className="col-ref" style={{ flex: '1.5' }}>Fecha y Hora</div>
-          <div className="col-act">Acciones</div>
+      <div className="invt-container animate-slide-up">
+        <div className="invt-grid-row invt-header-row">
+          <div className="invt-cell-art">Acción / Artículo</div>
+          <div className="invt-cell-details">Detalle / Responsable</div>
+          <div className="invt-cell-time">Fecha y Hora</div>
+          <div className="invt-cell-act">Acciones</div>
         </div>
         
-        <div className="parques-body scrollbar-hide" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <div className="invt-body scrollbar-hide">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-blue-500 gap-4">
               <Loader2 className="animate-spin" size={32} />
-              <p>Cargando transacciones...</p>
+              <p className="font-bold uppercase tracking-widest text-[10px] opacity-60">Sincronizando movimientos...</p>
             </div>
           ) : filteredMovements.length > 0 ? (
             filteredMovements.map((mov, index) => {
@@ -145,64 +145,63 @@ const TransactionsView = () => {
               const movDate = mov.timestamp?.toDate();
               
               return (
-                <div key={mov.id || index} className="parques-row">
-                  <div className="col-art" style={{ flex: '1.5' }}>
-                    <div className="park-name-group">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="parques-avatar" style={{ backgroundColor: cfg.bg, color: cfg.color, width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Icon size={16} />
-                        </div>
-                        <span className="park-name" style={{ color: cfg.color }}>{cfg.label}</span>
-                      </div>
-                      <div className="park-meta">
-                        <span className="park-badge-sub" onClick={() => handleArticleClick(mov)} style={{ cursor: 'pointer' }}>
-                          {mov.item}
-                        </span>
-                        <span className="park-brand">{mov.category || '—'}</span>
-                      </div>
+                <div key={mov.id || index} className="invt-grid-row invt-data-row">
+                  {/* Action + Item */}
+                  <div className="invt-cell-art">
+                    <div className="invt-avatar" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
+                      <Icon size={20} />
+                    </div>
+                    <div className="invt-item-info">
+                      <span className="invt-action-label" style={{ color: cfg.color }}>{cfg.label}</span>
+                      <span className="invt-item-name" onClick={() => handleArticleClick(mov)} style={{ cursor: 'pointer' }}>
+                        {mov.item}
+                      </span>
+                      <span className="invt-item-cat">{mov.category || 'General'}</span>
                     </div>
                   </div>
 
-                  <div className="col-stock" style={{ flex: '2' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{mov.details || 'Sin detalles'}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'hsl(var(--text-soft))' }}>
+                  {/* Detail + User */}
+                  <div className="invt-cell-details">
+                    <span className="invt-detail-text">{mov.details || 'Sin detalles adicionales'}</span>
+                    <div className="invt-detail-meta">
+                      <div className="invt-user-tag">
                         <Users size={12} />
                         <span>{mov.user || 'Admin'}</span>
-                        {mov.qty && <span className="park-badge-sub" style={{ background: 'hsla(var(--text-soft), 0.1)', color: 'inherit' }}>{mov.qty} uds</span>}
                       </div>
+                      {mov.qty && <span className="invt-qty-badge">{mov.qty} unidades</span>}
                     </div>
                   </div>
 
-                  <div className="col-ref" style={{ flex: '1.5' }}>
-                    <div className="stock-display">
-                      <span className="park-name" style={{ fontSize: '0.85rem' }}>{movDate?.toLocaleDateString()}</span>
-                      <span className="stock-unit">{movDate?.toLocaleTimeString()}</span>
-                    </div>
+                  {/* Timestamp */}
+                  <div className="invt-cell-time">
+                    <span className="invt-time-date">{movDate?.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    <span className="invt-time-hour">{movDate?.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                   </div>
 
-                  <div className="col-act">
-                    <div className="actions-group">
-                      {isAdmin && !mov.annulled && mov.action !== 'Anulación' && (
-                        <button 
-                          className="btn-icon-action btn-icon-gray text-red-500 hover:!bg-red-500 hover:text-white" 
-                          onClick={() => {
-                            if(window.confirm(`¿Anular movimiento de ${mov.item}?`)) annulMovement(mov.id, userData?.name || 'Admin');
-                          }}
-                        >
-                          <X size={16} />
-                        </button>
-                      )}
-                      {mov.annulled && <span className="park-badge-sub" style={{ background: 'hsl(var(--danger))', color: 'white' }}>ANULADO</span>}
-                    </div>
+                  {/* Actions */}
+                  <div className="invt-cell-act">
+                    {isAdmin && !mov.annulled && mov.action !== 'Anulación' && (
+                      <button 
+                        className="invt-btn-annul" 
+                        title="Anular Movimiento"
+                        onClick={() => {
+                          if(window.confirm(`¿Seguro que deseas anular el movimiento de "${mov.item}"? Esta acción revertirá el stock.`)) {
+                            annulMovement(mov.id, userData?.name || 'Admin');
+                          }
+                        }}
+                      >
+                        <X size={18} />
+                      </button>
+                    )}
+                    {mov.annulled && <span className="invt-badge-annulled">ANULADO</span>}
                   </div>
                 </div>
               );
             })
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
-              <Activity size={48} className="opacity-10" />
-              <p className="font-bold text-xl opacity-30">No hay movimientos para mostrar</p>
+            <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-4 opacity-40">
+              <Activity size={64} strokeWidth={1.5} />
+              <p className="font-black text-lg uppercase tracking-tighter">No hay registros para esta fecha</p>
             </div>
           )}
         </div>

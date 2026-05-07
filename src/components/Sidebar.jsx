@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { 
   Package, Wrench, PenTool, Cpu, Printer, Landmark,
   LayoutDashboard, Settings, User, LogOut, ShieldCheck, Users, Layers, Archive, History, Activity,
-  Menu, X
+  Menu, X, FileText
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Sidebar.css';
@@ -137,6 +137,14 @@ const Sidebar = () => {
                 <NavLink to="/transactions" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                   <History size={20} />
                   <span>Transacciones</span>
+                </NavLink>
+              </li>
+            )}
+            {hasAccess('facturas') && (
+              <li>
+                <NavLink to="/facturas" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                  <FileText size={20} />
+                  <span>Facturas</span>
                 </NavLink>
               </li>
             )}

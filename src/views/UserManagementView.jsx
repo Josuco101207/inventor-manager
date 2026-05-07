@@ -7,7 +7,7 @@ import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 import {
   UserPlus, Trash2, Shield, Mail, Key, Loader2,
   Warehouse, User, ChevronDown, ChevronUp, Lock, PlusCircle, Edit3, X, Eye, EyeOff,
-  LayoutDashboard, Wrench, PenTool, Package, Printer, Cpu, Layers, Archive, Landmark, History, Activity
+  LayoutDashboard, Wrench, PenTool, Package, Printer, Cpu, Layers, Archive, Landmark, History, Activity, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,7 +22,7 @@ const firebaseConfig = {
 
 const ALL_CATEGORIES = [
   'Tornillería', 'Papelería', 'Herramientas', 'Impresión 3D',
-  'Electrónica', 'Inventario General', 'Almacén Temporal', 'Parques',
+  'Electrónica', 'Inventario General', 'Almacén Temporal', 'Parques', 'Facturas'
 ];
 
 const ALL_VIEWS = [
@@ -36,6 +36,7 @@ const ALL_VIEWS = [
   { id: 'almacen-temporal', label: 'Almacén Temporal', icon: <Archive size={14} /> },
   { id: 'parques', label: 'Parques', icon: <Landmark size={14} /> },
   { id: 'transactions', label: 'Transacciones (Historial)', icon: <History size={14} /> },
+  { id: 'facturas', label: 'Facturas (Registro)', icon: <FileText size={14} /> },
   { id: 'analytics', label: 'Analíticas (Gráficas)', icon: <Activity size={14} /> },
 ];
 
@@ -149,6 +150,7 @@ const UserManagementView = () => {
           'Herramientas': 'herramientas', 'Impresión 3D': 'impresion-3d',
           'Electrónica': 'electronica', 'Inventario General': 'general',
           'Almacén Temporal': 'almacen-temporal', 'Parques': 'parques',
+          'Facturas': 'facturas'
         };
         const viewId = viewIdMap[category];
         if (viewId && !(u.allowedViews || []).includes(viewId)) {
