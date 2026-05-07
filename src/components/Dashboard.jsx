@@ -247,19 +247,61 @@ const Dashboard = () => {
 
       {isCriticalModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-card animate-scale-up">
-            <header className="modal-header">
-              <h3><AlertTriangle className="text-red-500" /> Stock Crítico (Top 500)</h3>
-              <button onClick={() => setIsCriticalModalOpen(false)}><X /></button>
-            </header>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {lowStockItems.map(item => (
-                <div key={item.id} className="flex justify-between p-3 bg-red-50 dark:bg-red-900/10 rounded-xl">
-                  <span>{item.name}</span>
-                  <span className="font-bold text-red-500">{item.qty} / {item.threshold}</span>
+          <div className="modal-card animate-scale-up crit-modal-card">
+            <div className="crit-modal-header">
+              <div className="crit-modal-title-group">
+                <div className="crit-modal-icon">
+                  <AlertTriangle size={20} />
                 </div>
-              ))}
+                <div>
+                  <h3 className="crit-modal-title">Stock Crítico</h3>
+                  <p className="crit-modal-subtitle">{lowStockItems.length} artículos por debajo del umbral</p>
+                </div>
+              </div>
+              <button className="crit-modal-close" onClick={() => setIsCriticalModalOpen(false)}>
+                <X size={20} />
+              </button>
             </div>
+
+            {lowStockItems.length === 0 ? (
+              <div className="crit-modal-empty">
+                <div className="crit-empty-icon">
+                  <Zap size={28} />
+                </div>
+                <h4 className="crit-empty-title">Todo en orden</h4>
+                <p className="crit-empty-subtitle">No hay artículos con stock crítico</p>
+              </div>
+            ) : (
+              <div className="crit-modal-list">
+                <div className="crit-modal-list-inner">
+                  {lowStockItems.slice(0, 500).map(item => (
+                    <div key={item.id} className="crit-item-row">
+                      <div className="crit-item-info">
+                        <span className="crit-item-name">{item.name}</span>
+                        <span className="crit-item-cat">{item.category || 'General'}</span>
+                      </div>
+                      <div className="crit-item-actions">
+                        <div className="crit-item-stats">
+                          <span className="crit-item-stats-label">Stock / Mín</span>
+                          <div className="crit-item-stats-values">
+                            <span className="crit-item-qty">{item.qty || 0}</span>
+                            <span className="crit-item-thresh">/ {item.threshold || 0}</span>
+                            <span className="crit-item-unit">{item.unit || 'PZA'}</span>
+                          </div>
+                        </div>
+                        <button
+                          className="crit-item-go-btn"
+                          title="Ir a categoría"
+                          onClick={() => { setIsCriticalModalOpen(false); navigate(categoryToRoute(item.category)); }}
+                        >
+                          <Zap size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
