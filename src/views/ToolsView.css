@@ -136,6 +136,20 @@
   border-color: hsl(var(--primary));
 }
 
+.btn-scan-qr.active-loaned {
+  background: #0071e3 !important;
+  color: white !important;
+  border-color: #0071e3 !important;
+  box-shadow: 0 8px 20px -5px rgba(0, 113, 227, 0.4) !important;
+}
+
+.btn-scan-qr.active-faulty {
+  background: #ff3b30 !important;
+  color: white !important;
+  border-color: #ff3b30 !important;
+  box-shadow: 0 8px 20px -5px rgba(255, 59, 48, 0.4) !important;
+}
+
 /* Tools Grid Layout */
 .tools-grid {
   display: grid;

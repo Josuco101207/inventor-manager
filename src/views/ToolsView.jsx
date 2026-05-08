@@ -135,7 +135,7 @@ const ToolsView = () => {
   const [isBulkLoanModalOpen, setIsBulkLoanModalOpen] = useState(false);
   const [isFaultModalOpen, setIsFaultModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [showLoanedOnly, setShowLoanedOnly] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(null); // null | 'Prestado' | 'Mantenimiento'
   
   // Forms state
   const [borrowerName, setBorrowerName] = useState('');
@@ -174,11 +174,11 @@ const ToolsView = () => {
         activeSubcategory: 'TODAS',
         selectedBrand: 'Todas',
         selectedLocation: 'Todas',
-        statusFilter: showLoanedOnly ? 'Prestado' : null
+        statusFilter: statusFilter
       });
     }, 50);
     return () => clearTimeout(filterTimer);
-  }, [items, debouncedSearch, loading, showLoanedOnly]);
+  }, [items, debouncedSearch, loading, statusFilter]);
 
   // Intersection Observer para Infinite Scroll
   useEffect(() => {
@@ -284,11 +284,19 @@ const ToolsView = () => {
           </div>
           
           <button 
-            className={`btn-scan-qr ${showLoanedOnly ? 'bg-blue-500 text-white border-blue-500' : ''}`}
-            onClick={() => setShowLoanedOnly(!showLoanedOnly)}
+            className={`btn-scan-qr ${statusFilter === 'Prestado' ? 'active-loaned' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'Prestado' ? null : 'Prestado')}
             title="Filtrar Prestadas"
           >
-            <ArrowUpRight size={18} /> {showLoanedOnly ? 'Viendo Prestadas' : 'Prestadas'}
+            <ArrowUpRight size={18} /> {statusFilter === 'Prestado' ? 'Viendo Prestadas' : 'Prestadas'}
+          </button>
+
+          <button 
+            className={`btn-scan-qr ${statusFilter === 'Mantenimiento' ? 'active-faulty' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'Mantenimiento' ? null : 'Mantenimiento')}
+            title="Filtrar con Falla"
+          >
+            <AlertTriangle size={18} /> {statusFilter === 'Mantenimiento' ? 'Viendo Fallas' : 'Con Falla'}
           </button>
 
           <button 
