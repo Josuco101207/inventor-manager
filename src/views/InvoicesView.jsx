@@ -144,33 +144,45 @@ const InvoicesView = () => {
   // ─── Validation ───
   const validate = useCallback(() => {
     const e = {};
-    if (!folio.trim()) e.folio = true;
-    if (!proveedor.trim()) e.proveedor = true;
-    if (!fechaEmision) e.fechaEmision = true;
+    // Ya no bloqueamos por folio, proveedor o fecha para dar flexibilidad
+    // Solo validamos el tipo de cambio si es USD para evitar errores de cálculo
     if (currency === 'USD' && (!tipoCambio || parseFloat(tipoCambio) <= 0)) e.tipoCambio = true;
-    lines.forEach((l, i) => {
-      if (!l.descripcion.trim()) e[`${i}-desc`] = true;
-      if (!l.cantidad || parseFloat(l.cantidad) <= 0) e[`${i}-qty`] = true;
-      if (!l.precioUnitario || parseFloat(l.precioUnitario) <= 0) e[`${i}-price`] = true;
-    });
+    
     setErrors(e);
     return Object.keys(e).length === 0;
-  }, [folio, proveedor, fechaEmision, currency, tipoCambio, lines]);
+  }, [currency, tipoCambio]);
 
   // ─── Save ───
   const handleSave = useCallback(async () => {
     if (!validate()) { toast.error('Completa todos los campos obligatorios'); return; }
     setSaving(true);
     try {
+      // Filtramos líneas que estén totalmente vacías antes de guardar
+      const validLines = lines.filter(l => 
+        l.oc.trim() || l.cantidad || l.frgnName.trim() || l.descripcion.trim() || l.precioUnitario
+      );
+
+      if (validLines.length === 0 && !folio && !proveedor) {
+        toast.error('La factura está vacía');
+        return;
+      }
+
       const invoiceData = {
-        folio: folio.trim(), proveedor: proveedor.trim(), fechaEmision,
-        currency, tipoCambio: currency === 'USD' ? parseFloat(tipoCambio) : null,
-        lines: lines.map(l => ({
-          oc: l.oc, cantidad: parseFloat(l.cantidad), um: l.um,
-          frgnName: l.frgnName, descripcion: l.descripcion,
-          precioUnitario: parseFloat(l.precioUnitario),
+        folio: folio.trim() || 'SIN FOLIO', 
+        proveedor: proveedor.trim() || 'SIN PROVEEDOR', 
+        fechaEmision: fechaEmision || new Date().toISOString().slice(0, 10),
+        currency, 
+        tipoCambio: currency === 'USD' ? parseFloat(tipoCambio) || 0 : null,
+        lines: validLines.map(l => ({
+          oc: l.oc, 
+          cantidad: parseFloat(l.cantidad) || 0, 
+          um: l.um,
+          frgnName: l.frgnName, 
+          descripcion: l.descripcion || 'Sin descripción',
+          precioUnitario: parseFloat(l.precioUnitario) || 0,
           ivaManual: l.ivaManual !== '' ? parseFloat(l.ivaManual) : null,
-          ivaCalc: l.ivaCalc, importeTotal: l.importeTotal
+          ivaCalc: l.ivaCalc, 
+          importeTotal: l.importeTotal
         })),
         subtotal: totals.subtotal, iva: totals.iva, total: totals.total,
         createdBy: userData?.name || userData?.email || 'Sistema',
@@ -297,15 +309,15 @@ const InvoicesView = () => {
             {saving && <div className="iv-saving-overlay"><div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid hsl(var(--border-color))', borderTopColor: 'hsl(var(--primary))', borderRadius: '50%' }} /></div>}
             <div className="iv-invoice-header">
               <div className="iv-field">
-                <label>Folio de Factura <span className="required-dot">*</span></label>
-                <input className={`iv-input ${errors.folio ? 'iv-input-error' : ''}`} placeholder="FAC-001" value={folio} onChange={e => setFolio(e.target.value)} />
+                <label>Folio de Factura</label>
+                <input className={`iv-input ${errors.folio ? 'iv-input-error' : ''}`} placeholder="Opcional" value={folio} onChange={e => setFolio(e.target.value)} />
               </div>
               <div className="iv-field">
-                <label>Proveedor <span className="required-dot">*</span></label>
-                <input className={`iv-input ${errors.proveedor ? 'iv-input-error' : ''}`} placeholder="Nombre del proveedor" value={proveedor} onChange={e => setProveedor(e.target.value)} />
+                <label>Proveedor</label>
+                <input className={`iv-input ${errors.proveedor ? 'iv-input-error' : ''}`} placeholder="Opcional" value={proveedor} onChange={e => setProveedor(e.target.value)} />
               </div>
               <div className="iv-field">
-                <label>Fecha de Emisión <span className="required-dot">*</span></label>
+                <label>Fecha de Emisión</label>
                 <input type="date" className={`iv-input ${errors.fechaEmision ? 'iv-input-error' : ''}`} value={fechaEmision} onChange={e => setFechaEmision(e.target.value)} />
               </div>
               <div className="iv-field">
@@ -321,7 +333,7 @@ const InvoicesView = () => {
               </div>
               {currency === 'USD' && (
                 <div className="iv-field">
-                  <label>Tipo de Cambio <span className="required-dot">*</span></label>
+                  <label>Tipo de Cambio</label>
                   <input type="number" step="0.01" className={`iv-input ${errors.tipoCambio ? 'iv-input-error' : ''}`} placeholder="19.50" value={tipoCambio} onChange={e => setTipoCambio(e.target.value)} />
                 </div>
               )}
@@ -441,7 +453,7 @@ const InvoicesView = () => {
             {/* Validation feedback */}
             {Object.keys(errors).length > 0 && (
               <div className="iv-validation-msg iv-msg-error" style={{ marginTop: '1rem' }}>
-                <AlertCircle size={16} /> Completa los campos marcados en rojo antes de guardar.
+                <AlertCircle size={16} /> Revisa los campos marcados en rojo (como el Tipo de Cambio).
               </div>
             )}
 
