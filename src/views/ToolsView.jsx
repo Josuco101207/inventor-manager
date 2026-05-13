@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { useInventory } from '../context/InventoryContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import Header from '../components/Header';

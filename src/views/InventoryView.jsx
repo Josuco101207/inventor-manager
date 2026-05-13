@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useInventory } from '../context/InventoryContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import ActionModal from '../components/ActionModal';
@@ -45,6 +45,11 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
             {item.marca && <span className="invt-tag invt-tag-gray">{item.marca}</span>}
             {item.item_number && <span className="invt-tag invt-tag-mono">#{item.item_number}</span>}
           </div>
+          {item.observaciones && (
+            <p className="invt-item-obs" title={item.observaciones}>
+              {item.observaciones}
+            </p>
+          )}
         </div>
       </div>
 

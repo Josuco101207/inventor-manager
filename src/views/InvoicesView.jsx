@@ -136,9 +136,14 @@ const InvoicesView = () => {
 
   // ─── Totals ───
   const totals = useMemo(() => {
+    // FIX: Usar precisión decimal de 2 lugares para evitar errores de centavos
+    const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
     let subtotal = 0, iva = 0;
-    lines.forEach(l => { subtotal += l.importeTotal; iva += l.ivaCalc; });
-    return { subtotal, iva, total: subtotal + iva };
+    lines.forEach(l => { 
+      subtotal = round2(subtotal + (l.importeTotal || 0)); 
+      iva = round2(iva + (l.ivaCalc || 0)); 
+    });
+    return { subtotal, iva, total: round2(subtotal + iva) };
   }, [lines]);
 
   // ─── Validation ───

@@ -72,11 +72,12 @@ export const InventoryProvider = ({ children }) => {
           OptimizedDataService.getCollectionCount('movements')
         ]);
 
-        // 2. Conteo de Stock Crítico (Estimado o por flag si existe)
+        // 2. Conteo de Stock Crítico
         // Nota: Firestore no permite comparar dos campos en un query.
-        // Como solución temporal eficiente, filtramos los 500 cargados + un query de qty=0
+        // Como solución temporal eficiente, filtramos los items locales cargados + un query de qty=0
         const outOfStockCount = await OptimizedDataService.getCollectionCount('items', [where('qty', '==', 0)]);
-        const localCritical = itemsRef.current.filter(i => (i.qty || 0) <= (i.threshold || 0) && (i.qty || 0) > 0).length;
+        // FIX: Usar items actual del estado en lugar de ref para evitar race condition
+        const localCritical = items.filter(i => (i.qty || 0) <= (i.threshold || 0) && (i.qty || 0) > 0).length;
 
         // 3. Actividad de los últimos 7 días (Conteos individuales)
         const last7Days = [6, 5, 4, 3, 2, 1, 0].map(i => {
@@ -115,7 +116,7 @@ export const InventoryProvider = ({ children }) => {
     // Refrescar cada 5 minutos o cuando cambie el inventario local significativamente
     const interval = setInterval(fetchStats, 300000); 
     return () => clearInterval(interval);
-  }, [user, items.length]); // Refrescar si cambia el tamaño local significativamente
+  }, [user, items]); // FIX: Dependencia de items completo para recalcular cuando cambien los datos
 
   // ─── Connection Monitor ───
   useEffect(() => {
@@ -197,14 +198,15 @@ export const InventoryProvider = ({ children }) => {
   }, [user, fetchAuxiliaryData]);
 
   // ─── Helpers ───
-  const addMovement = useCallback(async (action, itemName, qty, user = 'Jonathan', details = '', category = 'General') => {
+  const addMovement = useCallback(async (action, itemName, qty, user = 'Jonathan', details = '', category = 'General', itemId = null) => {
     try {
-      const relatedItem = itemsRef.current.find(i => i.name === itemName);
+      const relatedItem = itemId ? itemsRef.current.find(i => i.id === itemId) : itemsRef.current.find(i => i.name === itemName);
       const subcategory = relatedItem?.subcategory || '';
 
       await addDoc(collection(db, 'movements'), {
         action,
         item: itemName,
+        itemId: itemId || relatedItem?.id || null, // FIX: Guardar itemId para búsqueda segura
         user,
         details,
         category,
@@ -254,7 +256,8 @@ export const InventoryProvider = ({ children }) => {
         Math.abs(change), 
         userName, 
         customDetails || defaultDetails,
-        item.category
+        item.category,
+        item.id
       );
       toast.success(`${change > 0 ? 'Entrada' : 'Salida'} registrada: ${item.name}`);
     } catch (e) {
@@ -271,7 +274,12 @@ export const InventoryProvider = ({ children }) => {
 
   const loanItem = useCallback(async (itemId, borrower, userName = 'Jonathan') => {
     const item = itemsRef.current.find(i => i.id === itemId);
-    if (!item || (item.qty || 0) <= 0) {
+    
+    // Para herramientas, permitimos el préstamo si está marcada como Disponible, 
+    // incluso si por algún error el stock marca 0.
+    const isAvailable = item?.status === 'Disponible' || (item?.qty || 0) > 0;
+
+    if (!item || !isAvailable) {
       toast.error("No hay stock disponible para préstamo");
       return;
     }
@@ -292,7 +300,7 @@ export const InventoryProvider = ({ children }) => {
         lentBy: userName || null,
         loanDate: serverTimestamp()
       });
-      await addMovement('Préstamo', item.name, 1, userName, borrower, item.category);
+      await addMovement('Préstamo', item.name, 1, userName, borrower, item.category, item.id);
       toast.success(`Herramienta prestada a ${borrower} (Disponibles: ${remainingQty})`);
     } catch (e) {
       toast.error("Error al registrar préstamo");
@@ -300,9 +308,13 @@ export const InventoryProvider = ({ children }) => {
   }, [addMovement]);
 
   const bulkLoanItems = useCallback(async (itemIds, borrower, userName = 'Jonathan') => {
-    const availableItems = itemsRef.current.filter(i => itemIds.includes(i.id) && (i.qty || 0) > 0);
+    const availableItems = itemsRef.current.filter(i => 
+      itemIds.includes(i.id) && 
+      ((i.qty || 0) > 0 || i.status === 'Disponible')
+    );
+
     if (availableItems.length === 0) {
-      toast.error("Ninguna de las herramientas seleccionadas tiene stock");
+      toast.error("Ninguna de las herramientas seleccionadas está disponible");
       return;
     }
 
@@ -327,7 +339,7 @@ export const InventoryProvider = ({ children }) => {
     try {
       await batch.commit();
       for (const item of availableItems) {
-        await addMovement('Préstamo', item.name, 1, userName, borrower, item.category);
+        await addMovement('Préstamo', item.name, 1, userName, borrower, item.category, item.id);
       }
       toast.success(`${availableItems.length} herramientas prestadas a ${borrower}`);
     } catch (e) {
@@ -355,7 +367,7 @@ export const InventoryProvider = ({ children }) => {
         lentBy: newLent === 0 ? null : (item.lentBy || null),
         loanDate: newLent === 0 ? null : (item.loanDate || null)
       });
-      await addMovement('Devolución', item.name, 1, userName, 'Devuelto a almacén', item.category);
+      await addMovement('Devolución', item.name, 1, userName, 'Devuelto a almacén', item.category, item.id);
       toast.success(`Herramienta devuelta (En almacén: ${newQty})`);
     } catch (e) {
       toast.error("Error al registrar devolución");
@@ -375,7 +387,7 @@ export const InventoryProvider = ({ children }) => {
         observaciones: `Falla: ${reason} (Reportó: ${userName})`,
         status: 'Mantenimiento'
       });
-      await addMovement('Falla/Manto', item.name, 1, userName, reason, item.category);
+      await addMovement('Falla/Manto', item.name, 1, userName, reason, item.category, item.id);
       toast.warning(`Reporte registrado: 1x ${item.name} retirado por falla`);
     } catch (e) {
       toast.error("Error al reportar mantenimiento");
@@ -395,7 +407,7 @@ export const InventoryProvider = ({ children }) => {
         status: 'Disponible',
         observaciones: `Reparado el ${new Date().toLocaleDateString()} por ${userName}`
       });
-      await addMovement('Entrada', item.name, 1, userName, 'Reparado / Fin de mantenimiento', item.category);
+      await addMovement('Entrada', item.name, 1, userName, 'Reparado / Fin de mantenimiento', item.category, item.id);
       toast.success(`Herramienta reparada: ${item.name} vuelve a estar disponible`);
     } catch (e) {
       toast.error("Error al completar mantenimiento");
@@ -414,7 +426,7 @@ export const InventoryProvider = ({ children }) => {
       const finalReason = reason ? `Audit: ${reason}` : `Conteo físico: ${physicalQty} (Ajuste: ${diff > 0 ? '+' : ''}${diff})`;
 
       await addMovement(
-        'Auditoría', item.name, Math.abs(diff), userName, finalReason, item.category
+        'Auditoría', item.name, Math.abs(diff), userName, finalReason, item.category, item.id
       );
       toast.success("Auditoría registrada exitosamente");
     } catch (e) {
@@ -424,12 +436,17 @@ export const InventoryProvider = ({ children }) => {
 
   const addItem = useCallback(async (newItem, userName = 'Jonathan') => {
     try {
+      // Si es herramienta y no trae cantidad, por defecto es 1
+      const defaultQty = newItem.category === 'Herramientas' ? 1 : 0;
+      const initialQty = parseInt(newItem.qty);
+      
       await addDoc(collection(db, 'items'), {
         ...newItem,
-        qty: parseInt(newItem.qty) || 0,
+        qty: isNaN(initialQty) ? defaultQty : initialQty,
         threshold: parseInt(newItem.threshold) || 0,
         status: newItem.category === 'Herramientas' ? 'Disponible' : null
       });
+      // Note: itemId is not available for new items until after creation
       await addMovement('Alta', newItem.name, parseInt(newItem.qty) || 0, userName, 'Artículo agregado al inventario', newItem.category || 'General');
       toast.success(`Artículo creado: ${newItem.name}`);
     } catch (e) {
@@ -441,7 +458,7 @@ export const InventoryProvider = ({ children }) => {
     try {
       const item = itemsRef.current.find(i => i.id === itemId);
       await deleteDoc(doc(db, 'items', itemId));
-      await addMovement('Eliminación', item?.name || 'Desconocido', 0, userName, 'Artículo eliminado del inventario', item?.category || 'General');
+      await addMovement('Eliminación', item?.name || 'Desconocido', 0, userName, 'Artículo eliminado del inventario', item?.category || 'General', item?.id);
       toast.info(`Artículo eliminado: ${item?.name}`);
     } catch (e) {
       toast.error("Error al eliminar artículo");
@@ -453,7 +470,7 @@ export const InventoryProvider = ({ children }) => {
       const item = itemsRef.current.find(i => i.id === itemId);
       const itemRef = doc(db, 'items', itemId);
       await updateDoc(itemRef, updatedFields);
-      await addMovement('Edición', item?.name || updatedFields.name || 'Desconocido', 0, userName, 'Artículo editado', item?.category || updatedFields.category || 'General');
+      await addMovement('Edición', item?.name || updatedFields.name || 'Desconocido', 0, userName, 'Artículo editado', item?.category || updatedFields.category || 'General', item?.id);
       toast.success("Cambios guardados");
     } catch (e) {
       toast.error("Error al editar artículo");
@@ -643,6 +660,7 @@ export const InventoryProvider = ({ children }) => {
 
       await batch.commit();
       
+      // Batch deletion - log once per category instead of per item to avoid excessive writes
       await addMovement(
         'Eliminación Masiva', `Todo ${category}`, categoryItems.length, 
         userName, `Se eliminaron todos los elementos del apartado ${category}`, category
@@ -703,7 +721,20 @@ export const InventoryProvider = ({ children }) => {
     if (!mov || mov.annulled) return;
 
     try {
-      const item = itemsRef.current.find(i => i.name === mov.item && i.category === mov.category);
+      // FIX: Buscar primero por itemId (confiable), fallback a name+category para datos antiguos
+      let item = null;
+      if (mov.itemId) {
+        item = itemsRef.current.find(i => i.id === mov.itemId);
+      }
+      // Fallback: buscar por nombre + categoría con validación de unicidad
+      if (!item && mov.item && mov.category) {
+        const candidates = itemsRef.current.filter(i => i.name === mov.item && i.category === mov.category);
+        if (candidates.length === 1) {
+          item = candidates[0];
+        } else if (candidates.length > 1) {
+          console.warn(`Annul: Múltiples items con nombre "${mov.item}" en categoría "${mov.category}". Se requiere itemId.`);
+        }
+      }
       
       if (item) {
         const itemRef = doc(db, 'items', item.id);
@@ -729,6 +760,8 @@ export const InventoryProvider = ({ children }) => {
             ...extraFields
           });
         }
+      } else {
+        console.warn(`Annul: No se encontró item para movimiento ${movementId}. Stock no revertido.`);
       }
 
       await updateDoc(doc(db, 'movements', movementId), {
@@ -740,7 +773,8 @@ export const InventoryProvider = ({ children }) => {
       await addMovement(
         'Anulación', mov.item, mov.qty, adminName,
         `Reversión de ${mov.action}. Movimiento #${movementId.substring(0,5)}`,
-        mov.category
+        mov.category,
+        mov.itemId || item?.id
       );
 
       toast.success("Movimiento anulado correctamente");

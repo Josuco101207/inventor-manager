@@ -14,7 +14,7 @@ const TransactionsView = lazy(() => import('./views/TransactionsView'));
 const ToolsView = lazy(() => import('./views/ToolsView'));
 const InvoicesView = lazy(() => import('./views/InvoicesView'));
 
-import { InventoryProvider, useInventory } from './context/InventoryContext';
+import { InventoryProvider, useInventory } from './context/InventoryContextOptimized';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster, toast } from 'sonner';

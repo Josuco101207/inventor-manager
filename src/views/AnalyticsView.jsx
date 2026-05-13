@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useInventory } from '../context/InventoryContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import Header from '../components/Header';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 

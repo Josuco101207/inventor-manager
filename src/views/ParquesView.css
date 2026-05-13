@@ -122,6 +122,17 @@
   background: hsla(var(--border-color), 0.4);
   color: hsl(var(--text-soft));
 }
+.parques-item-obs {
+  font-size: 10px;
+  color: hsl(var(--warning));
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+  margin-top: 2px;
+  opacity: 0.8;
+}
 
 /* ─── Cell: Stock ─── */
 .parques-cell-stock {

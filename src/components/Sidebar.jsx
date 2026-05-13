@@ -51,11 +51,15 @@ const Sidebar = () => {
 
       <aside className={`sidebar ${isOpen ? 'sidebar-mobile-open' : ''}`}>
         <div className="sidebar-header">
-          <div className="logo-icon flex items-center justify-center">
-            <Package size={28} color="#ffffff" />
+          <div className="logo-container">
+            <div className="logo-icon">
+              <Package size={22} color="#ffffff" />
+            </div>
+            <div className="sidebar-brand">
+              <h1 className="sidebar-title">Inventario</h1>
+              {isAdmin && <span className="sidebar-subtitle">Modo Admin</span>}
+            </div>
           </div>
-          <h1 className="sidebar-title">Inventario</h1>
-          <p className="text-[10px] text-white/50 font-black tracking-tighter uppercase">@ MODO ADMIN</p>
         </div>
       
         <nav className="sidebar-nav">
@@ -161,7 +165,7 @@ const Sidebar = () => {
 
         <div className="sidebar-footer">
           <div className="user-profile-mini">
-            <div className="avatar-small bg-primary flex items-center justify-center rounded-full shadow-sm" style={{ width: '32px', height: '32px', minWidth: '32px', backgroundColor: '#0071e3', color: '#fff' }}>
+            <div className="user-avatar">
               <User size={16} />
             </div>
             <div className="user-details">
@@ -204,9 +208,6 @@ const Sidebar = () => {
               </button>
             </li>
           </ul>
-          <div className="mt-2 text-[10px] text-center opacity-30 font-mono">
-            v1.2.8 - Premium Layout Fix
-          </div>
         </div>
       </aside>
     </>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
-import { useInventory } from '../context/InventoryContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import Header from '../components/Header';
@@ -40,6 +40,11 @@ const TableRow = memo(({
             <span className="parques-tag parques-tag-blue">{item.subcategory || 'General'}</span>
             <span className="parques-tag parques-tag-gray">{item.marca || 'N/A'}</span>
           </div>
+          {item.observaciones && (
+            <p className="parques-item-obs" title={item.observaciones}>
+              {item.observaciones}
+            </p>
+          )}
         </div>
       </div>
 

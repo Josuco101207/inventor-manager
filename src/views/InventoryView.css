@@ -129,6 +129,17 @@
   background: hsla(var(--bg-main), 0.9);
   color: hsl(var(--text-muted));
 }
+.invt-item-obs {
+  font-size: 10px;
+  color: hsl(var(--warning));
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+  margin-top: 2px;
+  opacity: 0.8;
+}
 
 /* ─── Cell: Stock ─── */
 .invt-cell-stock {

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, Bell, User, Moon, Sun, Wifi, WifiOff, RefreshCw, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useInventory } from '../context/InventoryContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import { useTheme } from '../context/ThemeContext';
 import './Header.css';
 

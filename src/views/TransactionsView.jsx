@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useInventory } from '../context/InventoryContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import { useNavigate } from 'react-router-dom';

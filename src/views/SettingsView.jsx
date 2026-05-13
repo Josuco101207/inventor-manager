@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Building2, Save, MapPin, Phone, Globe, Trash2, AlertOctagon, Plus, Tag, Map, Bell, Moon, History, ChevronRight, X, FileSpreadsheet } from 'lucide-react';
-import { useInventory } from '../context/InventoryContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import { exportFullDatabase } from '../utils/exportUtils';

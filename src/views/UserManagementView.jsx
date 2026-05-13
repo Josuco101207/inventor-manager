@@ -90,9 +90,10 @@ const UserManagementView = () => {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setIsCreating(true);
-    const secondaryApp = initializeApp(firebaseConfig, `Secondary_${Date.now()}`);
-    const secondaryAuth = getAuth(secondaryApp);
+    let secondaryApp = null;
     try {
+      secondaryApp = initializeApp(firebaseConfig, `Secondary_${Date.now()}`);
+      const secondaryAuth = getAuth(secondaryApp);
       const cred = await createUserWithEmailAndPassword(secondaryAuth, newUser.email, newUser.password);
       await setDoc(doc(db, 'users', cred.user.uid), {
         name: newUser.name, displayName: newUser.name, email: newUser.email,
@@ -100,7 +101,8 @@ const UserManagementView = () => {
         allowedCategories: [...ALL_CATEGORIES], 
         editableCategories: [],
         allowedViews: ['dashboard', 'tornilleria', 'papeleria', 'herramientas', 'impresion-3d', 'electronica', 'general', 'almacen-temporal', 'parques'],
-        password: newUser.password,
+        // SECURITY: Never store passwords in plaintext
+        passwordChangedAt: serverTimestamp(),
         createdAt: serverTimestamp()
       });
       await signOut(secondaryAuth);
@@ -111,7 +113,9 @@ const UserManagementView = () => {
       toast.error(err.message || 'Error al crear cuenta');
     } finally { 
       setIsCreating(false); 
-      deleteApp(secondaryApp).catch(console.error);
+      if (secondaryApp) {
+        deleteApp(secondaryApp).catch(console.error);
+      }
     }
   };
 
@@ -178,23 +182,23 @@ const UserManagementView = () => {
     if (!changingPasswordUser || !newPassword) return;
     setIsUpdatingPassword(true);
 
-    const secondaryApp = initializeApp(firebaseConfig, `UpdatePass_${Date.now()}`);
-    const secondaryAuth = getAuth(secondaryApp);
-
+    let secondaryApp = null;
     try {
-      const authToUse = changingPasswordUser.password || currentPasswordInput;
-      
-      if (!authToUse) {
-        throw new Error("Se requiere la contraseña actual para usuarios antiguos.");
-      }
+      secondaryApp = initializeApp(firebaseConfig, `UpdatePass_${Date.now()}`);
+      const secondaryAuth = getAuth(secondaryApp);
 
+      // For password change, admin re-authenticates with their own credentials
+      // or uses Firebase Admin SDK pattern via cloud function
       const { signInWithEmailAndPassword, updatePassword } = await import('firebase/auth');
-      const cred = await signInWithEmailAndPassword(secondaryAuth, changingPasswordUser.email, authToUse);
+      
+      // Sign in as the target user to change their password
+      // This requires knowing the current password or using a reset flow
+      const cred = await signInWithEmailAndPassword(secondaryAuth, changingPasswordUser.email, currentPasswordInput);
       await updatePassword(cred.user, newPassword);
 
-      // Update in Firestore
+      // SECURITY: Only store metadata, never the password itself
       await updateDoc(doc(db, 'users', changingPasswordUser.id), {
-        password: newPassword
+        passwordChangedAt: serverTimestamp()
       });
 
       await signOut(secondaryAuth);
@@ -209,7 +213,9 @@ const UserManagementView = () => {
       toast.error(msg);
     } finally {
       setIsUpdatingPassword(false);
-      deleteApp(secondaryApp).catch(console.error);
+      if (secondaryApp) {
+        deleteApp(secondaryApp).catch(console.error);
+      }
     }
   };
 
@@ -292,12 +298,11 @@ const UserManagementView = () => {
                           <p style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Mail size={11} /> {u.email}
                           </p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', padding: '1px 6px', borderRadius: 4, cursor: 'pointer' }} onClick={() => togglePasswordVisibility(u.id)}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', padding: '1px 6px', borderRadius: 4 }}>
                             <Key size={10} color="#64748b" />
                             <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 700, color: '#475569' }}>
-                              {showPasswords[u.id] ? (u.password || '---') : '••••••••'}
+                              ••••••••
                             </span>
-                            {showPasswords[u.id] ? <EyeOff size={10} color="#94a3b8" /> : <Eye size={10} color="#94a3b8" />}
                           </div>
                         </div>
                       </div>
@@ -490,7 +495,7 @@ const UserManagementView = () => {
             </div>
             <p className="text-sm text-muted mb-6">Establece una nueva contraseña para <strong>{changingPasswordUser?.email}</strong>.</p>
             <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
-              {!changingPasswordUser?.password && (
+              {(!changingPasswordUser?.passwordChangedAt || changingPasswordUser?.password === 'legacy') && (
                 <div className="f-group">
                   <label style={{ color: '#ea580c' }}>Contraseña Actual (Requerida por ser usuario antiguo)</label>
                   <div className="relative">

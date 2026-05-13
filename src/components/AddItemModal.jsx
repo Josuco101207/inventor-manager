@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Save, Plus, Wrench, Layers } from 'lucide-react';
-import { useInventory } from '../context/InventoryContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import './ActionModal.css'; // Reusing base modal styles
 import './AddItemModal.css';
 
@@ -410,6 +410,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
               <textarea 
                 name="observaciones" 
                 placeholder="Notas adicionales (ej: Dañado, sin imán, falta seguro...)" 
+                value={formData.observaciones}
                 onChange={handleChange}
                 className="w-full p-3 h-20"
                 style={{ resize: 'none' }}

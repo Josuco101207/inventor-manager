@@ -2,7 +2,7 @@ import React from 'react';
 import Header from '../components/Header';
 import { User, Shield, Clock, TrendingUp, BarChart3, Mail, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useInventory } from '../context/InventoryContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import './ProfileView.css';
 
 const ProfileView = () => {
