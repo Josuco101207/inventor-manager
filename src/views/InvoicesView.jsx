@@ -31,6 +31,7 @@ const InvoicesView = () => {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [viewingInvoice, setViewingInvoice] = useState(null);
+  const [sortBy, setSortBy] = useState('fecha'); // 'fecha' | 'proveedor' | 'folio'
 
   // ─── Autocomplete state ───
   const [acIndex, setAcIndex] = useState(-1);    // which line shows dropdown
@@ -484,6 +485,20 @@ const InvoicesView = () => {
       {/* ═══ TAB: Invoice List ═══ */}
       {tab === 'list' && (
         <div className="iv-card">
+          {invoices.length > 0 && (
+            <div className="iv-list-controls">
+              <span className="iv-list-count">{invoices.length} facturas encontradas</span>
+              <div className="iv-sort-group">
+                <label>Ordenar por:</label>
+                <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="iv-sort-select">
+                  <option value="fecha">Fecha (Más reciente)</option>
+                  <option value="proveedor">Proveedor (A-Z)</option>
+                  <option value="folio">Folio (A-Z)</option>
+                </select>
+              </div>
+            </div>
+          )}
+          
           {invoices.length === 0 ? (
             <div className="iv-empty">
               <div className="iv-empty-icon"><FileText size={32} /></div>
@@ -492,7 +507,22 @@ const InvoicesView = () => {
             </div>
           ) : (
             <div className="iv-invoices-list">
-              {invoices.map(inv => (
+              {[...invoices].sort((a, b) => {
+                if (sortBy === 'fecha') {
+                  // Priorizar fecha de emisión, luego createdAt para desempate
+                  const dateA = a.fechaEmision || '';
+                  const dateB = b.fechaEmision || '';
+                  if (dateA !== dateB) return dateB.localeCompare(dateA);
+                  return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+                }
+                if (sortBy === 'proveedor') {
+                  return (a.proveedor || '').localeCompare(b.proveedor || '');
+                }
+                if (sortBy === 'folio') {
+                  return (a.folio || '').localeCompare(b.folio || '');
+                }
+                return 0;
+              }).map(inv => (
                 <div key={inv.id} className="iv-invoice-row" onClick={() => setViewingInvoice(inv)}>
                   <span className="iv-invoice-row-folio">{inv.folio}</span>
                   <span className="iv-invoice-row-provider">{inv.proveedor}</span>
