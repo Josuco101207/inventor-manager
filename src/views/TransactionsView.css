@@ -280,3 +280,121 @@
     max-height: none;
   }
 }
+
+/* ─── Timeline Neon para Transactions ─── */
+.dash-timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.dash-timeline-item {
+  display: flex;
+  gap: 1rem;
+  position: relative;
+}
+
+.dash-timeline-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.dash-timeline-node {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  border: 2px solid hsl(var(--bg-main));
+}
+
+.dash-timeline-line {
+  width: 2px;
+  flex-grow: 1;
+  margin-top: 4px;
+  margin-bottom: -1.5rem; /* Connect to next */
+}
+
+.dash-timeline-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  background: hsla(var(--bg-elevated), 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsla(var(--border-color), 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dash-timeline-content:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.dash-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.dash-timeline-action {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dash-timeline-time {
+  font-size: 0.75rem;
+  color: hsl(var(--text-muted));
+  font-weight: 600;
+}
+
+.dash-timeline-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: hsl(var(--text-main));
+  line-height: 1.2;
+}
+
+.dash-timeline-sub {
+  font-size: 0.8rem;
+  color: hsl(var(--text-soft));
+  margin-bottom: 8px;
+}
+
+.dash-timeline-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-top: 8px;
+  border-top: 1px dashed hsla(var(--border-color), 0.5);
+}
+
+.dash-timeline-note {
+  font-size: 0.85rem;
+  color: hsl(var(--text-muted));
+  font-weight: 500;
+  flex: 1;
+  padding-right: 1rem;
+}
+
+.dash-timeline-qty {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 0.9rem;
+}

@@ -125,14 +125,15 @@ const TransactionsView = () => {
       </header>
 
       <div className="invt-container animate-slide-up">
-        <div className="invt-grid-row invt-header-row">
+        {/* Ocultar el encabezado de tabla clásico */}
+        <div className="invt-grid-row invt-header-row hidden-on-mobile" style={{ display: 'none' }}>
           <div className="invt-cell-art">Acción / Artículo</div>
           <div className="invt-cell-details">Detalle / Responsable</div>
           <div className="invt-cell-time">Fecha y Hora</div>
           <div className="invt-cell-act">Acciones</div>
         </div>
         
-        <div className="invt-body scrollbar-hide">
+        <div className="dash-timeline-container" style={{ padding: '0 1rem' }}>
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-blue-500 gap-4">
               <Loader2 className="animate-spin" size={32} />
@@ -145,55 +146,49 @@ const TransactionsView = () => {
               const movDate = mov.timestamp?.toDate();
               
               return (
-                <div key={mov.id || index} className="invt-grid-row invt-data-row">
-                  {/* Action + Item */}
-                  <div className="invt-cell-art">
-                    <div className="invt-avatar" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-                      <Icon size={20} />
+                <div key={mov.id || index} className="dash-timeline-item">
+                  <div className="dash-timeline-track">
+                    <div className="dash-timeline-node" style={{ backgroundColor: cfg.color, boxShadow: `0 0 15px ${cfg.color}80` }}>
+                      <Icon size={12} color="#fff" />
                     </div>
-                    <div className="invt-item-info">
-                      <span className="invt-action-label" style={{ color: cfg.color }}>{cfg.label}</span>
-                      <span className="invt-item-name" onClick={() => handleArticleClick(mov)} style={{ cursor: 'pointer' }}>
-                        {mov.item}
-                      </span>
-                      <span className="invt-item-cat">{mov.category || 'General'}</span>
-                    </div>
+                    {index !== filteredMovements.length - 1 && <div className="dash-timeline-line" style={{ background: `linear-gradient(to bottom, ${cfg.color}80, transparent)` }}></div>}
                   </div>
-
-                  {/* Detail + User */}
-                  <div className="invt-cell-details">
-                    <span className="invt-detail-text">{mov.details || 'Sin detalles adicionales'}</span>
-                    <div className="invt-detail-meta">
-                      <div className="invt-user-tag">
-                        <Users size={12} />
-                        <span>{mov.user || 'Admin'}</span>
+                  
+                  <div className="dash-timeline-content glass-panel-ultra" style={{ marginBottom: '1rem' }}>
+                    <div className="dash-timeline-header">
+                      <div className="flex items-center gap-2">
+                        <span className="dash-timeline-action" style={{ color: cfg.color }}>{cfg.label}</span>
+                        {mov.annulled && <span className="invt-badge-annulled" style={{ padding: '2px 6px', fontSize: '8px' }}>ANULADO</span>}
                       </div>
-                      {mov.qty && <span className="invt-qty-badge">{mov.qty} unidades</span>}
+                      <span className="dash-timeline-time">{movDate?.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })} • {movDate?.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                     </div>
-                  </div>
-
-                  {/* Timestamp */}
-                  <div className="invt-cell-time">
-                    <span className="invt-time-date">{movDate?.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                    <span className="invt-time-hour">{movDate?.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="invt-cell-act">
-                    {isAdmin && !mov.annulled && mov.action !== 'Anulación' && (
-                      <button 
-                        className="invt-btn-annul" 
-                        title="Anular Movimiento"
-                        onClick={() => {
-                          if(window.confirm(`¿Seguro que deseas anular el movimiento de "${mov.item}"? Esta acción revertirá el stock.`)) {
-                            annulMovement(mov.id, userData?.name || 'Admin');
-                          }
-                        }}
-                      >
-                        <X size={18} />
-                      </button>
-                    )}
-                    {mov.annulled && <span className="invt-badge-annulled">ANULADO</span>}
+                    <span className="dash-timeline-title cursor-pointer hover:opacity-80 transition-opacity" onClick={() => handleArticleClick(mov)}>
+                      {mov.item}
+                    </span>
+                    <span className="dash-timeline-sub">{mov.category || 'General'}</span>
+                    <div className="dash-timeline-footer" style={{ alignItems: 'center' }}>
+                      <span className="dash-timeline-note">{mov.details || 'Sin detalles'}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] opacity-50 flex items-center gap-1">
+                          <Users size={10} /> {mov.user || 'Admin'}
+                        </span>
+                        {mov.qty && <span className="dash-timeline-qty" style={{ background: `${cfg.color}15`, color: cfg.color }}>{mov.qty} pz</span>}
+                        {isAdmin && !mov.annulled && mov.action !== 'Anulación' && (
+                          <button 
+                            className="invt-btn-annul flex items-center justify-center ml-2" 
+                            style={{ width: '28px', height: '28px', borderRadius: '8px' }}
+                            title="Anular Movimiento"
+                            onClick={() => {
+                              if(window.confirm(`¿Seguro que deseas anular el movimiento de "${mov.item}"? Esta acción revertirá el stock.`)) {
+                                annulMovement(mov.id, userData?.name || 'Admin');
+                              }
+                            }}
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
