@@ -96,6 +96,10 @@
 body {
   font-family: var(--font-body);
   background-color: hsl(var(--bg-main));
+  background-image: 
+    radial-gradient(circle at 0% 0%, hsla(var(--primary), 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, hsla(var(--accent-purple), 0.08) 0%, transparent 50%);
+  background-attachment: fixed;
   color: hsl(var(--text-main));
   transition: background-color var(--transition-base), color var(--transition-base);
   overflow-x: hidden;
@@ -126,7 +130,30 @@ h4 { font-size: 1.25rem; }
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background: hsl(var(--bg-main));
+  background: transparent;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: hsla(var(--bg-card), 0.7) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid hsla(var(--border-color), 0.4) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.04) !important;
+}
+
+.glass-card {
+  background: hsla(var(--bg-card), 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsla(var(--border-color), 0.5);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.glass-card:active {
+  transform: scale(0.98);
 }
 
 .main-content {
@@ -608,7 +635,7 @@ h4 { font-size: 1.25rem; }
 @media (max-width: 768px) {
   .main-content {
     padding: 1rem;
-    padding-bottom: 80px; /* Room for Bottom Nav */
+    padding-bottom: 110px; /* Room for Bottom Nav */
   }
 }
 
@@ -616,7 +643,7 @@ h4 { font-size: 1.25rem; }
 @media (max-width: 480px) {
   .main-content {
     padding: 0.75rem;
-    padding-bottom: 80px; /* Room for Bottom Nav */
+    padding-bottom: 110px; /* Room for Bottom Nav */
   }
 
   .modal-card {

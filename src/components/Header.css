@@ -292,8 +292,15 @@
 /* ─── Responsive: Phone (≤ 768px) ─── */
 @media (max-width: 768px) {
   .header {
-    margin-bottom: 1.5rem;
-    padding: 0.75rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: hsla(var(--bg-main), 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid hsla(var(--border-color), 0.5);
   }
 
   .search-bar {
