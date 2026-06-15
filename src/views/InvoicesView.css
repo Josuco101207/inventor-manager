@@ -770,7 +770,66 @@ select.iv-table-input {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Invoice Line Items Mobile Override */
+  .iv-table, .iv-table thead, .iv-table tbody, .iv-table th, .iv-table td, .iv-table tr {
+    display: block;
+  }
+
+  .iv-table {
+    min-width: 0;
+  }
+
+  .iv-table thead {
+    display: none; /* Hide headers */
+  }
+
+  .iv-table tbody tr {
+    margin-bottom: 1rem;
+    border: 1px solid hsl(var(--border-color));
+    border-radius: 16px;
+    padding: 1rem;
+    background: hsl(var(--bg-main));
+    position: relative;
+  }
+
+  .iv-table td {
+    padding: 0.5rem 0 !important;
+    border-bottom: 1px solid hsla(var(--border-color), 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+  }
+
+  .iv-table td:last-child {
+    border-bottom: none;
+  }
+
+  .iv-table td:nth-child(2)::before { content: "OC"; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
+  .iv-table td:nth-child(3)::before { content: "Cantidad"; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
+  .iv-table td:nth-child(4)::before { content: "U.M."; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
+  .iv-table td:nth-child(5)::before { content: "FrgnName"; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
+  .iv-table td:nth-child(6)::before { content: "Descripción"; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
+  .iv-table td:nth-child(7)::before { content: "P. Unitario"; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
+  .iv-table td:nth-child(8)::before { content: "IVA"; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
+  .iv-table td:nth-child(9)::before { content: "Importe Total"; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
+
+  .iv-table td.iv-row-num {
+    display: none;
+  }
+
+  .iv-table-input {
+    width: 100%;
+  }
+
+  .iv-table-wrapper {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+  }
 }
+
 
 /* ─── Responsive: Small Phone ─── */
 @media (max-width: 480px) {

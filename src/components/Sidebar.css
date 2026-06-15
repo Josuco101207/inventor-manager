@@ -257,8 +257,8 @@
 .hamburger-btn {
   display: none;
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  top: 1.5rem;
+  left: 1.5rem;
   z-index: 1100;
   width: 52px;
   height: 52px;
@@ -332,27 +332,15 @@
 /* ─── Phone (≤ 768px) ─── */
 @media (max-width: 768px) {
   .sidebar {
-    width: 85vw;
-    max-width: 300px;
-    padding: 1.25rem;
-  }
-
-  .sidebar-header {
-    padding: 0.25rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .nav-item {
-    padding: 0.75rem;
-    font-size: 0.9375rem;
-    min-height: 44px;
+    display: none !important;
   }
 
   .hamburger-btn {
-    width: 48px;
-    height: 48px;
-    bottom: 1.25rem;
-    right: 1.25rem;
+    display: none !important;
+  }
+  
+  .sidebar-overlay {
+    display: none !important;
   }
 }
 

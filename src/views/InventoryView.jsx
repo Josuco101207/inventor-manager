@@ -264,7 +264,7 @@ const InventoryView = ({ categoryTitle }) => {
           </label>
 
           {canAddTo(categoryTitle) && (
-            <button className="btn-primary-tools" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
+            <button className="btn-primary-tools desktop-only-btn" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
               <Plus size={18} />
               <span>Nuevo</span>
             </button>
@@ -363,6 +363,13 @@ const InventoryView = ({ categoryTitle }) => {
         isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} category={categoryTitle} initialData={selectedItem}
         onSave={(data) => { if (selectedItem) editItem(selectedItem.id, data, userData?.name || 'Jonathan'); else addItem(data, userData?.name || 'Jonathan'); setIsAddModalOpen(false); }}
       />
+
+      {/* Floating Action Button for Mobile */}
+      {canAddTo(categoryTitle) && (
+        <button className="mobile-fab" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
+          <Plus size={28} />
+        </button>
+      )}
     </main>
   );
 };

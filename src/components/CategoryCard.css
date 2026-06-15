@@ -44,13 +44,13 @@
 }
 
 .trend-badge.positive {
-  background-color: #f0fdf4;
-  color: #16a34a;
+  background-color: hsla(142, 71%, 45%, 0.1);
+  color: hsl(142, 71%, 45%);
 }
 
 .trend-badge.negative {
-  background-color: #fef2f2;
-  color: #dc2626;
+  background-color: hsla(0, 72%, 51%, 0.1);
+  color: hsl(0, 72%, 51%);
 }
 
 .category-info {
@@ -63,13 +63,43 @@
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-  color: #64748b;
+  color: hsl(var(--text-soft));
   letter-spacing: 0.05em;
 }
 
 .count-value {
-  color: #0f172a;
+  color: hsl(var(--text-main));
   font-size: 1.75rem;
   font-weight: 900;
   letter-spacing: -0.04em;
+}
+
+@media (max-width: 768px) {
+  .category-card {
+    padding: 1.25rem !important;
+    border-radius: 16px !important;
+  }
+
+  .icon-wrapper {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  .category-info {
+    margin-top: 0.75rem;
+  }
+
+  .category-info h3 {
+    font-size: 10px;
+  }
+
+  .count-value {
+    font-size: 1.4rem;
+  }
+
+  .trend-badge {
+    font-size: 9px;
+    padding: 3px 8px;
+  }
 }

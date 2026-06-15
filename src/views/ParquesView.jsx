@@ -230,7 +230,7 @@ const ParquesView = () => {
           )}
           
           {canAddTo('Parques') && (
-            <button className="btn-primary-tools" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
+            <button className="btn-primary-tools desktop-only-btn" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
               <Plus size={18} /> Nuevo
             </button>
           )}
@@ -392,6 +392,13 @@ const ParquesView = () => {
             <button className="btn-apple-primary w-full mt-8" onClick={() => setImportSummary(null)}>Entendido</button>
           </div>
         </div>
+      )}
+
+      {/* Floating Action Button for Mobile */}
+      {canAddTo('Parques') && (
+        <button className="mobile-fab" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
+          <Plus size={28} />
+        </button>
       )}
     </main>
   );

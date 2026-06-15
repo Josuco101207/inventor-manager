@@ -299,6 +299,7 @@
   .search-bar {
     padding: 0.65rem 1rem;
     border-radius: 14px;
+    width: 100%;
   }
 
   .header-actions {
@@ -320,7 +321,7 @@
   }
 
   .user-info {
-    display: none; /* Hide name/role, show only avatar */
+    display: none;
   }
 
   .header-avatar {

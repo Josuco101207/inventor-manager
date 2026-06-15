@@ -8,21 +8,21 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { 
   Search, Plus, QrCode, ArrowUpRight, ArrowDownLeft, AlertTriangle, 
-  Printer, X, Edit3, Trash2, Loader2, Wrench, ScanLine, RotateCcw, Download
+  Printer, X, Edit3, Trash2, Loader2, Wrench, ScanLine, RotateCcw, Download, UserCheck
 } from 'lucide-react';
 import { exportToExcel } from '../utils/exportUtils';
 import './ToolsView.css';
 
 const getStatusClass = (status) => {
   if (status === 'Prestado') return 'prestado';
-  if (status === 'Mantenimiento') return 'mantenimiento';
+  if (status === 'Asignado') return 'asignado';
   return 'disponible';
 };
 
 const ToolCard = memo(({ 
   tool, isAdmin, isStaff, canEdit, 
   isSelected, onSelectToggle,
-  onEdit, onDelete, onLoan, onReturn, onFault, onRepair, onQR, index
+  onEdit, onDelete, onLoan, onAssign, onReturn, onFault, onRepair, onQR, index
 }) => (
   <div 
     className={`tool-card animate-slide-up ${isSelected ? 'is-selected' : ''} ${isStaff ? 'has-selection-mode' : ''}`}
@@ -45,7 +45,7 @@ const ToolCard = memo(({
 
     <div className="tool-card-header">
       {/* Selection Checkbox Custom */}
-      {isStaff && tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && (
+      {isStaff && tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && tool.status !== 'Asignado' && (
         <div className="tool-selection-box" onClick={(e) => { e.stopPropagation(); onSelectToggle(tool.id); }}>
           <div className={`tool-checkbox-custom ${isSelected ? 'checked' : ''}`}>
             {isSelected && <span className="check-mark">✓</span>}
@@ -83,21 +83,26 @@ const ToolCard = memo(({
       )}
     </div>
 
-    {tool.status === 'Prestado' && tool.borrowedBy && (
+    {(tool.status === 'Prestado' || tool.status === 'Asignado') && (tool.borrowedBy || tool.assignedTo) && (
       <div className="borrower-info">
-        <p>Prestado a: <strong>{tool.borrowedBy}</strong></p>
+        <p>{tool.status === 'Asignado' ? 'Asignado a:' : 'Prestado a:'} <strong>{tool.status === 'Asignado' ? tool.assignedTo : tool.borrowedBy}</strong></p>
       </div>
     )}
 
     <div className="tool-actions">
       {isStaff && (
         <>
-          {tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && (
-            <button className="btn-tool-action btn-loan" onClick={() => onLoan(tool)}>
-              <ArrowUpRight size={16} /> Prestar
-            </button>
+          {tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && tool.status !== 'Asignado' && (
+            <>
+              <button className="btn-tool-action btn-loan" onClick={() => onLoan(tool)}>
+                <ArrowUpRight size={16} /> Prestar
+              </button>
+              <button className="btn-tool-action btn-assign-action" onClick={() => onAssign(tool)}>
+                <UserCheck size={16} /> Asignar
+              </button>
+            </>
           )}
-          {tool.status === 'Prestado' && (
+          {(tool.status === 'Prestado' || tool.status === 'Asignado') && (
             <button className="btn-tool-action btn-return" onClick={() => onReturn(tool)}>
               <ArrowDownLeft size={16} /> Devolver
             </button>
@@ -119,7 +124,7 @@ const ToolCard = memo(({
 ));
 
 const ToolsView = () => {
-  const { items, personnel, addItem, editItem, deleteItem, loanItem, bulkLoanItems, returnItem, reportMaintenance, completeMaintenance, loading } = useInventory();
+  const { items, personnel, addItem, editItem, deleteItem, loanItem, assignItem, bulkLoanItems, returnItem, reportMaintenance, completeMaintenance, loading } = useInventory();
   const { isAdmin, isStaff, canEditIn, canAddTo, userData } = useAuth();
   const location = useLocation();
   
@@ -132,10 +137,11 @@ const ToolsView = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isBulkLoanModalOpen, setIsBulkLoanModalOpen] = useState(false);
   const [isFaultModalOpen, setIsFaultModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState(null); // null | 'Prestado' | 'Mantenimiento'
+  const [statusFilter, setStatusFilter] = useState(null); // null | 'Prestado' | 'Mantenimiento' | 'Asignado'
   
   // Forms state
   const [borrowerName, setBorrowerName] = useState('');
@@ -226,6 +232,13 @@ const ToolsView = () => {
     setBorrowerName('');
   };
 
+  const handleAssignConfirm = async () => {
+    if (!borrowerName) return;
+    await assignItem(selectedTool.id, borrowerName, userName);
+    setIsAssignModalOpen(false);
+    setBorrowerName('');
+  };
+
   const handleBulkLoanConfirm = async () => {
     if (!borrowerName || selectedToolIds.length === 0) return;
     await bulkLoanItems(selectedToolIds, borrowerName, userName);
@@ -289,6 +302,14 @@ const ToolsView = () => {
             title="Filtrar Prestadas"
           >
             <ArrowUpRight size={18} /> {statusFilter === 'Prestado' ? 'Viendo Prestadas' : 'Prestadas'}
+          </button>
+
+          <button 
+            className={`btn-scan-qr ${statusFilter === 'Asignado' ? 'active-assigned' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'Asignado' ? null : 'Asignado')}
+            title="Filtrar Asignadas"
+          >
+            <UserCheck size={18} /> {statusFilter === 'Asignado' ? 'Viendo Asignadas' : 'Asignadas'}
           </button>
 
           <button 
@@ -375,6 +396,7 @@ const ToolsView = () => {
                 setIsLoanModalOpen(true);
               }
             }}
+            onAssign={(t) => { setSelectedTool(t); setIsAssignModalOpen(true); }}
             onReturn={handleReturnConfirm}
             onFault={(t) => { setSelectedTool(t); setIsFaultModalOpen(true); }}
             onRepair={handleRepairConfirm}
@@ -461,6 +483,38 @@ const ToolsView = () => {
             <div className="flex gap-4">
               <button className="btn-apple-secondary flex-1" onClick={() => setIsLoanModalOpen(false)}>Cancelar</button>
               <button className="btn-apple-primary flex-1" onClick={handleLoanConfirm} disabled={!borrowerName}>Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAssignModalOpen && selectedTool && (
+        <div className="modal-overlay">
+          <div className="modal-card animate-scale-up">
+            <header className="modal-header">
+              <h3>
+                <UserCheck className="text-purple-500" size={28} />
+                Asignar Herramienta
+              </h3>
+              <p>¿A quién se le asigna <strong>{selectedTool.name}</strong>?</p>
+            </header>
+
+            <div className="f-group">
+              <label>Nombre del Trabajador</label>
+              <input 
+                type="text" 
+                className="f-input" 
+                placeholder="Escribe el nombre aquí..." 
+                list="personnel-list"
+                value={borrowerName} 
+                onChange={(e) => setBorrowerName(e.target.value)} 
+                autoFocus
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <button className="btn-apple-secondary flex-1" onClick={() => setIsAssignModalOpen(false)}>Cancelar</button>
+              <button className="btn-apple-primary flex-1" onClick={handleAssignConfirm} disabled={!borrowerName} style={{ background: 'var(--purple-500)' }}>Confirmar</button>
             </div>
           </div>
         </div>

@@ -407,6 +407,24 @@
   .analytics-grid {
     gap: 1rem;
   }
+
+  .selector-stock-info {
+    border-top: 1px solid hsl(var(--border-color));
+    padding-top: 0.75rem;
+  }
+
+  .stock-info-value {
+    font-size: 1.2rem;
+  }
+
+  .no-data-state {
+    padding: 4rem 1.5rem;
+    border-radius: 24px;
+  }
+
+  .no-data-state h3 {
+    font-size: 1.2rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -416,6 +434,27 @@
 
   .insight-icon {
     display: none;
+  }
+
+  .stat-box {
+    padding: 1.25rem;
+    border-radius: 16px;
+  }
+
+  .stat-box .value {
+    font-size: 1.3rem;
+  }
+
+  .stat-box .label {
+    font-size: 0.65rem;
+  }
+
+  .analytics-container {
+    padding: 0.75rem;
+  }
+
+  .chart-container {
+    min-height: 180px;
   }
 }
 

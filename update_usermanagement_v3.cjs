@@ -1,255 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
-import { db } from '../firebase/config';
-import { collection, onSnapshot, query, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import {
-  UserPlus, Trash2, Shield, Mail, Key, Loader2,
-  Warehouse, User, ChevronDown, ChevronUp, Lock, PlusCircle, Edit3, X, Eye, EyeOff,
-  LayoutDashboard, Wrench, PenTool, Package, Printer, Cpu, Layers, Archive, Landmark, History, Activity, FileText
-} from 'lucide-react';
-import { toast } from 'sonner';
-import './UserManagementView.css';
+const fs = require('fs');
+const filePath = 'c:\\Users\\infra\\Desktop\\Inventor Manager\\src\\views\\UserManagementView.jsx';
+let content = fs.readFileSync(filePath, 'utf-8');
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDWOFFslHI0eSqyUf_tb1D1VlzMZmNemmM",
-  authDomain: "inventor-manager-a0b4d.firebaseapp.com",
-  projectId: "inventor-manager-a0b4d",
-  storageBucket: "inventor-manager-a0b4d.firebasestorage.app",
-  messagingSenderId: "213399034117",
-  appId: "1:213399034117:web:3e30a5421c516b05fe7f6c"
-};
+// 1. Add CSS import
+if (!content.includes("import './UserManagementView.css';")) {
+    content = content.replace("import { toast } from 'sonner';", "import { toast } from 'sonner';\nimport './UserManagementView.css';");
+}
 
-const ALL_CATEGORIES = [
-  'Tornillería', 'Papelería', 'Herramientas', 'Impresión 3D',
-  'Electrónica', 'Inventario General', 'Almacén Temporal', 'Parques', 'Facturas'
-];
+// 2. Fix PermToggle
+content = content.replace("background: active ? `${color}18` : '#f8fafc',", "background: active ? `${color}18` : 'transparent',");
 
-const ALL_VIEWS = [
-  { id: 'dashboard', label: 'Dashboard (Inicio)', icon: <LayoutDashboard size={14} /> },
-  { id: 'tornilleria', label: 'Tornillería', icon: <Wrench size={14} /> },
-  { id: 'papeleria', label: 'Papelería', icon: <PenTool size={14} /> },
-  { id: 'herramientas', label: 'Herramientas', icon: <Package size={14} /> },
-  { id: 'impresion-3d', label: 'Impresión 3D', icon: <Printer size={14} /> },
-  { id: 'electronica', label: 'Electrónica', icon: <Cpu size={14} /> },
-  { id: 'general', label: 'Inventario General', icon: <Layers size={14} /> },
-  { id: 'almacen-temporal', label: 'Almacén Temporal', icon: <Archive size={14} /> },
-  { id: 'parques', label: 'Parques', icon: <Landmark size={14} /> },
-  { id: 'transactions', label: 'Transacciones (Historial)', icon: <History size={14} /> },
-  { id: 'facturas', label: 'Facturas (Registro)', icon: <FileText size={14} /> },
-  { id: 'analytics', label: 'Analíticas (Gráficas)', icon: <Activity size={14} /> },
-];
+// 3. Replace the return
+const lines = content.split(/\r?\n/);
+const returnIndex = lines.findIndex((line, idx) => line === "  return (" && lines[idx+1] && lines[idx+1].includes("minHeight: '100vh'"));
 
-// Mini toggle checkbox button
-const PermToggle = ({ active, onClick, color, disabled }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    style={{
-      width: 28, height: 28,
-      borderRadius: 8,
-      border: `2px solid ${active ? color : '#e2e8f0'}`,
-      background: active ? `${color}18` : 'transparent',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      cursor: disabled ? 'default' : 'pointer',
-      transition: 'all 0.15s',
-      flexShrink: 0,
-    }}
-    title={active ? 'Quitar permiso' : 'Dar permiso'}
-  >
-    {active && <span style={{ width: 10, height: 10, borderRadius: 3, background: color, display: 'block' }} />}
-  </button>
-);
+if (returnIndex === -1) {
+    console.error("Could not find start index");
+    process.exit(1);
+}
 
-const UserManagementView = () => {
-  const [users, setUsers] = useState([]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
-  const [expandedUserId, setExpandedUserId] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [showPasswords, setShowPasswords] = useState({});
-  const [isChangeModalOpen, setIsChangeModalOpen] = useState(false);
-  const [changingPasswordUser, setChangingPasswordUser] = useState(null);
-  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+const beforeReturn = lines.slice(0, returnIndex).join('\n');
 
-  useEffect(() => {
-    const q = query(collection(db, 'users'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      data.sort((a, b) => (a.displayName || a.name || '').toLowerCase().localeCompare((b.displayName || b.name || '').toLowerCase()));
-      setUsers(data);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    setIsCreating(true);
-    let secondaryApp = null;
-    try {
-      secondaryApp = initializeApp(firebaseConfig, `Secondary_${Date.now()}`);
-      const secondaryAuth = getAuth(secondaryApp);
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, newUser.email, newUser.password);
-      await setDoc(doc(db, 'users', cred.user.uid), {
-        name: newUser.name, displayName: newUser.name, email: newUser.email,
-        role: newUser.role, 
-        allowedCategories: [...ALL_CATEGORIES], 
-        editableCategories: [],
-        allowedViews: ['dashboard', 'tornilleria', 'papeleria', 'herramientas', 'impresion-3d', 'electronica', 'general', 'almacen-temporal', 'parques'],
-        // SECURITY: Never store passwords in plaintext
-        passwordChangedAt: serverTimestamp(),
-        createdAt: serverTimestamp()
-      });
-      await signOut(secondaryAuth);
-      toast.success(`Usuario ${newUser.name} creado`);
-      setIsAddModalOpen(false);
-      setNewUser({ name: '', email: '', password: '', role: 'user' });
-    } catch (err) {
-      toast.error(err.message || 'Error al crear cuenta');
-    } finally { 
-      setIsCreating(false); 
-      if (secondaryApp) {
-        deleteApp(secondaryApp).catch(console.error);
-      }
-    }
-  };
-
-  const toggleRole = async (u) => {
-    const next = u.role === 'admin' ? 'almacenista' : u.role === 'almacenista' ? 'user' : 'admin';
-    if (window.confirm(`¿Cambiar rol de ${u.email} a ${next.toUpperCase()}?`)) {
-      await updateDoc(doc(db, 'users', u.id), { role: next });
-      toast.success(`Rol cambiado a ${next}`);
-    }
-  };
-
-  const handleDelete = async (u) => {
-    if (u.role === 'admin') return toast.error('No puedes eliminar a Jonathan');
-    if (window.confirm(`¿Eliminar acceso para ${u.email}?`)) {
-      await deleteDoc(doc(db, 'users', u.id));
-      toast.info('Perfil eliminado');
-    }
-  };
-
-  // Toggle a single permission for a user
-  const togglePerm = async (u, field, category) => {
-    const current = u[field] || [];
-    const isPresent = current.includes(category);
-    const next = isPresent ? current.filter(c => c !== category) : [...current, category];
-    
-    setSaving(true);
-    try {
-      const updates = { [field]: next };
-      
-      // Auto-sync: If they can Add or Edit, they MUST be able to View.
-      // If they lose View, they probably shouldn't Add/Edit (optional, but safer)
-      if (!isPresent && (field === 'allowedCategories' || field === 'editableCategories')) {
-        // Map category name back to view ID
-        const viewIdMap = {
-          'Tornillería': 'tornilleria', 'Papelería': 'papeleria',
-          'Herramientas': 'herramientas', 'Impresión 3D': 'impresion-3d',
-          'Electrónica': 'electronica', 'Inventario General': 'general',
-          'Almacén Temporal': 'almacen-temporal', 'Parques': 'parques',
-          'Facturas': 'facturas'
-        };
-        const viewId = viewIdMap[category];
-        if (viewId && !(u.allowedViews || []).includes(viewId)) {
-          updates.allowedViews = [...(u.allowedViews || []), viewId];
-        }
-      }
-      
-      await updateDoc(doc(db, 'users', u.id), updates);
-    }
-    catch { toast.error('Error al guardar'); }
-    finally { setSaving(false); }
-  };
-
-  const setAll = async (u, field, value) => {
-    setSaving(true);
-    const data = value 
-      ? (field === 'allowedViews' ? ALL_VIEWS.map(v => v.id) : [...ALL_CATEGORIES]) 
-      : [];
-    try { await updateDoc(doc(db, 'users', u.id), { [field]: data }); }
-    finally { setSaving(false); }
-  };
-
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    if (!changingPasswordUser || !newPassword) return;
-    setIsUpdatingPassword(true);
-
-    let secondaryApp = null;
-    try {
-      secondaryApp = initializeApp(firebaseConfig, `UpdatePass_${Date.now()}`);
-      const secondaryAuth = getAuth(secondaryApp);
-
-      // For password change, admin re-authenticates with their own credentials
-      // or uses Firebase Admin SDK pattern via cloud function
-      const { signInWithEmailAndPassword, updatePassword } = await import('firebase/auth');
-      
-      // Sign in as the target user to change their password
-      // This requires knowing the current password or using a reset flow
-      const cred = await signInWithEmailAndPassword(secondaryAuth, changingPasswordUser.email, currentPasswordInput);
-      await updatePassword(cred.user, newPassword);
-
-      // SECURITY: Only store metadata, never the password itself
-      await updateDoc(doc(db, 'users', changingPasswordUser.id), {
-        passwordChangedAt: serverTimestamp()
-      });
-
-      await signOut(secondaryAuth);
-      toast.success(`Contraseña de ${changingPasswordUser.email} actualizada`);
-      setIsChangeModalOpen(false);
-      setNewPassword('');
-      setCurrentPasswordInput('');
-    } catch (err) {
-      const msg = err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' 
-        ? "La contraseña actual es incorrecta." 
-        : err.message;
-      toast.error(msg);
-    } finally {
-      setIsUpdatingPassword(false);
-      if (secondaryApp) {
-        deleteApp(secondaryApp).catch(console.error);
-      }
-    }
-  };
-
-  const sendResetEmail = async (email) => {
-    const { getAuth, sendPasswordResetEmail } = await import('firebase/auth');
-    try {
-      await sendPasswordResetEmail(getAuth(), email);
-      toast.success("Correo de restablecimiento enviado");
-      setIsChangeModalOpen(false);
-    } catch (err) {
-      toast.error("Error al enviar correo");
-    }
-  };
-
-  const togglePasswordVisibility = (uid) => {
-    setShowPasswords(prev => ({ ...prev, [uid]: !prev[uid] }));
-  };
-
-  const roleStyle = (role) => ({
-    admin:       { bg: '#f0f7ff', color: '#0071e3', border: '#bfdbfe' },
-    almacenista: { bg: '#fff8f0', color: '#ea580c', border: '#fed7aa' },
-    user:        { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0' },
-  }[role] || { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0' });
-
-  const summaryText = (u) => {
-    if (u.role === 'admin') return { text: 'Acceso ilimitado', color: '#0071e3', bg: '#f0f7ff', border: '#bfdbfe' };
-    const a = (u.allowedCategories || []).length;
-    const e = (u.editableCategories || []).length;
-    if (a === 0 && e === 0) return { text: 'Sin permisos', color: '#dc2626', bg: '#fff1f1', border: '#fecaca' };
-    return { text: `${a} agregar · ${e} editar`, color: '#16a34a', bg: '#f0fff4', border: '#bbf7d0' };
-  };
-
-  return (
+const newReturn = `  return (
     <div className="um-view">
       <Header />
       <div className="um-container">
@@ -286,7 +58,7 @@ const UserManagementView = () => {
                   {/* User Row */}
                   <div className="um-user-row">
                     {/* Avatar */}
-                    <div className={`um-avatar ${isAdminUser ? 'um-avatar-admin' : 'um-avatar-user'}`}>
+                    <div className={\`um-avatar \${isAdminUser ? 'um-avatar-admin' : 'um-avatar-user'}\`}>
                       <User size={18} color={isAdminUser ? '#fff' : 'hsl(var(--text-muted))'} />
                     </div>
 
@@ -324,7 +96,7 @@ const UserManagementView = () => {
                       {!isAdminUser && (
                         <button
                           onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
-                          className={`um-btn-perms ${isExpanded ? 'expanded' : ''}`}
+                          className={\`um-btn-perms \${isExpanded ? 'expanded' : ''}\`}
                         >
                           <Lock size={12} /> Permisos {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                         </button>
@@ -365,7 +137,7 @@ const UserManagementView = () => {
                                 <div 
                                   key={view.id}
                                   onClick={() => !isCore && togglePerm(u, 'allowedViews', view.id)}
-                                  className={`um-view-row ${hasAccess ? 'active' : ''} ${isCore ? 'disabled' : ''}`}
+                                  className={\`um-view-row \${hasAccess ? 'active' : ''} \${isCore ? 'disabled' : ''}\`}
                                 >
                                   <div style={{ color: hasAccess ? '#0071e3' : 'hsl(var(--text-muted))' }}>{view.icon}</div>
                                   <span className="um-view-label">{view.label}</span>
@@ -400,7 +172,7 @@ const UserManagementView = () => {
                               return (
                                 <div
                                   key={cat}
-                                  className={`um-cat-row ${(canAdd || canEdit) ? 'active' : ''}`}
+                                  className={\`um-cat-row \${(canAdd || canEdit) ? 'active' : ''}\`}
                                 >
                                   <span className="um-cat-label">
                                     {cat}
@@ -537,3 +309,7 @@ const UserManagementView = () => {
 };
 
 export default UserManagementView;
+`;
+
+fs.writeFileSync(filePath, beforeReturn + '\\n' + newReturn, 'utf-8');
+console.log("Updated UserManagementView.jsx correctly");

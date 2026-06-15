@@ -36,7 +36,7 @@ const itemSchema = z.object({
   qty: z.number().int().min(0).default(0),
   threshold: z.number().int().min(0).default(0),
   unit: z.string().default('PZA'),
-  status: z.enum(['Disponible', 'Prestado', 'Mantenimiento']).optional().nullable(),
+  status: z.enum(['Disponible', 'Prestado', 'Mantenimiento', 'Asignado']).optional().nullable(),
   subcategory: z.string().optional().nullable(),
   marca: z.string().optional().nullable(),
   brand: z.string().optional().nullable(), // Keep for backward compatibility
@@ -54,7 +54,7 @@ const itemSchema = z.object({
 }).passthrough(); // Permitir cualquier otro campo dinámico de los esquemas de categoría
 
 const movementSchema = z.object({
-  action: z.enum(['Entrada', 'Salida', 'Préstamo', 'Devolución', 'Falla/Manto', 'Auditoría', 'Alta', 'Edición', 'Eliminación', 'Anulación']),
+  action: z.enum(['Entrada', 'Salida', 'Préstamo', 'Devolución', 'Falla/Manto', 'Auditoría', 'Alta', 'Edición', 'Eliminación', 'Anulación', 'Asignación']),
   item: z.string().min(1),
   itemId: z.string().optional(),
   qty: z.number().int().min(0),
@@ -540,29 +540,78 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
+  // ASIGNACIÓN - Optimistic UI
+  const assignItem = useCallback(async (itemId, assignee, userName = 'Jonathan') => {
+    const item = itemsRef.current.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const isAvailable = item.status === 'Disponible' || (item.qty || 0) > 0;
+    if (!isAvailable) {
+      toast.error("No hay stock disponible");
+      return;
+    }
+
+    // Guardar estado anterior
+    const previousState = { qty: item.qty, status: item.status, asignados: item.asignados };
+    
+    // OPTIMISTIC
+    const newQty = Math.max((item.qty || 0) - 1, 0);
+    const newAsignados = (item.asignados || 0) + 1;
+    const newStatus = newQty <= 0 ? 'Asignado' : 'Disponible';
+    
+    setItems(prev => prev.map(i => i.id === itemId ? {
+      ...i, qty: newQty, asignados: newAsignados, status: newStatus,
+      assignedTo: assignee, assignedBy: userName, assignmentDate: new Date()
+    } : i));
+
+    try {
+      await withRetry(() => updateDoc(doc(db, 'items', itemId), {
+        qty: increment(-1),
+        asignados: increment(1),
+        status: newStatus,
+        assignedTo: assignee,
+        assignedBy: userName,
+        assignmentDate: serverTimestamp(),
+        lastModified: serverTimestamp()
+      }));
+      
+      await addMovement('Asignación', item.name, 1, userName, assignee, item.category, item.id);
+      toast.success(`Asignado a ${assignee}`);
+    } catch (e) {
+      // ROLLBACK
+      setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...previousState } : i));
+      toast.error("Error al asignar");
+    }
+  }, [addMovement]);
+
   // DEVOLUCIÓN - Optimistic UI
   const returnItem = useCallback(async (itemId, userName = 'Jonathan') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
-    const previousState = { qty: item.qty, status: item.status, prestados: item.prestados, borrowedBy: item.borrowedBy };
+    const isAssigned = item.status === 'Asignado';
+    const previousState = { qty: item.qty, status: item.status, prestados: item.prestados, borrowedBy: item.borrowedBy, asignados: item.asignados, assignedTo: item.assignedTo };
     
     const newQty = (item.qty || 0) + 1;
-    const newPrestados = Math.max((item.prestados || 0) - 1, 0);
+    const newPrestados = isAssigned ? (item.prestados || 0) : Math.max((item.prestados || 0) - 1, 0);
+    const newAsignados = isAssigned ? Math.max((item.asignados || 0) - 1, 0) : (item.asignados || 0);
     const newStatus = 'Disponible';
     const newBorrowedBy = newPrestados === 0 ? null : item.borrowedBy;
+    const newAssignedTo = newAsignados === 0 ? null : item.assignedTo;
 
     // OPTIMISTIC
     setItems(prev => prev.map(i => i.id === itemId ? {
-      ...i, qty: newQty, prestados: newPrestados, status: newStatus, borrowedBy: newBorrowedBy
+      ...i, qty: newQty, prestados: newPrestados, asignados: newAsignados, status: newStatus, borrowedBy: newBorrowedBy, assignedTo: newAssignedTo
     } : i));
 
     try {
       await withRetry(() => updateDoc(doc(db, 'items', itemId), {
         qty: increment(1),
         prestados: newPrestados,
+        asignados: newAsignados,
         status: newStatus,
         borrowedBy: newBorrowedBy,
+        assignedTo: newAssignedTo,
         lastModified: serverTimestamp()
       }));
       
@@ -884,14 +933,14 @@ export const InventoryProvider = ({ children }) => {
     items, movements, personnel, brands, locations,
     loading, isLoadingMore, hasMoreItems, lastSync, globalStats,
     updateStock, addItem, deleteItem, editItem,
-    loanItem, returnItem, reportMaintenance, completeMaintenance, auditStock,
+    loanItem, assignItem, returnItem, reportMaintenance, completeMaintenance, auditStock,
     bulkAddItems, annulMovement, loadMoreItems, clearCache,
     itemsRef
   }), [
     items, movements, personnel, brands, locations,
     loading, isLoadingMore, hasMoreItems, lastSync, globalStats,
     updateStock, addItem, deleteItem, editItem,
-    loanItem, returnItem, reportMaintenance, completeMaintenance, auditStock,
+    loanItem, assignItem, returnItem, reportMaintenance, completeMaintenance, auditStock,
     bulkAddItems, annulMovement, loadMoreItems, clearCache
   ]);
 

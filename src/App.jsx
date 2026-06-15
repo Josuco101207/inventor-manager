@@ -19,6 +19,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Toaster, toast } from 'sonner';
 import { Loader2, Lock } from 'lucide-react';
+import MobileBottomNav from './components/MobileBottomNav';
 
 const RootApp = () => {
   const { user, loading, userData, isAdmin } = useAuth();
@@ -105,6 +106,7 @@ const RootApp = () => {
             </Routes>
           </Suspense>
         </main>
+        <MobileBottomNav />
       </div>
       <Toaster position="top-right" richColors closeButton />
     </Router>

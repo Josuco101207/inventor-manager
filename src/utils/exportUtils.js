@@ -45,7 +45,7 @@ export const exportToExcel = async (data, filename, category = "General") => {
           "Codigo": item.codigo || '-',
           "Marca": item.marca || '-',
           "Estado Fisico": item.estado || 'BUENO',
-          "Status": item.status === 'Prestado' ? `Prestado a ${item.borrowedBy}` : 'En Almacen',
+          "Status": item.status === 'Prestado' ? `Prestado a ${item.borrowedBy}` : item.status === 'Asignado' ? `Asignado a ${item.assignedTo}` : item.status === 'Mantenimiento' ? 'En Mantenimiento' : 'En Almacen',
           "Ult. Mov.": formattedDate,
         };
       case 'Parques':

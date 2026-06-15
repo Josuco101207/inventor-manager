@@ -114,7 +114,7 @@ input:checked + .ios-slider:before {
 }
 
 .cupertino-input:focus {
-  background: #e5e5ea;
+  background: hsla(var(--bg-main), 0.8);
   box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
 }
 
@@ -192,12 +192,35 @@ input:checked + .ios-slider:before {
     font-size: 15px;
     border-radius: 10px;
   }
+
+  .brand-pill {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .ios-switch {
+    min-width: 51px;
+  }
 }
 
 @media (max-width: 480px) {
   .settings-card-cupertino {
     padding: 1rem;
     margin-bottom: 1.25rem;
+  }
+
+  .cupertino-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .cupertino-label .title {
+    font-size: 13px;
+  }
+
+  .ios-switch {
+    align-self: flex-end;
   }
 }
 
