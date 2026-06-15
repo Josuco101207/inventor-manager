@@ -225,8 +225,8 @@ const InventoryView = ({ categoryTitle }) => {
           <p>Control de suministros • {stats.total} artículos ({stats.filtered} filtrados)</p>
         </div>
         
-        <div className="tools-actions">
-          <div className="search-box-wrapper">
+        <div className="dash-cat-scroll" style={{ padding: '0', margin: '0 0 1rem 0' }}>
+          <div className="search-box-wrapper" style={{ flex: '1 1 auto', minWidth: '200px' }}>
             <Search size={18} />
             <input 
               type="text" 
@@ -236,22 +236,22 @@ const InventoryView = ({ categoryTitle }) => {
             />
           </div>
 
-          <button className="btn-scan-qr" onClick={() => exportToExcel(filteredItems, `inv_${categoryTitle}_filtrado`, categoryTitle)}>
+          <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={() => exportToExcel(filteredItems, `inv_${categoryTitle}_filtrado`, categoryTitle)}>
             <Filter size={18} />
-            <span>Filtrados</span>
+            <span className="desktop-only-text">Filtrados</span>
           </button>
 
-          <button className="btn-scan-qr" onClick={() => {
+          <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={() => {
             const allItems = items.filter(i => i.category === categoryTitle);
             exportToExcel(allItems, `inv_${categoryTitle}_total`, categoryTitle);
           }}>
             <Download size={18} />
-            <span>Exportar Todo</span>
+            <span className="desktop-only-text">Exportar Todo</span>
           </button>
 
-          <label className="btn-scan-qr cursor-pointer">
+          <label className="btn-scan-qr cursor-pointer" style={{ padding: '0.75rem 1rem' }}>
             <Upload size={18} />
-            <span>Importar</span>
+            <span className="desktop-only-text">Importar</span>
             <input 
               type="file" 
               className="hidden" 
