@@ -321,6 +321,51 @@
 }
 
 @media (max-width: 768px) {
+  .tools-view {
+    padding-top: 80px !important;
+  }
+
+  .tools-header {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .desktop-only-text {
+    display: none !important;
+  }
+
+  .subcat-pills {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    gap: 0.5rem;
+    padding-bottom: 1rem;
+    scrollbar-width: none;
+  }
+
+  .subcat-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .subcat-nav-wrapper {
+    margin: 0 0 1rem 0 !important;
+  }
+
+  .subcat-nav-btn {
+    display: none !important;
+  }
+
+  .pill {
+    flex: 0 0 auto !important;
+    scroll-snap-align: start;
+    white-space: nowrap;
+  }
+
   .invt-grid-row {
     display: flex !important;
     flex-direction: column;
