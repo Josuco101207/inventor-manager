@@ -196,47 +196,30 @@ const Dashboard = () => {
             <p>Sin movimientos hoy</p>
           </div>
         ) : (
-          <div className="dash-mov-list">
-            <div className="dash-mov-header-row">
-              <span>MOVIMIENTO</span>
-              <span>DETALLES</span>
-              <span style={{ textAlign: 'center' }}>CANT.</span>
-              <span style={{ textAlign: 'right' }}>REGISTRO</span>
-            </div>
-            {dayMovements.slice(0, 15).map(mov => {
+          <div className="dash-timeline-container">
+            {dayMovements.slice(0, 15).map((mov, idx) => {
               const cfg = actionColors[mov.action] || { color: '#8e8e93', bg: '#f2f2f7', Icon: Activity };
               const { Icon } = cfg;
               return (
-                <div key={mov.id} className="dash-mov-row compact-premium">
-                  {/* Col 1: Action + Item */}
-                  <div className="mov-col-main">
-                    <span className="mov-badge-mini" style={{ color: cfg.color, background: cfg.bg }}>
-                      <Icon size={10} /> {mov.action}
-                    </span>
-                    <div className="mov-item-info">
-                      <span className="mov-item-name">{mov.item}</span>
-                      <span className="mov-item-sub">{mov.category || 'Gral'} {mov.subcategory ? `• ${mov.subcategory}` : ''}</span>
+                <div key={mov.id} className="dash-timeline-item">
+                  <div className="dash-timeline-track">
+                    <div className="dash-timeline-node" style={{ backgroundColor: cfg.color, boxShadow: `0 0 15px ${cfg.color}80` }}>
+                      <Icon size={12} color="#fff" />
                     </div>
+                    {idx !== dayMovements.slice(0, 15).length - 1 && <div className="dash-timeline-line" style={{ background: `linear-gradient(to bottom, ${cfg.color}80, transparent)` }}></div>}
                   </div>
                   
-                  {/* Col 2: Notes */}
-                  <div className="mov-col-notes">
-                    <span className="mov-note-text">{mov.details || '—'}</span>
-                  </div>
-
-                  {/* Col 3: Qty */}
-                  <div className="mov-col-qty">
-                    <span className="mov-qty-pill">{mov.qty}</span>
-                  </div>
-
-                  {/* Col 4: User + Time */}
-                  <div className="mov-col-meta">
-                    <span className="mov-user-tag">
-                      <User size={10} /> {mov.user || 'Jonathan'}
-                    </span>
-                    <span className="mov-time-tag">
-                      {mov.timestamp?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}
-                    </span>
+                  <div className="dash-timeline-content glass-panel-ultra">
+                    <div className="dash-timeline-header">
+                      <span className="dash-timeline-action" style={{ color: cfg.color }}>{mov.action}</span>
+                      <span className="dash-timeline-time">{mov.timestamp?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}</span>
+                    </div>
+                    <span className="dash-timeline-title">{mov.item}</span>
+                    <span className="dash-timeline-sub">{mov.category || 'Gral'} {mov.subcategory ? `• ${mov.subcategory}` : ''}</span>
+                    <div className="dash-timeline-footer">
+                      <span className="dash-timeline-note">{mov.details || '—'}</span>
+                      <span className="dash-timeline-qty" style={{ background: `${cfg.color}15`, color: cfg.color }}>{mov.qty} pz</span>
+                    </div>
                   </div>
                 </div>
               );
