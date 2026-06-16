@@ -356,7 +356,6 @@ const InventoryView = ({ categoryTitle }) => {
               )}
             </>
           ) : (
-          ) : (
             <div className="invt-empty-state">
               <div className="invt-empty-icon-wrap">
                 <Package size={48} />
