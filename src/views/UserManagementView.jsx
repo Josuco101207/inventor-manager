@@ -262,7 +262,7 @@ const UserManagementView = () => {
               Gestiona roles y permisos de cada miembro
             </p>
           </div>
-          <button className="btn-primary flex items-center gap-2" onClick={() => setIsAddModalOpen(true)}>
+          <button className="um-btn-add" onClick={() => setIsAddModalOpen(true)}>
             <UserPlus size={18} /> Agregar Miembro
           </button>
         </div>
@@ -306,18 +306,19 @@ const UserManagementView = () => {
                       </div>
                     </div>
 
-                    {/* Role pill */}
-                    <span className="um-role-pill" style={{ background: rs.bg, color: rs.color, borderColor: rs.border }}>
-                      {u.role === 'admin' && <Shield size={10} />}
-                      {u.role === 'almacenista' && <Warehouse size={10} />}
-                      {u.role === 'user' && <User size={10} />}
-                      {(u.role || 'user').toUpperCase()}
-                    </span>
+                    {/* Pills */}
+                    <div className="um-user-pills">
+                      <span className="um-role-pill" style={{ background: rs.bg, color: rs.color, borderColor: rs.border }}>
+                        {u.role === 'admin' && <Shield size={10} />}
+                        {u.role === 'almacenista' && <Warehouse size={10} />}
+                        {u.role === 'user' && <User size={10} />}
+                        {(u.role || 'user').toUpperCase()}
+                      </span>
 
-                    {/* Summary pill */}
-                    <span className="um-summary-pill" style={{ background: ss.bg, color: ss.color, borderColor: ss.border }}>
-                      {ss.text}
-                    </span>
+                      <span className="um-summary-pill" style={{ background: ss.bg, color: ss.color, borderColor: ss.border }}>
+                        {ss.text}
+                      </span>
+                    </div>
 
                     {/* Actions */}
                     <div className="um-actions">
