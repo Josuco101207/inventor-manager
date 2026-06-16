@@ -31,76 +31,87 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
   const isLow = !isCritical && (item.qty || 0) <= (item.threshold || 0) * 2;
   const stockClass = isCritical ? 'critical' : isLow ? 'low' : 'ok';
 
-  return (
-    <div className="invt-grid-row invt-data-row">
-      {/* Name + Meta */}
-      <div className="invt-cell-art">
-        <div className="invt-avatar">
-          {item.name ? item.name.charAt(0).toUpperCase() : '?'}
-        </div>
-        <div className="invt-item-info">
-          <span className="invt-item-name">{item.name || 'Sin nombre'}</span>
-          <div className="invt-item-tags">
-            {item.subcategory && <span className="invt-tag invt-tag-blue">{item.subcategory}</span>}
-            {item.marca && <span className="invt-tag invt-tag-gray">{item.marca}</span>}
-            {item.item_number && <span className="invt-tag invt-tag-mono">#{item.item_number}</span>}
+  return <div className="invt-grid-row">
+      <div className="invt-card-top">
+        {/* Article Info */}
+        <div className="invt-cell-art">
+          {item.image ? (
+            <img src={item.image} alt={item.name} className="invt-avatar glass-panel" />
+          ) : (
+            <div className="invt-avatar glass-panel">
+              {item.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="invt-item-info">
+            <h4 className="invt-item-name" title={item.name}>{item.name}</h4>
+            <div className="invt-item-tags">
+              <span className="invt-tag invt-tag-blue">{item.subcategory || 'GRAL'}</span>
+              <span className="invt-tag invt-tag-gray">{item.brand || 'S/M'}</span>
+              <span className="invt-tag invt-tag-mono">#{item.code || item.id.slice(0,6)}</span>
+            </div>
+            {item.observaciones && (
+              <p className="invt-item-obs" title={item.observaciones}>
+                {item.observaciones}
+              </p>
+            )}
           </div>
-          {item.observaciones && (
-            <p className="invt-item-obs" title={item.observaciones}>
-              {item.observaciones}
-            </p>
+        </div>
+
+        {/* Stock & Progress Bar */}
+        <div className="invt-cell-stock">
+          <div className="invt-stock-row">
+            <span className={`invt-stock-num stock-${stockClass}`}>{item.qty || 0}</span>
+            <span className="invt-stock-unit">{item.unit || 'pz'}</span>
+          </div>
+          <div className="invt-stock-progress-container">
+            <div className="invt-stock-bar-bg">
+              <div 
+                className={`invt-stock-bar bar-${stockClass}`}
+                style={{ width: `${Math.min(((item.qty || 0) / Math.max((item.threshold || 1) * 3, 1)) * 100, 100)}%` }}
+              />
+            </div>
+            <span className="invt-stock-min-text">Stock Mínimo: {item.threshold || 0}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="invt-card-divider"></div>
+
+      <div className="invt-card-bottom">
+        {/* Referencia (Location + Min) */}
+        <div className="invt-cell-ref">
+          <span className="invt-badge-min">Mín: {item.threshold || 0}</span>
+          <div className="invt-loc-text">
+            <Landmark size={12} className="invt-loc-icon" />
+            {item.location || 'General'}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="invt-cell-act">
+          {isStaff && (
+            <>
+              <button className="invt-btn invt-btn-dark" onClick={() => handleAction(item)} title="Movimiento">
+                <Activity size={14} className="icon-blue" />
+              </button>
+              <button className="invt-btn invt-btn-dark" onClick={() => handleAudit(item)} title="Auditar">
+                <ClipboardCheck size={14} className="icon-orange" />
+              </button>
+            </>
+          )}
+          {(isAdmin || canEditIn(categoryTitle)) && (
+            <button className="invt-btn invt-btn-dark" onClick={() => handleEdit(item)} title="Editar">
+              <Edit3 size={14} className="icon-gray" />
+            </button>
+          )}
+          {isAdmin && (
+            <button className="invt-btn invt-btn-dark" onClick={() => handleDelete(item)} title="Eliminar">
+              <Trash2 size={14} className="icon-red" />
+            </button>
           )}
         </div>
       </div>
-
-      {/* Stock */}
-      <div className="invt-cell-stock">
-        <div className="invt-stock-row">
-          <span className={`invt-stock-num stock-${stockClass}`}>{item.qty || 0}</span>
-          <span className="invt-stock-unit">{item.unit || 'pz'}</span>
-        </div>
-        <div className="invt-stock-bar-bg">
-          <div 
-            className={`invt-stock-bar bar-${stockClass}`}
-            style={{ width: `${Math.min(((item.qty || 0) / Math.max((item.threshold || 1) * 3, 1)) * 100, 100)}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Referencia (Location + Min) */}
-      <div className="invt-cell-ref">
-        <span className="invt-badge-min">Mín: {item.threshold || 0}</span>
-        <div className="invt-loc-text">
-          <Landmark size={12} className="invt-loc-icon" />
-          {item.location || 'General'}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="invt-cell-act">
-        {isStaff && (
-          <>
-            <button className="invt-btn invt-btn-blue" onClick={() => handleAction(item)} title="Movimiento">
-              <Activity size={15} />
-            </button>
-            <button className="invt-btn invt-btn-orange" onClick={() => handleAudit(item)} title="Auditar">
-              <ClipboardCheck size={15} />
-            </button>
-          </>
-        )}
-        {(isAdmin || canEditIn(categoryTitle)) && (
-          <button className="invt-btn invt-btn-gray" onClick={() => handleEdit(item)} title="Editar">
-            <Edit3 size={15} />
-          </button>
-        )}
-        {isAdmin && (
-          <button className="invt-btn invt-btn-red" onClick={() => handleDelete(item)} title="Eliminar">
-            <Trash2 size={15} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
+    </div>;
 });
 
 const InventoryView = ({ categoryTitle }) => {
