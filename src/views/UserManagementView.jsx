@@ -537,7 +537,7 @@ const UserManagementView = () => {
                 </button>
               </div>
               <div className="um-modal-link-wrap">
-                <button type="button" className="um-modal-link" onClick={handleResetPasswordEmail}>
+                <button type="button" className="um-modal-link" onClick={() => sendResetEmail(changingPasswordUser.email)}>
                   O enviar correo de restablecimiento
                 </button>
               </div>
