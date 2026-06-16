@@ -436,35 +436,55 @@ const UserManagementView = () => {
       {/* Add user modal */}
       {isAddModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-card animate-scale-up p-8">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 className="text-xl font-bold">Nuevo Miembro</h3>
-              <button onClick={() => setIsAddModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}><X size={20} /></button>
+          <div className="modal-card animate-scale-up um-modal">
+            <div className="um-modal-header">
+              <h3>Nuevo Miembro</h3>
+              <button className="um-modal-close" onClick={() => setIsAddModalOpen(false)}><X size={20} /></button>
             </div>
-            <p className="text-sm text-muted mb-6">Crea una cuenta de acceso para un trabajador.</p>
-            <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
-              <div className="f-group">
+            <p className="um-modal-sub">Crea una cuenta de acceso para un trabajador.</p>
+            <form onSubmit={handleCreateUser} className="um-modal-form">
+              <div className="um-input-group">
                 <label>Nombre</label>
-                <input type="text" required className="w-full" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
+                <div className="um-input-wrapper">
+                  <User className="um-input-icon" size={18} />
+                  <input type="text" required value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} />
+                </div>
               </div>
-              <div className="f-group">
+              <div className="um-input-group">
                 <label>Correo</label>
-                <input type="email" required className="w-full" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+                <div className="um-input-wrapper">
+                  <Mail className="um-input-icon" size={18} />
+                  <input type="email" required value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+                </div>
               </div>
-              <div className="f-group">
-                <label>Contraseña temporal</label>
-                <input type="text" required className="w-full" placeholder="Mín 6 caracteres" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+              <div className="um-input-group">
+                <label>Contraseña Temporal</label>
+                <div className="um-input-wrapper">
+                  <Key className="um-input-icon" size={18} />
+                  <input 
+                    type={showPasswords['new'] ? 'text' : 'password'} 
+                    required 
+                    value={newUser.password} 
+                    onChange={e => setNewUser({ ...newUser, password: e.target.value })} 
+                  />
+                  <button type="button" className="um-input-toggle" onClick={() => setShowPasswords({...showPasswords, new: !showPasswords['new']})}>
+                    {showPasswords['new'] ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
-              <div className="f-group">
-                <label>Rol</label>
-                <select className="w-full" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
-                  <option value="user">Usuario</option>
-                  <option value="almacenista">Almacenista</option>
-                </select>
+              <div className="um-input-group">
+                <label>Rol Principal</label>
+                <div className="um-input-wrapper">
+                  <Shield className="um-input-icon" size={18} />
+                  <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
+                    <option value="user">Usuario</option>
+                    <option value="almacenista">Almacenista</option>
+                  </select>
+                </div>
               </div>
-              <div className="flex gap-4 mt-2">
-                <button type="button" className="btn-secondary flex-1" onClick={() => setIsAddModalOpen(false)}>Cancelar</button>
-                <button type="submit" className="btn-primary flex-1 flex justify-center items-center gap-2" disabled={isCreating}>
+              <div className="um-modal-footer">
+                <button type="button" className="um-btn-cancel" onClick={() => setIsAddModalOpen(false)}>Cancelar</button>
+                <button type="submit" className="um-btn-submit" disabled={isCreating}>
                   {isCreating ? <Loader2 className="animate-spin" size={18} /> : 'Crear Acceso'}
                 </button>
               </div>
@@ -475,57 +495,49 @@ const UserManagementView = () => {
       {/* Change password modal */}
       {isChangeModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-card animate-scale-up p-8">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 className="text-xl font-bold">Cambiar Contraseña</h3>
-              <button onClick={() => setIsChangeModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(var(--text-muted))' }}><X size={20} /></button>
+          <div className="modal-card animate-scale-up um-modal">
+            <div className="um-modal-header">
+              <h3>Cambiar Contraseña</h3>
+              <button className="um-modal-close" onClick={() => setIsChangeModalOpen(false)}><X size={20} /></button>
             </div>
-            <p className="text-sm text-muted mb-6">Establece una nueva contraseña para <strong>{changingPasswordUser?.email}</strong>.</p>
-            <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+            <p className="um-modal-sub">Establece una nueva contraseña para <strong>{changingPasswordUser?.email}</strong>.</p>
+            <form onSubmit={handleChangePassword} className="um-modal-form">
               {(!changingPasswordUser?.passwordChangedAt || changingPasswordUser?.password === 'legacy') && (
-                <div className="f-group">
-                  <label style={{ color: '#ea580c' }}>Contraseña Actual (Requerida por ser usuario antiguo)</label>
-                  <div className="relative">
-                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <div className="um-input-group warning">
+                  <label>Contraseña Actual (Requerida por ser usuario antiguo)</label>
+                  <div className="um-input-wrapper">
+                    <Key className="um-input-icon" size={18} />
                     <input 
                       type="text" 
                       required 
                       placeholder="Contraseña que usa actualmente" 
-                      className="w-full" 
-                      style={{ borderColor: '#fed7aa', background: '#fffcf9' }}
                       value={currentPasswordInput} 
                       onChange={e => setCurrentPasswordInput(e.target.value)} 
                     />
                   </div>
                 </div>
               )}
-              <div className="f-group">
+              <div className="um-input-group">
                 <label>Nueva Contraseña</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <div className="um-input-wrapper">
+                  <Lock className="um-input-icon" size={18} />
                   <input 
                     type="text" 
                     required 
                     placeholder="Mín 6 caracteres" 
-                    className="w-full" 
                     value={newPassword} 
                     onChange={e => setNewPassword(e.target.value)} 
                   />
                 </div>
               </div>
-              <div className="flex flex-col gap-3 mt-2">
-                <div className="flex gap-4">
-                  <button type="button" className="btn-secondary flex-1" onClick={() => { setIsChangeModalOpen(false); setCurrentPasswordInput(''); }}>Cancelar</button>
-                  <button type="submit" className="btn-primary flex-1 flex justify-center items-center gap-2" disabled={isUpdatingPassword}>
-                    {isUpdatingPassword ? <Loader2 className="animate-spin" size={18} /> : 'Actualizar'}
-                  </button>
-                </div>
-                
-                <button 
-                  type="button" 
-                  onClick={() => sendResetEmail(changingPasswordUser.email)}
-                  style={{ background: 'none', border: 'none', color: '#0071e3', fontSize: 12, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-                >
+              <div className="um-modal-footer">
+                <button type="button" className="um-btn-cancel" onClick={() => { setIsChangeModalOpen(false); setCurrentPasswordInput(''); }}>Cancelar</button>
+                <button type="submit" className="um-btn-submit" disabled={isUpdatingPassword}>
+                  {isUpdatingPassword ? <Loader2 className="animate-spin" size={18} /> : 'Actualizar'}
+                </button>
+              </div>
+              <div className="um-modal-link-wrap">
+                <button type="button" className="um-modal-link" onClick={handleResetPasswordEmail}>
                   O enviar correo de restablecimiento
                 </button>
               </div>

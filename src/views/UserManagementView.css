@@ -390,6 +390,190 @@
   line-height: 1.4;
 }
 
+/* ─── Modals (Premium Design) ─── */
+.um-modal {
+  background: hsl(var(--bg-card));
+  border-radius: 24px;
+  border: 1px solid hsla(var(--border-color), 0.5);
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+  padding: 32px;
+  max-width: 440px;
+  width: 100%;
+}
+
+.um-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.um-modal-header h3 {
+  font-size: 22px;
+  font-weight: 900;
+  color: hsl(var(--text-main));
+  margin: 0;
+}
+
+.um-modal-close {
+  background: none;
+  border: none;
+  color: hsl(var(--text-muted));
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 4px;
+}
+.um-modal-close:hover {
+  color: hsl(var(--text-main));
+}
+
+.um-modal-sub {
+  font-size: 14px;
+  color: hsl(var(--text-muted));
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+
+.um-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.um-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.um-input-group label {
+  font-size: 12px;
+  font-weight: 800;
+  color: hsl(var(--text-secondary));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.um-input-group.warning label {
+  color: hsl(var(--warning));
+}
+
+.um-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.um-input-icon {
+  position: absolute;
+  left: 14px;
+  color: hsl(var(--text-muted));
+  pointer-events: none;
+}
+
+.um-input-wrapper input,
+.um-input-wrapper select {
+  width: 100%;
+  background: hsla(var(--bg-main), 0.5);
+  border: 1.5px solid hsla(var(--border-color), 0.6);
+  border-radius: 12px;
+  padding: 12px 14px 12px 42px; /* padding-left to clear icon */
+  font-size: 15px;
+  color: hsl(var(--text-main));
+  outline: none;
+  transition: all 0.2s;
+}
+
+.um-input-group.warning input {
+  border-color: hsla(var(--warning), 0.5);
+  background: hsla(var(--warning), 0.05);
+}
+
+.um-input-wrapper input:focus,
+.um-input-wrapper select:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsla(var(--primary), 0.15);
+  background: hsla(var(--bg-main), 0.8);
+}
+
+.um-input-toggle {
+  position: absolute;
+  right: 14px;
+  background: none;
+  border: none;
+  color: hsl(var(--text-muted));
+  cursor: pointer;
+}
+
+.um-modal-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.um-btn-cancel,
+.um-btn-submit {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.um-btn-cancel {
+  background: hsla(var(--bg-elevated), 0.5);
+  border: 1.5px solid hsla(var(--border-color), 0.5);
+  color: hsl(var(--text-main));
+}
+
+.um-btn-cancel:hover {
+  background: hsla(var(--bg-elevated), 0.8);
+  border-color: hsl(var(--text-muted));
+}
+
+.um-btn-submit {
+  background: hsl(var(--primary));
+  border: none;
+  color: #fff;
+  box-shadow: 0 4px 12px hsla(var(--primary), 0.4);
+}
+
+.um-btn-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px hsla(var(--primary), 0.6);
+}
+
+.um-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.um-modal-link-wrap {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.um-modal-link {
+  background: none;
+  border: none;
+  color: hsl(var(--primary));
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 8px;
+  transition: opacity 0.2s;
+}
+
+.um-modal-link:hover {
+  opacity: 0.8;
+}
+
 /* ─── Responsive: Tablet (≤ 1024px) ─── */
 @media (max-width: 1024px) {
   .um-container {
