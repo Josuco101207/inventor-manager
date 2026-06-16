@@ -251,6 +251,14 @@ h4 { font-size: 1.25rem; }
   display: none !important;
 }
 
+@media (max-width: 768px) {
+  .desktop-only-btn,
+  .desktop-only-text,
+  .hidden-on-mobile {
+    display: none !important;
+  }
+}
+
 /* Subtle gradient backgrounds */
 .bg-gradient-subtle {
   background: linear-gradient(

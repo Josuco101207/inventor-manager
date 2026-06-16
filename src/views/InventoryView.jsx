@@ -236,8 +236,8 @@ const InventoryView = ({ categoryTitle }) => {
           <p>Control de suministros • {stats.total} artículos ({stats.filtered} filtrados)</p>
         </div>
         
-        <div className="dash-cat-scroll" style={{ padding: '0', margin: '0 0 1rem 0' }}>
-          <div className="search-box-wrapper" style={{ flex: '1 1 auto', minWidth: '200px' }}>
+        <div className="tools-actions" style={{ width: '100%' }}>
+          <div className="search-box-wrapper" style={{ flex: '1 1 auto' }}>
             <Search size={18} />
             <input 
               type="text" 

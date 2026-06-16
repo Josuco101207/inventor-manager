@@ -207,8 +207,8 @@ const ParquesView = () => {
           <p>Control de suministros por sede ({filteredItems.length})</p>
         </div>
         
-        <div className="tools-actions">
-          <div className="search-box-wrapper">
+        <div className="tools-actions" style={{ width: '100%' }}>
+          <div className="search-box-wrapper" style={{ flex: '1 1 auto' }}>
             <Search size={18} />
             <input 
               type="text" 
