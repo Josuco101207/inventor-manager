@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999;
   padding: 1.5rem;
   transition: all 0.3s;
 }
@@ -199,7 +199,8 @@
     max-width: 100%;
     width: 100%;
     border-radius: 24px 24px 0 0;
-    padding: 2rem 1.5rem;
+    padding: 2rem 1.5rem 3rem; /* Add more padding at the bottom */
+    padding-bottom: calc(3rem + env(safe-area-inset-bottom));
     max-height: 90vh;
     overflow-y: auto;
     animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
