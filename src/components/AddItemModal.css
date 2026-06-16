@@ -14,7 +14,7 @@
   color: hsl(var(--text-main));
 }
 
-.f-group input, .f-group select {
+.f-group input, .f-group select, .f-group textarea {
   padding: 0.75rem 1rem;
   border-radius: 14px;
   border: 1.5px solid hsl(var(--border-color));
@@ -25,7 +25,7 @@
   transition: all 0.2s;
 }
 
-.f-group input:focus, .f-group select:focus {
+.f-group input:focus, .f-group select:focus, .f-group textarea:focus {
   border-color: var(--primary-color);
 }
 
@@ -69,6 +69,42 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+/* Quick Add Buttons */
+.btn-add-quick {
+  background: hsl(var(--bg-main));
+  border: 1px solid hsl(var(--border-color));
+  color: hsl(var(--primary));
+  width: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-quick:hover {
+  background: hsl(var(--primary));
+  color: white;
+  border-color: hsl(var(--primary));
+}
+
+.btn-cancel-quick {
+  background: transparent;
+  border: none;
+  color: hsl(var(--text-muted));
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel-quick:hover {
+  color: hsl(var(--danger));
 }
 
 /* iOS / Cupertino Settings Style for Herramientas */

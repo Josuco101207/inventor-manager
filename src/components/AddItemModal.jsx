@@ -190,7 +190,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                 </select>
                 <button 
                   type="button" 
-                  className="p-2 bg-slate-100 rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
+                  className="btn-add-quick"
                   onClick={() => setIsAddingBrand(true)}
                   title="Nueva Marca"
                 >
@@ -215,7 +215,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                 </button>
                 <button 
                   type="button" 
-                  className="p-2 text-slate-400 hover:text-danger transition-colors"
+                  className="btn-cancel-quick"
                   onClick={() => setIsAddingBrand(false)}
                 >
                   <X size={18} />
@@ -240,7 +240,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                 </select>
                 <button 
                   type="button" 
-                  className="p-2 bg-slate-100 rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm"
+                  className="btn-add-quick"
                   onClick={() => setIsAddingLocation(true)}
                   title="Nueva Ubicación"
                 >
@@ -265,7 +265,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                 </button>
                 <button 
                   type="button" 
-                  className="p-2 text-slate-400 hover:text-danger transition-colors"
+                  className="btn-cancel-quick"
                   onClick={() => setIsAddingLocation(false)}
                 >
                   <X size={18} />
