@@ -374,6 +374,8 @@
   .invt-grid-row {
     display: flex !important;
     flex-direction: column !important;
+    min-width: 0 !important; /* Reset desktop 700px */
+    width: auto !important;
     padding: 1.25rem !important;
     gap: 1rem !important;
     background: hsla(var(--bg-elevated), 0.6) !important;
