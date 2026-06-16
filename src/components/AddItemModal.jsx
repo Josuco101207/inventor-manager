@@ -329,9 +329,9 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
     }
 
     return (
-      <div className="special-fields grid grid-cols-2 gap-4">
+      <div className="special-fields flex gap-4" style={{ flexWrap: 'wrap' }}>
         {fields.map(field => (
-          <div className="f-group" key={field.name}>
+          <div className="f-group flex-1" style={{ minWidth: '150px' }} key={field.name}>
             <label>{field.label}</label>
             {renderField(field)}
           </div>
@@ -355,7 +355,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                 <label>Nombre del Artículo</label>
                 <input name="name" required value={formData.name} placeholder="Ej: Tornillo Hexagonal..." onChange={handleChange} className="w-full" />
               </div>
-              <div className="f-group w-32">
+              <div className="f-group flex-1">
                 <label>Costo Unitario ($)</label>
                 <input type="number" name="costo_unitario" step="0.01" value={formData.costo_unitario} onChange={handleChange} />
               </div>
@@ -363,8 +363,8 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
             
             {category !== 'Herramientas' && (
               <>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="f-group">
+                <div className="flex gap-4 mb-4">
+                  <div className="f-group flex-1">
                     <label>Unidad de Medida</label>
                     <select name="unit" value={formData.unit} onChange={handleChange} className="w-full">
                       <option value="Piezas">Piezas</option>
@@ -378,7 +378,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                     </select>
                   </div>
                   {(formData.unit === 'Cajas' || formData.unit === 'Paquetes') && (
-                    <div className="f-group">
+                    <div className="f-group flex-1">
                       <label>Piezas por {formData.unit.slice(0, -1)}</label>
                       <input 
                         type="number" 
