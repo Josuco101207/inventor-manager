@@ -356,9 +356,13 @@ const InventoryView = ({ categoryTitle }) => {
               )}
             </>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '5rem 0', gap: '1rem', opacity: 0.4 }}>
-              <Package size={64} />
-              <p style={{ fontWeight: 800, fontSize: '1.2rem' }}>No se encontraron artículos</p>
+          ) : (
+            <div className="invt-empty-state">
+              <div className="invt-empty-icon-wrap">
+                <Package size={48} />
+              </div>
+              <h3>No se encontraron artículos</h3>
+              <p>Intenta ajustar tus filtros de búsqueda o agrega un nuevo artículo a esta sección.</p>
             </div>
           )}
         </div>

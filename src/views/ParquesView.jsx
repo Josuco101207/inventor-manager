@@ -306,9 +306,12 @@ const ParquesView = () => {
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-4 py-20">
-              <Package size={64} className="opacity-10" />
-              <p className="font-bold text-xl opacity-30">No se encontraron artículos</p>
+            <div className="invt-empty-state">
+              <div className="invt-empty-icon-wrap">
+                <Landmark size={48} />
+              </div>
+              <h3>No se encontraron artículos</h3>
+              <p>Intenta ajustar tus filtros de búsqueda o agrega un nuevo parque.</p>
             </div>
           )}
         </div>
