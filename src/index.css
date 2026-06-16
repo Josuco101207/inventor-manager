@@ -246,6 +246,11 @@ h4 { font-size: 1.25rem; }
   border: 1px solid hsla(var(--border-color), 0.4);
 }
 
+/* Utilities */
+.hidden {
+  display: none !important;
+}
+
 /* Subtle gradient backgrounds */
 .bg-gradient-subtle {
   background: linear-gradient(
