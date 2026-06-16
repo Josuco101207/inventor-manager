@@ -193,6 +193,7 @@ h4 { font-size: 1.25rem; }
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 2rem;
   background: 
     radial-gradient(ellipse at 10% 20%, hsla(var(--primary), 0.08) 0%, transparent 50%),
