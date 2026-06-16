@@ -199,8 +199,8 @@
     max-width: 100%;
     width: 100%;
     border-radius: 24px 24px 0 0;
-    padding: 2rem 1.5rem 3rem; /* Add more padding at the bottom */
-    padding-bottom: calc(3rem + env(safe-area-inset-bottom));
+    padding: 2rem 1.5rem 7.5rem; /* Sufficient padding to clear mobile bottom nav */
+    padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
     max-height: 90vh;
     overflow-y: auto;
     animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
