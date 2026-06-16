@@ -366,18 +366,23 @@
     white-space: nowrap;
   }
 
+  .invt-container {
+    margin: 0 1rem;
+    padding-bottom: 2rem;
+  }
+
   .invt-grid-row {
     display: flex !important;
-    flex-direction: column;
-    padding: 1.25rem;
-    gap: 0;
-    background: hsla(var(--bg-card), 0.75) !important;
-    backdrop-filter: blur(24px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-    border: 1px solid hsla(var(--border-color), 0.5) !important;
-    box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.08) !important;
-    border-radius: 24px;
-    margin-bottom: 1.25rem;
+    flex-direction: column !important;
+    padding: 1.25rem !important;
+    gap: 1rem !important;
+    background: hsla(var(--bg-elevated), 0.6) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-radius: 24px !important;
+    margin-bottom: 1rem !important;
+    border: 1px solid hsla(var(--border-color), 0.4) !important;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08) !important;
     transition: transform var(--transition-fast);
   }
 
@@ -388,85 +393,104 @@
   .invt-header-row { display: none !important; }
   
   .invt-data-row { height: auto; }
-  
-  .invt-grid-row {
-    display: grid !important;
-    grid-template-columns: 1fr auto !important;
-    grid-template-areas: 
-      "art art"
-      "ref stock"
-      "act act" !important;
-    gap: 1rem;
-    padding: 1.25rem 1rem !important;
-    background: hsla(var(--bg-elevated), 0.4) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border-radius: 24px !important;
-    margin: 0 0.5rem 1rem 0.5rem;
-    border: 1px solid hsla(var(--border-color), 0.3) !important;
-  }
-  .invt-header-row {
-    display: none !important;
-  }
 
   .invt-cell-art {
-    grid-area: art;
-    padding: 0;
-    align-items: flex-start;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 !important;
+    border-bottom: 1px solid hsla(var(--border-color), 0.2);
+    padding-bottom: 1rem !important;
   }
 
   .invt-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    font-size: 1.2rem;
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    font-size: 1.3rem;
+  }
+
+  .invt-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .invt-item-name {
-    font-size: 1.1rem;
-    line-height: 1.3;
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+
+  .invt-item-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
   }
 
   .invt-cell-stock {
-    grid-area: stock;
-    justify-content: center;
-    align-items: flex-end;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 !important;
+  }
+
+  .invt-stock-row {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
   }
 
   .invt-stock-num {
-    font-size: 1.8rem;
+    font-size: 2rem;
+  }
+
+  .invt-stock-bar-bg {
+    display: none; /* Hide progress bar on mobile to save space */
   }
 
   .invt-cell-ref {
-    grid-area: ref;
-    align-items: flex-start;
-    justify-content: center;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 4px !important;
+    border: none !important;
+    padding: 0 !important;
   }
 
   .invt-badge-min {
-    background: transparent;
-    padding: 0;
-    border: none;
-    font-size: 0.75rem;
+    background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
+    font-size: 0.85rem !important;
+    opacity: 0.7;
   }
 
   .invt-loc-text {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
+    opacity: 0.9;
   }
 
   .invt-cell-act {
-    grid-area: act;
-    justify-content: space-between;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-end !important;
+    gap: 0.75rem !important;
     width: 100%;
-    margin-top: 0.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px dashed hsla(var(--border-color), 0.5);
+    padding-top: 1rem !important;
+    border-top: 1px dashed hsla(var(--border-color), 0.3) !important;
   }
 
   .invt-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
   }
 
   .mobile-fab {
