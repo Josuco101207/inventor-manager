@@ -56,13 +56,15 @@ async function handleMessage(message, userPhone) {
             if (intent.format && intent.format.toLowerCase().includes('excel')) format = 'excel';
             if (intent.format && intent.format.toLowerCase().includes('xlsx')) format = 'excel';
 
-            const filePath = await dbTools.generateExport(format);
-            const textResponse = await aiService.generateNaturalResponse(message, `Se generó el archivo en formato ${format} exitosamente.`);
+            const filter = intent.filter && intent.filter !== 'palabra_clave_para_filtrar_o_nulo' ? intent.filter : null;
+
+            const filePath = await dbTools.generateExport(format, filter);
             
             if (filePath) {
+                const textResponse = await aiService.generateNaturalResponse(message, `Se generó el archivo en formato ${format} exitosamente${filter ? ' para ' + filter : ''}.`);
                 return { text: textResponse, file: filePath };
             } else {
-                return { text: "Hubo un problema al generar el archivo. Por favor intenta de nuevo." };
+                return { text: `No encontré ningún artículo que coincida con "${filter}" para generar el reporte.` };
             }
         }
 

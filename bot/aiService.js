@@ -20,7 +20,7 @@ Acciones posibles:
 3. "salida": Cuando el usuario diga que sacó, usó, vendió o salieron productos.
 4. "resumen": Cuando el usuario pida un reporte general o totales del inventario.
 5. "analisis": Cuando el usuario pregunte por cosas históricas, datos estadísticos, la última salida, el artículo más popular, qué falta, etc.
-6. "exportar": Cuando el usuario pida explícitamente un PDF, Excel o documento con el inventario o movimientos.
+6. "exportar": Cuando el usuario pida explícitamente un PDF, Excel o documento. También puedes detectar si pidió filtrar por algo (ej. "solo de parques", "de la categoría X").
 7. "unknown": Cuando el usuario diga "hola", pregunte tu nombre o hable de otra cosa (aquí puedes usar el campo "reply" para responder amablemente que solo manejas inventario).
 
 Formato esperado:
@@ -29,7 +29,7 @@ Formato esperado:
 {"action": "salida", "keyword": "nombre_producto", "quantity": numero_entero}
 {"action": "resumen"}
 {"action": "analisis", "question": "La pregunta exacta que hizo el usuario"}
-{"action": "exportar", "format": "pdf_o_excel_o_default"}
+{"action": "exportar", "format": "pdf_o_excel_o_default", "filter": "palabra_clave_para_filtrar_o_nulo"}
 {"action": "unknown", "reply": "Hola, soy tu asistente de inventario. Dime qué necesitas buscar o registrar."}
 
 REGLAS:

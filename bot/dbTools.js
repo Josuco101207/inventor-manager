@@ -278,12 +278,27 @@ async function analyzeMovements(question) {
   }
 }
 
-async function generateExport(format) {
+async function generateExport(format, filterKeyword = null) {
   try {
     // 1. Obtener datos
     const itemsSnap = await getDocs(collection(db, 'items'));
     let items = [];
-    itemsSnap.forEach(d => items.push(d.data()));
+    itemsSnap.forEach(d => {
+      const data = d.data();
+      // Si hay un filtro, buscar coincidencia en nombre, categoría o grupo
+      if (filterKeyword) {
+        const text = `${data.name || ''} ${data.category || ''} ${data.grupo || ''}`.toLowerCase();
+        if (text.includes(filterKeyword.toLowerCase())) {
+          items.push(data);
+        }
+      } else {
+        items.push(data);
+      }
+    });
+
+    if (items.length === 0) {
+      return null; // No hay items que coincidan
+    }
 
     const filePath = path.join(__dirname, `inventario_${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`);
 
