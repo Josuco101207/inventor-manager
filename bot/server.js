@@ -18,35 +18,36 @@ app.listen(PORT, () => {
     console.log(`✅ Servidor Express iniciado en el puerto ${PORT}`);
 });
 
-console.log('Iniciando el Bot de Inventario (Dual)...');
-
-// Iniciar Telegram
-initTelegramBot();
-
-// Usamos LocalAuth para que la sesión se guarde en la carpeta .wwebjs_auth y no tengas que escanear el QR cada vez
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
-});
-
-client.on('qr', (qr) => {
-    console.log('\n======================================================');
-    console.log('ESCANEA ESTE CÓDIGO QR CON TU WHATSAPP PARA VINCULAR EL BOT');
-    console.log('Ve a WhatsApp > Dispositivos Vinculados > Vincular un dispositivo');
-    console.log('======================================================\n');
-    qrcode.generate(qr, {small: true});
-});
-
-client.on('ready', async () => {
-    console.log('\n======================================================');
-    console.log('✅ ¡EL BOT ESTÁ LISTO Y CONECTADO A TU WHATSAPP!');
-    console.log('======================================================\n');
-    
-    // Iniciar sesión en Firebase usando las credenciales del admin
+async function startBot() {
+    console.log('Iniciando sesión en Firebase...');
     await dbTools.loginToFirebase();
-});
+
+    console.log('Iniciando el Bot de Inventario (Dual)...');
+
+    // Iniciar Telegram
+    initTelegramBot();
+
+    // Usamos LocalAuth para que la sesión se guarde en la carpeta .wwebjs_auth
+    const client = new Client({
+        authStrategy: new LocalAuth(),
+        puppeteer: {
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        }
+    });
+
+    client.on('qr', (qr) => {
+        console.log('\n======================================================');
+        console.log('ESCANEA ESTE CÓDIGO QR CON TU WHATSAPP PARA VINCULAR EL BOT');
+        console.log('Ve a WhatsApp > Dispositivos Vinculados > Vincular un dispositivo');
+        console.log('======================================================\n');
+        qrcode.generate(qr, {small: true});
+    });
+
+    client.on('ready', async () => {
+        console.log('\n======================================================');
+        console.log('✅ ¡EL BOT ESTÁ LISTO Y CONECTADO A TU WHATSAPP!');
+        console.log('======================================================\n');
+    });
 
 client.on('message', async msg => {
     try {
@@ -88,4 +89,7 @@ client.on('message', async msg => {
     }
 });
 
-client.initialize();
+    client.initialize();
+}
+
+startBot().catch(console.error);
