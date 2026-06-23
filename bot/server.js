@@ -31,6 +31,7 @@ async function startBot() {
     const client = new Client({
         authStrategy: new LocalAuth(),
         puppeteer: {
+            executablePath: process.platform === 'linux' ? '/usr/bin/google-chrome-stable' : undefined,
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox',
@@ -38,13 +39,11 @@ async function startBot() {
                 '--disable-accelerated-2d-canvas',
                 '--no-first-run',
                 '--no-zygote',
-                '--single-process',
                 '--disable-gpu'
             ]
         },
         webVersionCache: {
-            type: 'remote',
-            strict: true
+            type: 'none'
         }
     });
 
