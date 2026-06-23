@@ -40,9 +40,12 @@ function initTelegramBot() {
             }
 
             console.log(`Procesando mensaje de Telegram de ${phoneNumber}: ${text}`);
-            const responseText = await router.handleMessage(text, phoneNumber);
+            const response = await router.handleMessage(text, phoneNumber);
             
-            bot.sendMessage(chatId, responseText, { parse_mode: 'Markdown' });
+            await bot.sendMessage(chatId, response.text, { parse_mode: 'Markdown' });
+            if (response.file) {
+                await bot.sendDocument(chatId, response.file);
+            }
 
         } catch (error) {
             console.error("Error al procesar el mensaje de Telegram:", error);

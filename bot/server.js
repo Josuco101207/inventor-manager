@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const dbTools = require('./dbTools');
 const router = require('./router');
@@ -71,18 +71,24 @@ client.on('message', async msg => {
         // Verificar autorización
         const isAuth = await dbTools.isAuthorizedUser(phoneNumber);
         
-        let responseText = "";
+        let response = { text: "" };
 
         if (!isAuth) {
             console.log(`Intento no autorizado desde ${phoneNumber}`);
-            responseText = "Lo siento, tu número no está autorizado. Para autorizarte, envía el mensaje: !registrarme";
+            response.text = "Lo siento, tu número no está autorizado. Para autorizarte, envía el mensaje: !registrarme";
         } else {
             console.log(`Procesando mensaje de ${phoneNumber}: ${incomingMessage}`);
-            responseText = await router.handleMessage(incomingMessage, phoneNumber);
+            response = await router.handleMessage(incomingMessage, phoneNumber);
         }
 
-        // Enviar la respuesta
-        msg.reply(responseText);
+        // Enviar la respuesta de texto
+        await msg.reply(response.text);
+
+        // Si hay archivo, enviarlo
+        if (response.file) {
+            const media = MessageMedia.fromFilePath(response.file);
+            await client.sendMessage(msg.from, media);
+        }
 
     } catch (error) {
         console.error("Error al procesar el mensaje:", error);

@@ -19,13 +19,17 @@ Acciones posibles:
 2. "entrada": Cuando el usuario diga que agregó, metió, compró o entraron productos.
 3. "salida": Cuando el usuario diga que sacó, usó, vendió o salieron productos.
 4. "resumen": Cuando el usuario pida un reporte general o totales del inventario.
-5. "unknown": Cuando el usuario diga "hola", pregunte tu nombre o hable de otra cosa (aquí puedes usar el campo "reply" para responder amablemente que solo manejas inventario).
+5. "analisis": Cuando el usuario pregunte por cosas históricas, datos estadísticos, la última salida, el artículo más popular, qué falta, etc.
+6. "exportar": Cuando el usuario pida explícitamente un PDF, Excel o documento con el inventario o movimientos.
+7. "unknown": Cuando el usuario diga "hola", pregunte tu nombre o hable de otra cosa (aquí puedes usar el campo "reply" para responder amablemente que solo manejas inventario).
 
 Formato esperado:
 {"action": "buscar", "keyword": "nombre_producto"}
 {"action": "entrada", "keyword": "nombre_producto", "quantity": numero_entero}
 {"action": "salida", "keyword": "nombre_producto", "quantity": numero_entero}
 {"action": "resumen"}
+{"action": "analisis", "question": "La pregunta exacta que hizo el usuario"}
+{"action": "exportar", "format": "pdf_o_excel_o_default"}
 {"action": "unknown", "reply": "Hola, soy tu asistente de inventario. Dime qué necesitas buscar o registrar."}
 
 REGLAS:
@@ -50,23 +54,25 @@ const responseContent = chatCompletion.choices[0]?.message?.content || "{}";
     return JSON.parse(responseContent);
 }
 
-const NATURAL_PROMPT = `Eres un encargado de almacén llamado "Inventor Bot".
+const NATURAL_PROMPT = `Eres un encargado de almacén súper inteligente llamado "Inventor Bot".
 El usuario te ha dado una instrucción o pregunta. El sistema de base de datos ya la ejecutó y te ha devuelto los datos crudos.
 Tu objetivo es redactar un mensaje final natural, humano, amable y útil (usando emojis moderadamente) basándote en esos datos.
-NUNCA menciones que eres una IA o que recibiste un JSON. Actúa como si tú mismo hubieras revisado el almacén.
+NUNCA menciones que eres una IA o que recibiste un JSON. Actúa como si tú mismo hubieras revisado el almacén o el archivo de registros.
 
 Reglas de Redacción:
 - Sé directo, natural y breve (la gente está trabajando, no quiere leer un testamento).
 - Si hay resultados de búsqueda, menciónalos de forma amigable (ej: "¡Claro! Tenemos 5 discos en el estante A...").
 - Si fue un registro de entrada o salida, confírmalo amablemente (ej: "¡Listo! Ya registré la salida de las 2 cajas. Ahora nos quedan 8 en total.").
-- Si los datos dicen "No se encontraron" o el arreglo está vacío, dilo amablemente ("Lo siento, busqué por todos lados pero no encontré nada con ese nombre...").`;
+- Si los datos dicen "No se encontraron" o el arreglo está vacío, dilo amablemente ("Lo siento, busqué por todos lados pero no encontré nada con ese nombre...").
+- Si es una pregunta analítica (ej. qué es lo que más sale), analiza los datos que te pasamos en el JSON y dale la respuesta de forma conversacional y clara.
+- Si es una exportación de documento, confírmale amablemente que aquí le dejas su archivo.`;
 
 async function generateNaturalResponse(userMessage, dbResult) {
     if (!groq) return "No hay IA disponible.";
 
     const context = `
 Mensaje original del usuario: "${userMessage}"
-Resultado crudo de la Base de Datos: ${JSON.stringify(dbResult)}
+Resultado crudo de la Base de Datos: ${typeof dbResult === 'string' ? dbResult : JSON.stringify(dbResult)}
 
 Redacta la respuesta final para el usuario:
 `;

@@ -2,6 +2,10 @@ const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, query, where } = require('firebase/firestore');
 const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
 const Fuse = require('fuse.js');
+const fs = require('fs');
+const path = require('path');
+const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit-table');
 const firebaseConfig = {
   apiKey: "AIzaSyDWOFFslHI0eSqyUf_tb1D1VlzMZmNemmM",
   authDomain: "inventor-manager-a0b4d.firebaseapp.com",
@@ -247,6 +251,104 @@ async function autorizarNumero(phoneNumber) {
   }
 }
 
+async function analyzeMovements(question) {
+  try {
+    const { orderBy, limit } = require('firebase/firestore');
+    const movsQ = query(collection(db, 'movements'), orderBy('timestamp', 'desc'), limit(150));
+    const movsSnap = await getDocs(movsQ);
+    
+    let history = [];
+    movsSnap.forEach(docSnap => {
+      const data = docSnap.data();
+      history.push({
+        articulo: data.itemName,
+        accion: data.action,
+        cantidad: data.qty,
+        fecha: data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Desconocida',
+        usuario: data.user || data.personnel
+      });
+    });
+
+    if (history.length === 0) return "No hay movimientos registrados en el historial para analizar.";
+    
+    return JSON.stringify(history);
+  } catch (error) {
+    console.error("Error analizando movimientos:", error);
+    return "Ocurrió un error al extraer el historial para el análisis.";
+  }
+}
+
+async function generateExport(format) {
+  try {
+    // 1. Obtener datos
+    const itemsSnap = await getDocs(collection(db, 'items'));
+    let items = [];
+    itemsSnap.forEach(d => items.push(d.data()));
+
+    const filePath = path.join(__dirname, `inventario_${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`);
+
+    if (format === 'excel') {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Inventario');
+      
+      worksheet.columns = [
+        { header: 'Nombre', key: 'name', width: 30 },
+        { header: 'Categoría', key: 'category', width: 20 },
+        { header: 'Cantidad', key: 'qty', width: 10 },
+        { header: 'Ubicación', key: 'location', width: 20 }
+      ];
+
+      items.forEach(item => {
+        worksheet.addRow({
+          name: item.name || '',
+          category: item.category || '',
+          qty: item.qty || 0,
+          location: item.location || ''
+        });
+      });
+
+      await workbook.xlsx.writeFile(filePath);
+      return filePath;
+
+    } else {
+      // PDF
+      return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 30, size: 'A4' });
+        const stream = fs.createWriteStream(filePath);
+        doc.pipe(stream);
+
+        doc.fontSize(18).text('Reporte de Inventario', { align: 'center' });
+        doc.moveDown();
+
+        const table = {
+          title: "Existencias Actuales",
+          headers: ["Nombre", "Categoría", "Cantidad", "Ubicación"],
+          rows: items.map(item => [
+            item.name || '',
+            item.category || '',
+            String(item.qty || 0),
+            item.location || ''
+          ])
+        };
+
+        doc.table(table, {
+          prepareHeader: () => doc.font("Helvetica-Bold").fontSize(10),
+          prepareRow: (row, indexColumn, indexRow, rectRow) => doc.font("Helvetica").fontSize(10)
+        });
+
+        doc.end();
+
+        stream.on('finish', () => resolve(filePath));
+        stream.on('error', reject);
+      });
+    }
+
+  } catch (error) {
+    console.error("Error al exportar:", error);
+    return null;
+  }
+}
+
 module.exports = {
   loginToFirebase,
   isAuthorizedUser,
@@ -254,5 +356,7 @@ module.exports = {
   searchItems,
   getInventorySummary,
   registerMovement,
+  analyzeMovements,
+  generateExport,
   getDb: () => db
 };
