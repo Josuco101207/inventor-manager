@@ -26,11 +26,15 @@ self.onmessage = (e) => {
     if (searchLow) {
       const match = (
         (item.name && item.name.toLowerCase().includes(searchLow)) || 
+        (item.subcategory && item.subcategory.toLowerCase().includes(searchLow)) || 
+        (item.category && item.category.toLowerCase().includes(searchLow)) || 
         (item.modelo && item.modelo.toLowerCase().includes(searchLow)) || 
         (item.marca && item.marca.toLowerCase().includes(searchLow)) || 
+        (item.brand && item.brand.toLowerCase().includes(searchLow)) || 
         (item.codigo && item.codigo.toLowerCase().includes(searchLow)) || 
         (item.item_number && String(item.item_number).includes(searchLow)) || 
         (item.serie && item.serie.toLowerCase().includes(searchLow)) ||
+        (item.observaciones && item.observaciones.toLowerCase().includes(searchLow)) ||
         (item.id && item.id.toLowerCase().includes(searchLow))
       );
       if (!match) continue;

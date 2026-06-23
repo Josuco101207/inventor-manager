@@ -3,13 +3,15 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { 
   Package, Wrench, PenTool, Cpu, Printer, Landmark,
   LayoutDashboard, Settings, User, LogOut, ShieldCheck, Users, Layers, Archive, History, Activity,
-  Menu, X, FileText
+  Menu, X, FileText, Box, Tag, Key
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import './Sidebar.css';
 
 const Sidebar = () => {
   const { logout, userData, isAdmin } = useAuth();
+  const { customCategories } = useInventory(); // <== AGREGADO
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
@@ -136,6 +138,31 @@ const Sidebar = () => {
                 </NavLink>
               </li>
             )}
+            
+            {/* ─── DYNAMIC CATEGORIES ─── */}
+            {customCategories?.map(cat => {
+              // Si no tiene permiso, lo ocultamos. Como son dinámicas, puedes darle acceso por defecto si es admin, o si explícitamente se le dio acceso a la vista con el ID de la categoría.
+              if (!hasAccess(cat.id) && !isAdmin) return null;
+              
+              // Mapeo básico de iconos dinámicos
+              const IconComp = {
+                Layers: <Layers size={20} />,
+                Box: <Box size={20} />,
+                Tag: <Tag size={20} />,
+                Key: <Key size={20} />,
+                LayoutDashboard: <LayoutDashboard size={20} />
+              }[cat.icon] || <Layers size={20} />;
+
+              return (
+                <li key={cat.id}>
+                  <NavLink to={cat.route} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    {IconComp}
+                    <span>{cat.name}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
+
             {hasAccess('transactions') && (
               <li>
                 <NavLink to="/transactions" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -191,6 +218,12 @@ const Sidebar = () => {
                   <NavLink to="/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <Users size={20} />
                     <span>Equipo</span>
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to="/sections" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Layers size={20} />
+                    <span>Secciones</span>
                   </NavLink>
                 </li>
                 <li>

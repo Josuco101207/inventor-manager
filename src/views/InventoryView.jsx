@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import ActionModal from '../components/ActionModal';
 import AddItemModal from '../components/AddItemModal';
+import AuditModal from '../components/AuditModal';
 import Header from '../components/Header';
 import { 
   Plus, Download, Upload, Search, Filter, Loader2, Trash2, Edit3, 
@@ -22,7 +23,7 @@ import './InventoryView.css';
  * Componente de Fila Optimizado para react-window v2.
  * Recibe props directamente (no via data).
  */
-const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff, canEditIn, handlers }) => {
+const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff, canEditIn, handlers, isDynamicCategory, customCategories }) => {
   if (!item) return null;
 
   const { handleDelete, handleEdit, handleAction, handleAudit } = handlers;
@@ -31,7 +32,17 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
   const isLow = !isCritical && (item.qty || 0) <= (item.threshold || 0) * 2;
   const stockClass = isCritical ? 'critical' : isLow ? 'low' : 'ok';
 
-  return <div className="invt-grid-row">
+  const customCat = isDynamicCategory ? customCategories?.find(c => c.name === categoryTitle) : null;
+  const configuredFields = customCat?.fields?.map(f => f.name) || [];
+
+  // Identify custom fields dynamically (fallback for standard categories that might have extra props)
+  const standardKeys = ['id', 'name', 'category', 'subcategory', 'brand', 'location', 'code', 'qty', 'threshold', 'unit', 'observaciones', 'image', 'date', 'createdBy', 'timestamp', 'lastAudit', 'searchKeywords'];
+  const legacyCustomFields = Object.keys(item).filter(key => !standardKeys.includes(key) && item[key] !== '' && item[key] !== null && typeof item[key] !== 'object');
+  
+  // Si es categoría dinámica, SOLO mostrar los campos configurados. Si es normal, no mostrar los campos basuras de excel en la tarjeta
+  const fieldsToRender = isDynamicCategory ? configuredFields.filter(key => item[key] !== '' && item[key] !== null) : [];
+
+  return <div className={`invt-grid-row ${isDynamicCategory ? 'dynamic-grid' : ''}`}>
       <div className="invt-card-top">
         {/* Article Info */}
         <div className="invt-cell-art">
@@ -45,9 +56,22 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
           <div className="invt-item-info">
             <h4 className="invt-item-name" title={item.name}>{item.name}</h4>
             <div className="invt-item-tags">
-              <span className="invt-tag invt-tag-blue">{item.subcategory || 'GRAL'}</span>
-              <span className="invt-tag invt-tag-gray">{item.brand || 'S/M'}</span>
-              <span className="invt-tag invt-tag-mono">#{item.code || item.id.slice(0,6)}</span>
+              {!isDynamicCategory && <span className="invt-tag invt-tag-blue">{item.subcategory || 'GRAL'}</span>}
+              {!isDynamicCategory && <span className="invt-tag invt-tag-gray">{item.brand || 'S/M'}</span>}
+              {!isDynamicCategory && <span className="invt-tag invt-tag-mono">#{item.code || item.id.slice(0,6)}</span>}
+              
+              {/* Dynamic Custom Fields */}
+              {fieldsToRender.map(key => {
+                const label = isDynamicCategory ? (customCat?.fields?.find(f => f.name === key)?.label || key) : key;
+                let value = item[key];
+                if (typeof value === 'boolean') value = value ? 'Sí' : 'No';
+                
+                return (
+                  <span key={key} className="invt-tag" style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-color)' }}>
+                    {label.charAt(0).toUpperCase() + label.slice(1)}: <strong>{value}</strong>
+                  </span>
+                );
+              })}
             </div>
             {item.observaciones && (
               <p className="invt-item-obs" title={item.observaciones}>
@@ -58,37 +82,41 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
         </div>
 
         {/* Stock & Progress Bar */}
-        <div className="invt-cell-stock">
-          <div className="invt-stock-row">
-            <span className={`invt-stock-num stock-${stockClass}`}>{item.qty || 0}</span>
-            <span className="invt-stock-unit">{item.unit || 'pz'}</span>
-          </div>
-          <div className="invt-stock-progress-container">
-            <div className="invt-stock-bar-bg">
-              <div 
-                className={`invt-stock-bar bar-${stockClass}`}
-                style={{ width: `${Math.min(((item.qty || 0) / Math.max((item.threshold || 1) * 3, 1)) * 100, 100)}%` }}
-              />
+        {!isDynamicCategory && (
+          <div className="invt-cell-stock">
+            <div className="invt-stock-row">
+              <span className={`invt-stock-num stock-${stockClass}`}>{item.qty || 0}</span>
+              <span className="invt-stock-unit">{item.unit || 'pz'}</span>
             </div>
-            <span className="invt-stock-min-text">Stock Mínimo: {item.threshold || 0}</span>
+            <div className="invt-stock-progress-container">
+              <div className="invt-stock-bar-bg">
+                <div 
+                  className={`invt-stock-bar bar-${stockClass}`}
+                  style={{ width: `${Math.min(((item.qty || 0) / Math.max((item.threshold || 1) * 3, 1)) * 100, 100)}%` }}
+                />
+              </div>
+              <span className="invt-stock-min-text">Stock Mínimo: {item.threshold || 0}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="invt-card-divider"></div>
 
       <div className="invt-card-bottom">
         {/* Referencia (Location + Min) */}
-        <div className="invt-cell-ref">
-          <span className="invt-badge-min">Mín: {item.threshold || 0}</span>
-          <div className="invt-loc-text">
-            <Landmark size={12} className="invt-loc-icon" />
-            {item.location || 'General'}
+        {!isDynamicCategory && (
+          <div className="invt-cell-ref">
+            <span className="invt-badge-min">Mín: {item.threshold || 0}</span>
+            <div className="invt-loc-text">
+              <Landmark size={12} className="invt-loc-icon" />
+              {item.location || 'General'}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Actions */}
-        <div className="invt-cell-act">
+        <div className="invt-cell-act" style={{ marginLeft: isDynamicCategory ? 'auto' : '0' }}>
           {isStaff && (
             <>
               <button className="invt-btn invt-btn-dark" onClick={() => handleAction(item)} title="Movimiento">
@@ -115,16 +143,16 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
 });
 
 const InventoryView = ({ categoryTitle }) => {
-  const { items, personnel, updateStock, addItem, deleteItem, editItem, loanItem, returnItem, bulkAddItems, auditStock, loading, fetchMoreItems, hasMore } = useInventory();
+  const { items, personnel, updateStock, addItem, deleteItem, editItem, loanItem, returnItem, bulkAddItems, auditStock, loading, fetchMoreItems, hasMore, customCategories } = useInventory();
   const { isAdmin, isStaff, userData, canAddTo, canEditIn } = useAuth();
   const location = useLocation();
   const [visibleCount, setVisibleCount] = useState(40);
-  const observerTarget = useRef(null);
-  
+  const observer = useRef(null);
   // Estados de UI
   const [selectedItem, setSelectedItem] = useState(null);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(location.state?.prefillSearch || '');
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   const [activeSubcategory, setActiveSubcategory] = useState('TODAS');
@@ -136,26 +164,25 @@ const InventoryView = ({ categoryTitle }) => {
   const [isFiltering, setIsFiltering] = useState(false);
   const workerRef = useRef(null);
 
-  // Infinite Scroll Observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount(prev => Math.min(prev + 40, filteredItems.length));
-        }
-      },
-      { threshold: 0.1, rootMargin: '200px' }
-    );
-    if (observerTarget.current) observer.observe(observerTarget.current);
-    return () => observer.disconnect();
-  }, [filteredItems.length]);
+  // Infinite Scroll Observer usando callback ref
+  const observerTarget = useCallback(node => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        setVisibleCount(prev => prev + 40);
+      }
+    }, { threshold: 0.1, rootMargin: '200px' });
+    
+    if (node) observer.current.observe(node);
+  }, [loading]);
 
   // Inicializar Worker (solo una vez)
   useEffect(() => {
     workerRef.current = new Worker(new URL('../workers/filterWorker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
       setFilteredItems(e.data);
-      setVisibleCount(40); // Reset al filtrar
       setIsFiltering(false);
     };
     return () => workerRef.current.terminate();
@@ -165,9 +192,15 @@ const InventoryView = ({ categoryTitle }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
+      setVisibleCount(40); // Reset scroll on search
     }, 150);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Reset count on filter change
+  useEffect(() => {
+    setVisibleCount(40);
+  }, [activeSubcategory, selectedBrand, selectedLocation, categoryTitle]);
 
   // Disparar filtrado cuando cambian los criterios (con pequeño debounce para evitar saturación)
   useEffect(() => {
@@ -198,7 +231,7 @@ const InventoryView = ({ categoryTitle }) => {
     handleDelete: (item) => { if (window.confirm(`¿Eliminar "${item.name}"?`)) deleteItem(item.id, userData?.name || 'Admin'); },
     handleEdit: (item) => { setSelectedItem(item); setIsAddModalOpen(true); },
     handleAction: (item) => { setSelectedItem(item); setIsStockModalOpen(true); },
-    handleAudit: (item) => { setSelectedItem(item); /* setIsAuditModalOpen(true); */ },
+    handleAudit: (item) => { setSelectedItem(item); setIsAuditModalOpen(true); },
     handleLoan: (item) => { setSelectedItem(item); },
     handleReturn: async (item) => { if (window.confirm(`¿Devolución de ${item.name}?`)) await returnItem(item.id, userData?.name || 'Admin'); }
   }), [deleteItem, returnItem, userData]);
@@ -226,6 +259,8 @@ const InventoryView = ({ categoryTitle }) => {
     </div>
   );
 
+  const isDynamicCategory = customCategories?.some(c => c.name === categoryTitle);
+
   return (
     <main className="tools-view animate-fade-in relative min-h-screen">
       <Header />
@@ -247,32 +282,34 @@ const InventoryView = ({ categoryTitle }) => {
             />
           </div>
 
-          <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={() => exportToExcel(filteredItems, `inv_${categoryTitle}_filtrado`, categoryTitle)}>
-            <Filter size={18} />
-            <span className="desktop-only-text">Filtrados</span>
-          </button>
+          <div className="action-buttons-group">
+            <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={() => exportToExcel(filteredItems, `inv_${categoryTitle}_filtrado`, categoryTitle)}>
+              <Filter size={18} />
+              <span className="desktop-only-text">Filtrados</span>
+            </button>
 
-          <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={() => {
-            const allItems = items.filter(i => i.category === categoryTitle);
-            exportToExcel(allItems, `inv_${categoryTitle}_total`, categoryTitle);
-          }}>
-            <Download size={18} />
-            <span className="desktop-only-text">Exportar Todo</span>
-          </button>
+            <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={() => {
+              const allItems = items.filter(i => i.category === categoryTitle);
+              exportToExcel(allItems, `inv_${categoryTitle}_total`, categoryTitle);
+            }}>
+              <Download size={18} />
+              <span className="desktop-only-text">Exportar Todo</span>
+            </button>
 
-          <label className="btn-scan-qr cursor-pointer" style={{ padding: '0.75rem 1rem' }}>
-            <Upload size={18} />
-            <span className="desktop-only-text">Importar</span>
-            <input 
-              type="file" 
-              className="hidden" 
-              accept=".xlsx,.xls" 
-              onChange={async (e) => {
-                const data = await processInventoryExcel(e.target.files[0]);
-                if (data) bulkAddItems(data, categoryTitle, userData?.name || 'Jonathan');
-              }}
-            />
-          </label>
+            <label className="btn-scan-qr cursor-pointer" style={{ padding: '0.75rem 1rem' }}>
+              <Upload size={18} />
+              <span className="desktop-only-text">Importar</span>
+              <input 
+                type="file" 
+                className="hidden" 
+                accept=".xlsx,.xls" 
+                onChange={async (e) => {
+                  const data = await processInventoryExcel(e.target.files[0]);
+                  if (data) bulkAddItems(data, categoryTitle, userData?.name || 'Jonathan');
+                }}
+              />
+            </label>
+          </div>
 
           {canAddTo(categoryTitle) && (
             <button className="btn-primary-tools desktop-only-btn" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
@@ -326,10 +363,10 @@ const InventoryView = ({ categoryTitle }) => {
       )}
 
       <div className="invt-container">
-        <div className="invt-grid-row invt-header-row">
+        <div className={`invt-grid-row invt-header-row ${isDynamicCategory ? 'dynamic-grid' : ''}`}>
           <div>Artículo / Detalle</div>
-          <div style={{ textAlign: 'center' }}>Stock Actual</div>
-          <div style={{ textAlign: 'center' }}>Referencia</div>
+          {!isDynamicCategory && <div style={{ textAlign: 'center' }}>Stock Actual</div>}
+          {!isDynamicCategory && <div style={{ textAlign: 'center' }}>Referencia</div>}
           <div style={{ textAlign: 'right' }}>Acciones</div>
         </div>
         
@@ -346,6 +383,8 @@ const InventoryView = ({ categoryTitle }) => {
                   isStaff={rowData.isStaff}
                   canEditIn={rowData.canEditIn}
                   handlers={rowData.handlers}
+                  isDynamicCategory={isDynamicCategory}
+                  customCategories={customCategories}
                 />
               ))}
 
@@ -371,6 +410,11 @@ const InventoryView = ({ categoryTitle }) => {
         isOpen={isStockModalOpen} onClose={() => setIsStockModalOpen(false)} item={selectedItem}
         personnel={personnel}
         onConfirm={(id, qty, details) => { updateStock(id, qty, userData?.name || 'Jonathan', details); setIsStockModalOpen(false); }}
+      />
+
+      <AuditModal 
+        isOpen={isAuditModalOpen} onClose={() => setIsAuditModalOpen(false)} item={selectedItem}
+        onConfirm={(id, physicalQty, reason) => { auditStock(id, physicalQty, userData?.name || 'Jonathan', reason); setIsAuditModalOpen(false); }}
       />
 
       <AddItemModal 

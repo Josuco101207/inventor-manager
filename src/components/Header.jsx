@@ -142,7 +142,7 @@ const Header = () => {
           <div className="status-info">
             <span className="status-label">{getStatusText()}</span>
             <span className="last-sync">
-              {lastSync.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              {lastSync instanceof Date ? lastSync.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '...'}
             </span>
           </div>
         </div>

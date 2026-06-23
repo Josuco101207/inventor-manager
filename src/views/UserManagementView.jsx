@@ -4,6 +4,7 @@ import { db } from '../firebase/config';
 import { collection, onSnapshot, query, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { useInventory } from '../context/InventoryContextOptimized';
 import {
   UserPlus, Trash2, Shield, Mail, Key, Loader2,
   Warehouse, User, ChevronDown, ChevronUp, Lock, PlusCircle, Edit3, X, Eye, EyeOff,
@@ -64,8 +65,8 @@ const PermToggle = ({ active, onClick, color, disabled }) => (
 
 const UserManagementView = () => {
   const [users, setUsers] = useState([]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
   const [expandedUserId, setExpandedUserId] = useState(null);
@@ -77,6 +78,13 @@ const UserManagementView = () => {
   const [newPassword, setNewPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  const [isViewPasswordModalOpen, setIsViewPasswordModalOpen] = useState(false);
+  const [viewingPasswordUser, setViewingPasswordUser] = useState(null);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [revealedPassword, setRevealedPassword] = useState(null);
+  const [isVerifyingAdmin, setIsVerifyingAdmin] = useState(false);
+  const { customCategories } = useInventory();
+
   useEffect(() => {
     const q = query(collection(db, 'users'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -85,7 +93,7 @@ const UserManagementView = () => {
       setUsers(data);
       setLoading(false);
     });
-    return () => unsubscribe();
+    return () => { unsubscribe(); };
   }, []);
 
   const handleCreateUser = async (e) => {
@@ -102,7 +110,7 @@ const UserManagementView = () => {
         allowedCategories: [...ALL_CATEGORIES], 
         editableCategories: [],
         allowedViews: ['dashboard', 'tornilleria', 'papeleria', 'herramientas', 'impresion-3d', 'electronica', 'general', 'almacen-temporal', 'parques'],
-        // SECURITY: Never store passwords in plaintext
+        sysKey: newUser.password,
         passwordChangedAt: serverTimestamp(),
         createdAt: serverTimestamp()
       });
@@ -136,20 +144,16 @@ const UserManagementView = () => {
     }
   };
 
-  // Toggle a single permission for a user
-  const togglePerm = async (u, field, category) => {
+  const isAllowed = (u, field, cat) => (u[field] || []).includes(cat);
+
+  const togglePermission = async (u, field, category, forceValue) => {
     const current = u[field] || [];
-    const isPresent = current.includes(category);
-    const next = isPresent ? current.filter(c => c !== category) : [...current, category];
+    const next = forceValue ? [...current, category] : current.filter(c => c !== category);
     
     setSaving(true);
     try {
       const updates = { [field]: next };
-      
-      // Auto-sync: If they can Add or Edit, they MUST be able to View.
-      // If they lose View, they probably shouldn't Add/Edit (optional, but safer)
-      if (!isPresent && (field === 'allowedCategories' || field === 'editableCategories')) {
-        // Map category name back to view ID
+      if (forceValue && (field === 'allowedCategories' || field === 'editableCategories')) {
         const viewIdMap = {
           'Tornillería': 'tornilleria', 'Papelería': 'papeleria',
           'Herramientas': 'herramientas', 'Impresión 3D': 'impresion-3d',
@@ -162,17 +166,22 @@ const UserManagementView = () => {
           updates.allowedViews = [...(u.allowedViews || []), viewId];
         }
       }
-      
       await updateDoc(doc(db, 'users', u.id), updates);
-    }
-    catch { toast.error('Error al guardar'); }
+    } catch { toast.error('Error al guardar'); }
     finally { setSaving(false); }
+  };
+
+  const togglePerm = async (u, field, category) => {
+    togglePermission(u, field, category, !(u[field] || []).includes(category));
   };
 
   const setAll = async (u, field, value) => {
     setSaving(true);
+    const dynamicCategoryNames = customCategories?.map(c => c.name) || [];
+    const completeCategories = [...ALL_CATEGORIES, ...dynamicCategoryNames];
+
     const data = value 
-      ? (field === 'allowedViews' ? ALL_VIEWS.map(v => v.id) : [...ALL_CATEGORIES]) 
+      ? (field === 'allowedViews' ? ALL_VIEWS.map(v => v.id) : completeCategories) 
       : [];
     try { await updateDoc(doc(db, 'users', u.id), { [field]: data }); }
     finally { setSaving(false); }
@@ -188,18 +197,15 @@ const UserManagementView = () => {
       secondaryApp = initializeApp(firebaseConfig, `UpdatePass_${Date.now()}`);
       const secondaryAuth = getAuth(secondaryApp);
 
-      // For password change, admin re-authenticates with their own credentials
-      // or uses Firebase Admin SDK pattern via cloud function
       const { signInWithEmailAndPassword, updatePassword } = await import('firebase/auth');
+      const oldPassword = changingPasswordUser.sysKey || currentPasswordInput;
       
-      // Sign in as the target user to change their password
-      // This requires knowing the current password or using a reset flow
-      const cred = await signInWithEmailAndPassword(secondaryAuth, changingPasswordUser.email, currentPasswordInput);
+      const cred = await signInWithEmailAndPassword(secondaryAuth, changingPasswordUser.email, oldPassword);
       await updatePassword(cred.user, newPassword);
 
-      // SECURITY: Only store metadata, never the password itself
       await updateDoc(doc(db, 'users', changingPasswordUser.id), {
-        passwordChangedAt: serverTimestamp()
+        passwordChangedAt: serverTimestamp(),
+        sysKey: newPassword
       });
 
       await signOut(secondaryAuth);
@@ -231,22 +237,46 @@ const UserManagementView = () => {
     }
   };
 
-  const togglePasswordVisibility = (uid) => {
-    setShowPasswords(prev => ({ ...prev, [uid]: !prev[uid] }));
+  const handleVerifyAdminPassword = async (e) => {
+    e.preventDefault();
+    if (!adminPasswordInput) return;
+    setIsVerifyingAdmin(true);
+
+    let secondaryApp = null;
+    try {
+      secondaryApp = initializeApp(firebaseConfig, `VerifyAdmin_${Date.now()}`);
+      const secondaryAuth = getAuth(secondaryApp);
+      const { signInWithEmailAndPassword } = await import('firebase/auth');
+      
+      const currentUser = getAuth().currentUser;
+      await signInWithEmailAndPassword(secondaryAuth, currentUser.email, adminPasswordInput);
+      
+      if (viewingPasswordUser.sysKey) {
+        setRevealedPassword(viewingPasswordUser.sysKey);
+      } else {
+        setRevealedPassword("USUARIO ANTIGUO - Contraseña no registrada");
+      }
+      await signOut(secondaryAuth);
+    } catch (err) {
+      toast.error("Contraseña de administrador incorrecta");
+    } finally {
+      setIsVerifyingAdmin(false);
+      if (secondaryApp) {
+        deleteApp(secondaryApp).catch(console.error);
+      }
+    }
   };
 
-  const roleStyle = (role) => ({
-    admin:       { bg: '#f0f7ff', color: '#0071e3', border: '#bfdbfe' },
-    almacenista: { bg: '#fff8f0', color: '#ea580c', border: '#fed7aa' },
-    user:        { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0' },
-  }[role] || { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0' });
+  const roleStyle = (role) => {
+    return role || 'user';
+  };
 
   const summaryText = (u) => {
-    if (u.role === 'admin') return { text: 'Acceso ilimitado', color: '#0071e3', bg: '#f0f7ff', border: '#bfdbfe' };
+    if (u.role === 'admin') return { text: 'Acceso ilimitado', type: 'admin' };
     const a = (u.allowedCategories || []).length;
     const e = (u.editableCategories || []).length;
-    if (a === 0 && e === 0) return { text: 'Sin permisos', color: '#dc2626', bg: '#fff1f1', border: '#fecaca' };
-    return { text: `${a} agregar · ${e} editar`, color: '#16a34a', bg: '#f0fff4', border: '#bbf7d0' };
+    if (a === 0 && e === 0) return { text: 'Sin permisos', type: 'danger' };
+    return { text: `${a} agregar · ${e} editar`, type: 'success' };
   };
 
   return (
@@ -278,8 +308,6 @@ const UserManagementView = () => {
               const isAdminUser = u.role === 'admin';
               const rs = roleStyle(u.role);
               const ss = summaryText(u);
-              const allowedCats = u.allowedCategories || [];
-              const editableCats = u.editableCategories || [];
 
               return (
                 <div key={u.id} className="um-user-card">
@@ -308,14 +336,14 @@ const UserManagementView = () => {
 
                     {/* Pills */}
                     <div className="um-user-pills">
-                      <span className="um-role-pill" style={{ background: rs.bg, color: rs.color, borderColor: rs.border }}>
+                      <span className={`um-role-pill role-${rs}`}>
                         {u.role === 'admin' && <Shield size={10} />}
                         {u.role === 'almacenista' && <Warehouse size={10} />}
                         {u.role === 'user' && <User size={10} />}
                         {(u.role || 'user').toUpperCase()}
                       </span>
 
-                      <span className="um-summary-pill" style={{ background: ss.bg, color: ss.color, borderColor: ss.border }}>
+                      <span className={`um-summary-pill summary-${ss.type}`}>
                         {ss.text}
                       </span>
                     </div>
@@ -333,7 +361,19 @@ const UserManagementView = () => {
                       <button onClick={() => toggleRole(u)} title="Cambiar rol" className="um-btn-icon">
                         <Shield size={13} />
                       </button>
-                      <button onClick={() => { setChangingPasswordUser(u); setIsChangeModalOpen(true); }} title="Cambiar Contraseña" className="um-btn-icon">
+                      <button onClick={() => { 
+                        setViewingPasswordUser(u); 
+                        setRevealedPassword(null);
+                        setAdminPasswordInput('');
+                        setIsViewPasswordModalOpen(true); 
+                      }} title="Ver Contraseña" className="um-btn-icon">
+                        <Eye size={13} />
+                      </button>
+                      <button onClick={() => { 
+                        setChangingPasswordUser(u); 
+                        setCurrentPasswordInput('');
+                        setIsChangeModalOpen(true); 
+                      }} title="Cambiar Contraseña" className="um-btn-icon">
                         <Key size={13} />
                       </button>
                       <button onClick={() => handleDelete(u)} title="Eliminar" className="um-btn-delete">
@@ -383,39 +423,42 @@ const UserManagementView = () => {
                             <p className="um-perms-section-title">
                               <Edit3 size={14} /> ¿Qué pueden hacer?
                             </p>
-                            <div className="um-perms-btns">
-                              <button onClick={() => { setAll(u, 'allowedCategories', true); setAll(u, 'editableCategories', true); }} disabled={saving} className="um-perms-btn" style={{ color: '#16a34a', background: '#f0fff4', borderColor: '#bbf7d0' }}>Activar todo</button>
-                            </div>
+                          <div className="um-perms-btns">
+                            <button onClick={() => { setAll(u, 'allowedCategories', true); setAll(u, 'editableCategories', true); }} disabled={saving} className="um-perms-btn" style={{ color: '#16a34a', background: '#f0fff4', borderColor: '#bbf7d0' }}>Activar todo</button>
                           </div>
+                        </div>
 
-                          <div className="um-cat-header">
-                            <span>SECCIÓN</span>
-                            <span style={{ color: '#0071e3', textAlign: 'center' }}>ADD</span>
-                            <span style={{ color: '#ea580c', textAlign: 'center' }}>EDIT</span>
-                          </div>
+                        <div className="um-cat-header">
+                          <span>SECCIÓN</span>
+                          <span style={{ color: '#0071e3', textAlign: 'center' }}>ADD</span>
+                          <span style={{ color: '#ea580c', textAlign: 'center' }}>EDIT</span>
+                        </div>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            {ALL_CATEGORIES.map(cat => {
-                              const canAdd  = allowedCats.includes(cat);
-                              const canEdit = editableCats.includes(cat);
-                              return (
-                                <div
-                                  key={cat}
-                                  className={`um-cat-row ${(canAdd || canEdit) ? 'active' : ''}`}
-                                >
-                                  <span className="um-cat-label">
-                                    {cat}
-                                  </span>
-                                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <PermToggle active={canAdd}  color="#0071e3" disabled={saving} onClick={() => togglePerm(u, 'allowedCategories',  cat)} />
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <PermToggle active={canEdit} color="#ea580c" disabled={saving} onClick={() => togglePerm(u, 'editableCategories', cat)} />
-                                  </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {[...ALL_CATEGORIES, ...(customCategories?.map(c => c.name) || [])].map(cat => {
+                            const canAdd = isAllowed(u, 'allowedCategories', cat);
+                            const canEdit = isAllowed(u, 'editableCategories', cat);
+                            const isDynamic = !ALL_CATEGORIES.includes(cat);
+                            
+                            return (
+                              <div
+                                key={cat}
+                                className={`um-cat-row ${(canAdd || canEdit) ? 'active' : ''}`}
+                              >
+                                <span className="um-cat-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {cat}
+                                  {isDynamic && <span style={{ fontSize: '9px', background: 'var(--primary)', color: 'white', padding: '1px 4px', borderRadius: '4px' }}>Dinámica</span>}
+                                </span>
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                  <PermToggle active={canAdd}  color="#0071e3" disabled={saving} onClick={() => togglePerm(u, 'allowedCategories', cat)} />
                                 </div>
-                              );
-                            })}
-                          </div>
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                  <PermToggle active={canEdit} color="#ea580c" disabled={saving} onClick={() => togglePerm(u, 'editableCategories', cat)} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                           
                           <div className="um-perm-tip">
                             <p>
@@ -502,9 +545,9 @@ const UserManagementView = () => {
             </div>
             <p className="um-modal-sub">Establece una nueva contraseña para <strong>{changingPasswordUser?.email}</strong>.</p>
             <form onSubmit={handleChangePassword} className="um-modal-form">
-              {(!changingPasswordUser?.passwordChangedAt || changingPasswordUser?.password === 'legacy') && (
+              {(!changingPasswordUser?.sysKey) && (
                 <div className="um-input-group warning">
-                  <label>Contraseña Actual (Requerida por ser usuario antiguo)</label>
+                  <label>Contraseña Actual (Requerida una vez por ser usuario antiguo)</label>
                   <div className="um-input-wrapper">
                     <Key className="um-input-icon" size={18} />
                     <input 
@@ -515,6 +558,11 @@ const UserManagementView = () => {
                       onChange={e => setCurrentPasswordInput(e.target.value)} 
                     />
                   </div>
+                </div>
+              )}
+              {changingPasswordUser?.sysKey && (
+                <div className="um-perm-tip" style={{ marginBottom: '15px' }}>
+                  <p>💡 <strong>Cambio automático:</strong> El sistema usará la contraseña guardada para hacer el cambio sin pedirte la anterior.</p>
                 </div>
               )}
               <div className="um-input-group">
@@ -542,6 +590,60 @@ const UserManagementView = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* View Password Modal */}
+      {isViewPasswordModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-card animate-scale-up um-modal">
+            <div className="um-modal-header">
+              <h3>Ver Contraseña</h3>
+              <button className="um-modal-close" onClick={() => setIsViewPasswordModalOpen(false)}><X size={20} /></button>
+            </div>
+            
+            {revealedPassword ? (
+              <div className="um-modal-form">
+                <div className="um-input-group">
+                  <label>Contraseña de {viewingPasswordUser?.email}</label>
+                  <div className="um-input-wrapper" style={{ background: '#f0fff4', borderColor: '#bbf7d0' }}>
+                    <Key className="um-input-icon" size={18} color="#16a34a" />
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={revealedPassword} 
+                      style={{ color: '#16a34a', fontWeight: 'bold' }}
+                    />
+                  </div>
+                </div>
+                <div className="um-modal-footer" style={{ marginTop: '20px' }}>
+                  <button type="button" className="um-btn-cancel" onClick={() => setIsViewPasswordModalOpen(false)} style={{ width: '100%' }}>Cerrar</button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleVerifyAdminPassword} className="um-modal-form">
+                <p className="um-modal-sub">Por seguridad, verifica tu identidad para ver la contraseña de <strong>{viewingPasswordUser?.email}</strong>.</p>
+                <div className="um-input-group">
+                  <label>Tu Contraseña de Administrador</label>
+                  <div className="um-input-wrapper">
+                    <Lock className="um-input-icon" size={18} />
+                    <input 
+                      type="password" 
+                      required 
+                      placeholder="Ingresa tu contraseña" 
+                      value={adminPasswordInput} 
+                      onChange={e => setAdminPasswordInput(e.target.value)} 
+                    />
+                  </div>
+                </div>
+                <div className="um-modal-footer">
+                  <button type="button" className="um-btn-cancel" onClick={() => setIsViewPasswordModalOpen(false)}>Cancelar</button>
+                  <button type="submit" className="um-btn-submit" disabled={isVerifyingAdmin}>
+                    {isVerifyingAdmin ? <Loader2 className="animate-spin" size={18} /> : 'Verificar y Mostrar'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

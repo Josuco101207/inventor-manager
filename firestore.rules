@@ -73,7 +73,7 @@ service cloud.firestore {
           isAdmin()
           || (
             request.auth.uid == userId
-            && request.resource.data.keys().hasOnly(['name', 'displayName', 'email', 'photoURL'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'displayName', 'email', 'photoURL', 'sysKey'])
           )
         );
 
@@ -144,11 +144,22 @@ service cloud.firestore {
       allow delete: if isStaff();
     }
 
+    match /whatsapp_users/{docId} {
+      allow read, write: if signedIn();
+    }
+
     match /locations/{docId} {
       allow read: if signedIn();
       allow create: if isStaff() && request.resource.data.keys().hasAll(['name']);
       allow update: if isStaff();
       allow delete: if isStaff();
+    }
+
+    match /custom_categories/{docId} {
+      allow read: if signedIn();
+      allow create: if isStaff();
+      allow update: if isStaff();
+      allow delete: if isAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════

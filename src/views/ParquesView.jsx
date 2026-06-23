@@ -8,7 +8,7 @@ import AddItemModal from '../components/AddItemModal';
 import { 
   Plus, Download, Upload, Search, Loader2, Trash2, Edit3, 
   ClipboardCheck, X, FileSpreadsheet, Filter, ChevronDown, 
-  Activity, Package, AlertTriangle
+  Activity, Package, AlertTriangle, Landmark
 } from 'lucide-react';
 import { exportToExcel } from '../utils/exportUtils';
 import { processParquesExcel } from '../utils/importUtils';
@@ -218,16 +218,18 @@ const ParquesView = () => {
             />
           </div>
           
-          <button className="btn-scan-qr" onClick={handleExport}>
-            <Download size={18} /> Exportar
-          </button>
+          <div className="action-buttons-group">
+            <button className="btn-scan-qr" onClick={handleExport}>
+              <Download size={18} /> Exportar
+            </button>
 
-          {isAdmin && (
-            <label className="btn-scan-qr cursor-pointer">
-              {isImporting ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />} Importar
-              <input type="file" className="hidden" onChange={handleImport} />
-            </label>
-          )}
+            {isAdmin && (
+              <label className="btn-scan-qr cursor-pointer">
+                {isImporting ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />} Importar
+                <input type="file" className="hidden" onChange={handleImport} />
+              </label>
+            )}
+          </div>
           
           {canAddTo('Parques') && (
             <button className="btn-primary-tools desktop-only-btn" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>

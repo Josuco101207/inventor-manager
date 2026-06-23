@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Save, Plus, Wrench, Layers } from 'lucide-react';
 import { useInventory } from '../context/InventoryContextOptimized';
 import './ActionModal.css'; // Reusing base modal styles
@@ -62,13 +63,21 @@ const CATEGORY_SCHEMAS = {
 };
 
 const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
-  const { brands, locations, addBrand, addLocation, items } = useInventory();
+  const { brands, locations, addBrand, addLocation, items, customCategories } = useInventory();
   const [newBrandName, setNewBrandName] = useState('');
   const [newLocationName, setNewLocationName] = useState('');
   const [isAddingBrand, setIsAddingBrand] = useState(false);
   const [isAddingLocation, setIsAddingLocation] = useState(false);
+  const isDynamicCategory = customCategories?.some(c => c.name === category);
+  const [showAdvanced, setShowAdvanced] = useState(!isDynamicCategory);
 
-  const [formData, setFormData] = useState({
+  useEffect(() => {
+    if (isOpen) {
+      setShowAdvanced(!isDynamicCategory);
+    }
+  }, [isOpen, isDynamicCategory]);
+
+  const [formData, setFormData] = useState(initialData || {
     name: '',
     qty: 0,
     threshold: 5,
@@ -108,9 +117,10 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
     recuento_reparaciones: 0
   });
 
-  // Sync data when prop changes or modal opens (for editing)
   React.useEffect(() => {
     if (isOpen) {
+      const dynamic = customCategories?.some(c => c.name === category);
+      setShowAdvanced(!dynamic);
       if (initialData) {
         setFormData({ ...initialData });
       } else {
@@ -138,6 +148,29 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
       submitData.threshold = 0;
       submitData.unit = 'Piezas';
       submitData.pieces_per_unit = 1;
+    }
+
+    if (isDynamicCategory) {
+      const customCat = customCategories?.find(c => c.name === category);
+      
+      if (!submitData.name) {
+        const firstField = customCat?.fields?.[0];
+        if (firstField && formData[firstField.name]) {
+          submitData.name = formData[firstField.name];
+        } else {
+          submitData.name = `Registro ${new Date().getTime().toString().slice(-4)}`;
+        }
+      }
+
+      // STRICTLY limit data to ONLY configured fields, name, and category
+      const configuredFields = customCat?.fields?.map(f => f.name) || [];
+      const allowedKeys = ['name', 'category', ...configuredFields];
+
+      Object.keys(submitData).forEach(key => {
+        if (!allowedKeys.includes(key)) {
+          delete submitData[key];
+        }
+      });
     }
     
     onSave(submitData);
@@ -278,13 +311,25 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
         return <input type="date" name={field.name} onChange={handleChange} value={formData[field.name]} />;
       case 'number':
         return <input type="number" name={field.name} placeholder={field.placeholder} onChange={handleChange} value={formData[field.name]} />;
+      case 'boolean':
+        return (
+          <label className="checkbox-wrap flex items-center gap-2 mt-2">
+            <input 
+              type="checkbox" 
+              name={field.name} 
+              onChange={(e) => setFormData(prev => ({ ...prev, [field.name]: e.target.checked }))}
+              checked={!!formData[field.name]} 
+            />
+            <span className="text-sm">Sí</span>
+          </label>
+        );
       default:
         const existingSubcategories = [...new Set(items.filter(i => i.category === category && i.subcategory).map(i => i.subcategory))];
         return (
           <>
             <input 
               name={field.name} 
-              placeholder={field.placeholder} 
+              placeholder={field.placeholder || `Ingresar ${field.label || field.name}`} 
               onChange={handleChange} 
               value={formData[field.name]} 
               list={field.name === 'subcategory' ? "subcategory-suggestions" : undefined}
@@ -301,7 +346,10 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
   };
 
   const renderCategoryFields = () => {
-    const fields = CATEGORY_SCHEMAS[category] || [];
+    // Buscar si es una categoría dinámica
+    const customCat = customCategories?.find(c => c.name === category);
+    const fields = customCat ? customCat.fields : (CATEGORY_SCHEMAS[category] || []);
+    
     if (fields.length === 0) return <p className="text-xs text-muted italic">No hay campos adicionales para esta categoría.</p>;
 
     if (category === 'Herramientas' || category === 'Inventario General') {
@@ -332,7 +380,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
       <div className="special-fields flex gap-4" style={{ flexWrap: 'wrap' }}>
         {fields.map(field => (
           <div className="f-group flex-1" style={{ minWidth: '150px' }} key={field.name}>
-            <label>{field.label}</label>
+            <label>{field.label || field.name}</label>
             {renderField(field)}
           </div>
         ))}
@@ -340,7 +388,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
     );
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay">
       <div className="modal-card add-item-modal animate-scale-up">
         <header className="modal-header">
@@ -349,87 +397,105 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
         </header>
 
         <form onSubmit={handleSubmit}>
-          <div className="main-fields mb-6">
-            <div className="flex gap-4 mb-4">
-              <div className="f-group flex-1">
-                <label>Nombre del Artículo</label>
-                <input name="name" required value={formData.name} placeholder="Ej: Tornillo Hexagonal..." onChange={handleChange} className="w-full" />
-              </div>
-              <div className="f-group flex-1">
-                <label>Costo Unitario ($)</label>
-                <input type="number" name="costo_unitario" step="0.01" value={formData.costo_unitario} onChange={handleChange} />
-              </div>
-            </div>
-            
-            {category !== 'Herramientas' && (
-              <>
-                <div className="flex gap-4 mb-4">
+          <div className="form-layout-horizontal mb-6">
+            <div className="main-fields">
+              <div className="flex gap-4 mb-4">
+                {!isDynamicCategory && (
                   <div className="f-group flex-1">
-                    <label>Unidad de Medida</label>
-                    <select name="unit" value={formData.unit} onChange={handleChange} className="w-full">
-                      <option value="Piezas">Piezas</option>
-                      <option value="Litros">Litros</option>
-                      <option value="Metros">Metros</option>
-                      <option value="Cajas">Cajas</option>
-                      <option value="Paquetes">Paquetes</option>
-                      <option value="Cubetas">Cubetas</option>
-                      <option value="Rollos">Rollos</option>
-                      <option value="Kilos">Kilos</option>
-                    </select>
+                    <label>Nombre del Artículo</label>
+                    <input name="name" required value={formData.name} placeholder="Ej: Tornillo Hexagonal..." onChange={handleChange} className="w-full" />
                   </div>
-                  {(formData.unit === 'Cajas' || formData.unit === 'Paquetes') && (
+                )}
+                {showAdvanced && !isDynamicCategory && (
+                  <div className="f-group flex-1">
+                    <label>Costo Unitario ($)</label>
+                    <input type="number" name="costo_unitario" step="0.01" value={formData.costo_unitario} onChange={handleChange} />
+                  </div>
+                )}
+              </div>
+              
+              {!isDynamicCategory && !showAdvanced && (
+                <div className="mb-4" style={{ textAlign: 'center' }}>
+                  <button type="button" onClick={() => setShowAdvanced(true)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '8px', color: 'var(--text-muted)', fontSize: '0.85rem', cursor: 'pointer' }}>
+                    + Configurar Cantidad y Opciones Avanzadas
+                  </button>
+                </div>
+              )}
+
+              {!isDynamicCategory && showAdvanced && category !== 'Herramientas' && (
+                <>
+                  <div className="flex gap-4 mb-4">
                     <div className="f-group flex-1">
-                      <label>Piezas por {formData.unit.slice(0, -1)}</label>
-                      <input 
-                        type="number" 
-                        name="pieces_per_unit" 
-                        value={formData.pieces_per_unit} 
-                        onChange={(e) => setFormData(prev => ({ ...prev, pieces_per_unit: parseInt(e.target.value) || 1 }))}
-                        min="1"
-                        className="w-full"
-                      />
+                      <label>Unidad de Medida</label>
+                      <select name="unit" value={formData.unit} onChange={handleChange} className="w-full">
+                        <option value="Piezas">Piezas</option>
+                        <option value="Litros">Litros</option>
+                        <option value="Metros">Metros</option>
+                        <option value="Cajas">Cajas</option>
+                        <option value="Paquetes">Paquetes</option>
+                        <option value="Cubetas">Cubetas</option>
+                        <option value="Rollos">Rollos</option>
+                        <option value="Kilos">Kilos</option>
+                      </select>
                     </div>
-                  )}
-                </div>
-
-                <div className="flex gap-4 mb-4">
-                  <div className="f-group flex-1">
-                    <label>Existencia Inicial ({formData.unit})</label>
-                    <input type="number" name="qty" required onChange={handleChange} value={formData.qty} />
+                    {(formData.unit === 'Cajas' || formData.unit === 'Paquetes') && (
+                      <div className="f-group flex-1">
+                        <label>Piezas por {formData.unit.slice(0, -1)}</label>
+                        <input 
+                          type="number" 
+                          name="pieces_per_unit" 
+                          value={formData.pieces_per_unit} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, pieces_per_unit: parseInt(e.target.value) || 1 }))}
+                          min="1"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
                   </div>
-                  <div className="f-group flex-1">
-                    <label>Umbral Mínimo (Alerta)</label>
-                    <input type="number" name="threshold" required onChange={handleChange} value={formData.threshold} />
-                  </div>
-                </div>
-              </>
-            )}
 
-            <div className="f-group">
-              <label>Observaciones / Notas</label>
-              <textarea 
-                name="observaciones" 
-                placeholder="Notas adicionales (ej: Dañado, sin imán, falta seguro...)" 
-                value={formData.observaciones}
-                onChange={handleChange}
-                className="w-full p-3 h-20"
-                style={{ resize: 'none' }}
-              />
+                  <div className="flex gap-4 mb-4">
+                    <div className="f-group flex-1">
+                      <label>Existencia Inicial ({formData.unit})</label>
+                      <input type="number" name="qty" required onChange={handleChange} value={formData.qty} />
+                    </div>
+                    <div className="f-group flex-1">
+                      <label>Umbral Mínimo (Alerta)</label>
+                      <input type="number" name="threshold" required onChange={handleChange} value={formData.threshold} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {!isDynamicCategory && showAdvanced && (
+                <div className="f-group">
+                  <label>Observaciones / Notas</label>
+                  <textarea 
+                    name="observaciones" 
+                    placeholder="Notas adicionales (ej: Dañado, sin imán, falta seguro...)" 
+                    value={formData.observaciones}
+                    onChange={handleChange}
+                    className="w-full p-3 h-20"
+                    style={{ resize: 'none' }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="category-fields">
+              {category === 'Herramientas' || category === 'Inventario General' ? (
+                <div className="animate-fade-in">
+                  {renderCategoryFields()}
+                </div>
+              ) : (
+                <div className="dynamic-section h-full">
+                  <h4 className="text-sm font-bold text-muted mb-4 uppercase tracking-widest">Detalles Especiales</h4>
+                  {renderCategoryFields()}
+                </div>
+              )}
             </div>
           </div>
 
-          {category === 'Herramientas' || category === 'Inventario General' ? (
-            <div className="mb-8 animate-fade-in">
-              {renderCategoryFields()}
-            </div>
-          ) : (
-            <div className="dynamic-section mb-8">
-              <h4 className="text-sm font-bold text-muted mb-4 uppercase tracking-widest">Detalles Especiales</h4>
-              {renderCategoryFields()}
-            </div>
-          )}
-
-          <div className="flex gap-4">
+          <div className="flex gap-4 pt-4 border-t border-white/5">
             <button type="button" className="btn-apple-secondary flex-1" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn-apple-primary flex-1">
               <Save size={18} /> {initialData ? 'Guardar Cambios' : 'Crear Artículo'}
@@ -437,7 +503,8 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

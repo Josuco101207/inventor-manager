@@ -13,16 +13,20 @@ const AnalyticsView = lazy(() => import('./views/AnalyticsView'));
 const TransactionsView = lazy(() => import('./views/TransactionsView'));
 const ToolsView = lazy(() => import('./views/ToolsView'));
 const InvoicesView = lazy(() => import('./views/InvoicesView'));
+const SectionAdminView = lazy(() => import('./views/SectionAdminView'));
 
 import { InventoryProvider, useInventory } from './context/InventoryContextOptimized';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ScannerAIProvider } from './context/ScannerAIContext'; // <== AGREGADO
 import { Toaster, toast } from 'sonner';
 import { Loader2, Lock } from 'lucide-react';
 import MobileBottomNav from './components/MobileBottomNav';
+import GlobalScanner from './components/GlobalScanner'; // <== AGREGADO
 
 const RootApp = () => {
   const { user, loading, userData, isAdmin } = useAuth();
+  const { customCategories } = useInventory();
 
   if (loading) {
     return (
@@ -96,9 +100,16 @@ const RootApp = () => {
               <Route path="/general" element={<ViewProtectedRoute viewId="general"><InventoryView categoryTitle="Inventario General" /></ViewProtectedRoute>} />
               <Route path="/almacen-temporal" element={<ViewProtectedRoute viewId="almacen-temporal"><InventoryView categoryTitle="Almacén Temporal" /></ViewProtectedRoute>} />
               <Route path="/parques" element={<ViewProtectedRoute viewId="parques"><ParquesView /></ViewProtectedRoute>} />
+              
+              {/* Dynamic Categories */}
+              {customCategories?.map(cat => (
+                <Route key={cat.id} path={cat.route} element={<ViewProtectedRoute viewId={cat.id}><InventoryView categoryTitle={cat.name} /></ViewProtectedRoute>} />
+              ))}
+
               <Route path="/analytics" element={<ViewProtectedRoute viewId="analytics"><AnalyticsView /></ViewProtectedRoute>} />
               <Route path="/transactions" element={<ViewProtectedRoute viewId="transactions"><TransactionsView /></ViewProtectedRoute>} />
               <Route path="/facturas" element={<ViewProtectedRoute viewId="facturas"><InvoicesView /></ViewProtectedRoute>} />
+              <Route path="/sections" element={isAdmin ? <SectionAdminView /> : <Navigate to="/" />} />
               <Route path="/settings" element={isAdmin ? <SettingsView /> : <Navigate to="/" />} />
               <Route path="/profile" element={<ProfileView />} />
               <Route path="/users" element={isAdmin ? <UserManagementView /> : <Navigate to="/" />} />
@@ -106,6 +117,7 @@ const RootApp = () => {
             </Routes>
           </Suspense>
         </main>
+        <GlobalScanner />
         <MobileBottomNav />
       </div>
       <Toaster position="top-right" richColors closeButton />
@@ -118,7 +130,9 @@ function App() {
     <AuthProvider>
       <ThemeProvider>
         <InventoryProvider>
-          <RootApp />
+          <ScannerAIProvider>
+            <RootApp />
+          </ScannerAIProvider>
         </InventoryProvider>
       </ThemeProvider>
     </AuthProvider>

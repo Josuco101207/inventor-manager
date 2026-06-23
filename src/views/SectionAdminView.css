@@ -1,0 +1,328 @@
+.section-admin-view {
+  padding: 0 2rem 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  max-width: 100%;
+  min-height: 100vh;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  background: hsla(var(--bg-card), 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 1.5rem 2rem;
+  border-radius: 24px;
+  border: 1px solid hsla(var(--border-color), 0.4);
+}
+
+.admin-header h2 {
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  font-weight: 900;
+  margin: 0;
+  background: linear-gradient(135deg, hsl(var(--text-main)) 30%, hsl(var(--primary)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.admin-header p {
+  color: hsl(var(--text-muted));
+  margin: 0.5rem 0 0 0;
+  font-weight: 500;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 2rem;
+  padding-bottom: 4rem;
+}
+
+.admin-card {
+  background: hsla(var(--bg-card), 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 1px solid hsla(var(--border-color), 0.3);
+  padding: 2rem;
+}
+
+.card-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: hsl(var(--text-main));
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid hsla(var(--border-color), 0.3);
+  padding-bottom: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: hsl(var(--text-soft));
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  border: 1px solid hsla(var(--border-color), 0.5);
+  background: hsla(var(--bg-elevated), 0.6);
+  color: hsl(var(--text-main));
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsla(var(--primary), 0.15);
+  background: hsla(var(--bg-elevated), 0.9);
+}
+
+.icon-selector {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid hsla(var(--border-color), 0.5);
+  background: hsla(var(--bg-elevated), 0.5);
+  color: hsl(var(--text-muted));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: hsla(var(--primary), 0.1);
+  color: hsl(var(--primary));
+}
+
+.icon-btn.active {
+  background: hsla(var(--primary), 0.2);
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary));
+  box-shadow: 0 4px 12px hsla(var(--primary), 0.2);
+}
+
+.fields-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.fields-header h4 {
+  font-size: 1rem;
+  font-weight: 800;
+  color: hsl(var(--text-main));
+  margin: 0;
+}
+
+.btn-add-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: hsla(var(--primary), 0.15);
+  color: hsl(var(--primary));
+  border: none;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-field:hover {
+  background: hsl(var(--primary));
+  color: white;
+}
+
+.fields-help {
+  font-size: 0.8rem;
+  color: hsl(var(--text-muted));
+  margin-bottom: 1rem;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.field-name { flex: 2; }
+.field-type { flex: 1; }
+
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: hsl(var(--text-soft));
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-remove-field {
+  background: hsla(var(--danger), 0.1);
+  color: hsl(var(--danger));
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-remove-field:hover {
+  background: hsl(var(--danger));
+  color: white;
+}
+
+.btn-save {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent-purple)));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 800;
+  margin-top: 2rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-save:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px hsla(var(--primary), 0.4);
+}
+
+.btn-save:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.empty-sections {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: hsl(var(--text-muted));
+  opacity: 0.7;
+}
+
+.section-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid hsla(var(--border-color), 0.4);
+  border-radius: 16px;
+  margin-bottom: 0.8rem;
+  background: hsla(var(--bg-elevated), 0.4);
+  transition: all 0.2s;
+}
+
+.section-item:hover {
+  background: hsla(var(--bg-elevated), 0.8);
+  border-color: hsla(var(--primary), 0.3);
+}
+
+.section-item-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-icon {
+  width: 44px;
+  height: 44px;
+  background: hsla(var(--primary), 0.15);
+  color: hsl(var(--primary));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-item h4 {
+  margin: 0 0 0.2rem 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: hsl(var(--text-main));
+}
+
+.section-route {
+  font-size: 0.8rem;
+  color: hsl(var(--text-muted));
+  font-family: var(--font-mono);
+}
+
+.btn-delete-section {
+  background: transparent;
+  color: hsl(var(--text-muted));
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.btn-delete-section:hover {
+  background: hsla(var(--danger), 0.1);
+  color: hsl(var(--danger));
+}
+
+@media (max-width: 1024px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .section-admin-view {
+    padding: 1rem 1rem 6rem 1rem;
+  }
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.5rem;
+  }
+  .field-row {
+    flex-wrap: wrap;
+  }
+  .field-name { min-width: 100%; margin-bottom: 0.5rem; }
+}

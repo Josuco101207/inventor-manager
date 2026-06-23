@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useInventory } from '../context/InventoryContextOptimized';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
@@ -151,20 +152,27 @@ const ToolsView = () => {
   const workerRef = useRef(null);
   const [filteredTools, setFilteredTools] = useState([]);
   const [visibleCount, setVisibleCount] = useState(30);
-  const observerTarget = useRef(null);
+  const observer = useRef(null);
 
   // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 150);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setVisibleCount(30); // Reset scroll on search
+    }, 150);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  // Reset count on filter change
+  useEffect(() => {
+    setVisibleCount(30);
+  }, [statusFilter]);
 
   // Inicializar Worker
   useEffect(() => {
     workerRef.current = new Worker(new URL('../workers/filterWorker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
       setFilteredTools(e.data);
-      setVisibleCount(30); // Reset scroll on new filter
     };
     return () => workerRef.current.terminate();
   }, []);
@@ -186,23 +194,19 @@ const ToolsView = () => {
     return () => clearTimeout(filterTimer);
   }, [items, debouncedSearch, loading, statusFilter]);
 
-  // Intersection Observer para Infinite Scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount(prev => Math.min(prev + 30, filteredTools.length));
-        }
-      },
-      { threshold: 0.1, rootMargin: '200px' }
-    );
+  // Intersection Observer para Infinite Scroll usando callback ref (seguro contra loops)
+  const observerTarget = useCallback(node => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
     
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        setVisibleCount(prev => prev + 30);
+      }
+    }, { threshold: 0.1, rootMargin: '200px' });
     
-    return () => observer.disconnect();
-  }, [filteredTools.length]);
+    if (node) observer.current.observe(node);
+  }, [loading]);
 
   if (loading) {
     return (
@@ -271,6 +275,24 @@ const ToolsView = () => {
       await completeMaintenance(tool.id, userName);
     }
   }, [completeMaintenance, userName]);
+
+  const handlers = useMemo(() => ({
+    onEdit: (t) => { setSelectedTool(t); setIsAddModalOpen(true); },
+    onDelete: handleDelete,
+    onLoan: (t) => { 
+      if (selectedToolIds.includes(t.id) && selectedToolIds.length > 1) {
+        setIsBulkLoanModalOpen(true);
+      } else {
+        setSelectedTool(t); 
+        setIsLoanModalOpen(true);
+      }
+    },
+    onAssign: (t) => { setSelectedTool(t); setIsAssignModalOpen(true); },
+    onReturn: handleReturnConfirm,
+    onFault: (t) => { setSelectedTool(t); setIsFaultModalOpen(true); },
+    onRepair: handleRepairConfirm,
+    onQR: (t) => { setSelectedTool(t); setIsQRModalOpen(true); }
+  }), [handleDelete, handleReturnConfirm, handleRepairConfirm, selectedToolIds]);
 
   const visibleTools = filteredTools.slice(0, visibleCount);
   const canEditTools = canEditIn('Herramientas');
@@ -385,22 +407,14 @@ const ToolsView = () => {
             canEdit={canEditTools}
             isSelected={selectedToolIds.includes(tool.id)}
             onSelectToggle={toggleToolSelection}
-            onEdit={(t) => { setSelectedTool(t); setIsAddModalOpen(true); }}
-            onDelete={handleDelete}
-            onLoan={(t) => { 
-              // Si el item clickeado está en la selección y hay más de uno, ir por lote
-              if (selectedToolIds.includes(t.id) && selectedToolIds.length > 1) {
-                setIsBulkLoanModalOpen(true);
-              } else {
-                setSelectedTool(t); 
-                setIsLoanModalOpen(true);
-              }
-            }}
-            onAssign={(t) => { setSelectedTool(t); setIsAssignModalOpen(true); }}
-            onReturn={handleReturnConfirm}
-            onFault={(t) => { setSelectedTool(t); setIsFaultModalOpen(true); }}
-            onRepair={handleRepairConfirm}
-            onQR={(t) => { setSelectedTool(t); setIsQRModalOpen(true); }}
+            onEdit={handlers.onEdit}
+            onDelete={handlers.onDelete}
+            onLoan={handlers.onLoan}
+            onAssign={handlers.onAssign}
+            onReturn={handlers.onReturn}
+            onFault={handlers.onFault}
+            onRepair={handlers.onRepair}
+            onQR={handlers.onQR}
           />
         ))}
         {filteredTools.length === 0 && (
@@ -514,7 +528,7 @@ const ToolsView = () => {
 
             <div className="flex gap-4">
               <button className="btn-apple-secondary flex-1" onClick={() => setIsAssignModalOpen(false)}>Cancelar</button>
-              <button className="btn-apple-primary flex-1" onClick={handleAssignConfirm} disabled={!borrowerName} style={{ background: 'var(--purple-500)' }}>Confirmar</button>
+              <button className="btn-apple-primary flex-1" onClick={handleAssignConfirm} disabled={!borrowerName}>Confirmar</button>
             </div>
           </div>
         </div>

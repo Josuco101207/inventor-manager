@@ -146,14 +146,19 @@ export const InventoryProvider = ({ children }) => {
     const aux = cache.get(CACHE_KEYS.AUX_DATA);
     return aux?.locations || [];
   });
+  const [customCategories, setCustomCategories] = useState([]); // <== AGREGADO
   
   const [loading, setLoading] = useState(true);
-  const [lastSync, setLastSync] = useState(() => cache.get(CACHE_KEYS.LAST_SYNC) || null);
+  const [lastSync, setLastSync] = useState(() => {
+    const cached = cache.get(CACHE_KEYS.LAST_SYNC);
+    return cached ? new Date(cached) : null;
+  });
   const [connectionStatus, setConnectionStatus] = useState('online');
   const [isAutoWiping, setIsAutoWiping] = useState(false);
   const [globalStats, setGlobalStats] = useState({ 
     items: 0, 
     movements: 0, 
+    outOfStockBase: 0,
     critical: 0,
     activity: [] 
   });
@@ -181,11 +186,26 @@ export const InventoryProvider = ({ children }) => {
       setBrands([]);
       setLocations([]);
       setGlobalStats({ items: 0, movements: 0, critical: 0, activity: [] });
+      setCustomCategories([]);
       setLoading(true);
       lastDocRef.current = null;
       setHasMoreItems(true);
       // NO limpiamos cache aquí - permite offline mode
     }
+  }, [user]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // Cargar Categorías Dinámicas
+  // ═══════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = onSnapshot(collection(db, 'custom_categories'), (snapshot) => {
+      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCustomCategories(cats);
+    }, (error) => {
+      console.error("Error fetching custom categories:", error);
+    });
+    return () => unsubscribe();
   }, [user]);
 
   // ═══════════════════════════════════════════════════════════════
@@ -201,7 +221,6 @@ export const InventoryProvider = ({ children }) => {
         ]);
 
         const outOfStockCount = await OptimizedDataService.getCollectionCount('items', [where('qty', '==', 0)]);
-        const localCritical = items.filter(i => (i.qty || 0) <= (i.threshold || 0) && (i.qty || 0) > 0).length;
 
         const last7Days = [6, 5, 4, 3, 2, 1, 0].map(i => {
           const d = new Date();
@@ -225,20 +244,32 @@ export const InventoryProvider = ({ children }) => {
           movimientos: activityCounts[idx]
         }));
 
-        setGlobalStats({ 
+        setGlobalStats(prev => ({ 
+          ...prev,
           items: itemCount, 
           movements: moveCount, 
-          critical: outOfStockCount + localCritical,
+          outOfStockBase: outOfStockCount,
+          critical: outOfStockCount + (itemsRef.current ? itemsRef.current.filter(i => (i.qty || 0) <= (i.threshold || 0) && (i.qty || 0) > 0).length : 0),
           activity: activityData 
-        });
+        }));
       } catch (e) {
         console.error("Stats fetch error:", e);
       }
     };
     fetchStats();
-    const interval = setInterval(fetchStats, 300000); 
+    // Incrementar intervalo a 10 min para evitar 429
+    const interval = setInterval(fetchStats, 600000); 
     return () => clearInterval(interval);
-  }, [user, items]);
+  }, [user]);
+
+  // Actualizar solo localCritical cuando los items cambian sin llamar a red
+  useEffect(() => {
+    const localCritical = items.filter(i => (i.qty || 0) <= (i.threshold || 0) && (i.qty || 0) > 0).length;
+    setGlobalStats(prev => ({
+      ...prev,
+      critical: (prev.outOfStockBase || 0) + localCritical
+    }));
+  }, [items]);
 
 
   // ═══════════════════════════════════════════════════════════════
@@ -934,14 +965,14 @@ export const InventoryProvider = ({ children }) => {
     loading, isLoadingMore, hasMoreItems, lastSync, globalStats,
     updateStock, addItem, deleteItem, editItem,
     loanItem, assignItem, returnItem, reportMaintenance, completeMaintenance, auditStock,
-    bulkAddItems, annulMovement, loadMoreItems, clearCache,
+    bulkAddItems, annulMovement, loadMoreItems, clearCache, customCategories,
     itemsRef
   }), [
     items, movements, personnel, brands, locations,
     loading, isLoadingMore, hasMoreItems, lastSync, globalStats,
     updateStock, addItem, deleteItem, editItem,
     loanItem, assignItem, returnItem, reportMaintenance, completeMaintenance, auditStock,
-    bulkAddItems, annulMovement, loadMoreItems, clearCache
+    bulkAddItems, annulMovement, loadMoreItems, clearCache, customCategories
   ]);
 
   return (

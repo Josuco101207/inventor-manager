@@ -6,10 +6,12 @@ import {
   Settings, User, LogOut, Users, Archive, FileText, BarChart3
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useInventory } from '../context/InventoryContextOptimized';
 import './MobileBottomNav.css';
 
 const MobileBottomNav = () => {
   const { logout, userData, isAdmin } = useAuth();
+  const { customCategories } = useInventory();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -43,6 +45,17 @@ const MobileBottomNav = () => {
     { id: 'facturas', label: 'Facturas', icon: FileText, path: '/facturas', color: '#a2845e' },
     { id: 'analytics', label: 'Analíticas', icon: BarChart3, path: '/analytics', color: '#0071e3' },
   ];
+
+  // Agrupar custom categories
+  const dynamicMenuItems = (customCategories || []).map(cat => ({
+    id: `custom_${cat.id}`,
+    label: cat.name,
+    icon: Package, // Podemos usar un ícono genérico, o buscar el mapeo de íconos si se exporta de SectionAdminView
+    path: cat.route || `/custom/${cat.id}`,
+    color: cat.color || '#3b82f6'
+  }));
+
+  const allMenuItems = [...menuItems, ...dynamicMenuItems];
 
   return (
     <>
@@ -90,8 +103,8 @@ const MobileBottomNav = () => {
             
             <div className="bottom-sheet-content">
               <div className="bottom-sheet-grid">
-                {menuItems.map(item => {
-                  if (!hasAccess(item.id)) return null;
+                {allMenuItems.map(item => {
+                  if (item.id.startsWith('custom_') ? !hasAccess(item.id.replace('custom_', '')) : !hasAccess(item.id)) return null;
                   const Icon = item.icon;
                   return (
                     <div 
@@ -118,6 +131,9 @@ const MobileBottomNav = () => {
                   <>
                     <div className="bottom-sheet-list-item" onClick={() => navigate('/users')}>
                       <Users size={20} /> Equipo
+                    </div>
+                    <div className="bottom-sheet-list-item" onClick={() => navigate('/secciones')}>
+                      <Settings size={20} /> Secciones
                     </div>
                     <div className="bottom-sheet-list-item" onClick={() => navigate('/settings')}>
                       <Settings size={20} /> Ajustes

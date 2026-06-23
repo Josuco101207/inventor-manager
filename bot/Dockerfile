@@ -1,0 +1,29 @@
+FROM node:20
+
+# Instalar dependencias necesarias para Puppeteer (Google Chrome) en Linux
+RUN apt-get update \
+    && apt-get install -y wget gnupg \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg \
+    && sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+      --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear directorio de la app
+WORKDIR /usr/src/app
+
+# Copiar package.json y package-lock.json
+COPY package*.json ./
+
+# Instalar dependencias de Node
+RUN npm install
+
+# Copiar el resto del código (omitiendo lo que está en .dockerignore)
+COPY . .
+
+# Exponer el puerto (Render usa el puerto automáticamente, pero por convención ponemos 3000)
+EXPOSE 3000
+
+# Comando para iniciar la aplicación
+CMD ["node", "server.js"]

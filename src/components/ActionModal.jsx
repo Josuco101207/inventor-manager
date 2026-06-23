@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, RefreshCw, ArrowUpCircle, ArrowDownCircle, User, AlertCircle } from 'lucide-react';
 import './ActionModal.css';
 
@@ -23,7 +24,7 @@ const ActionModal = ({ isOpen, onClose, item, onConfirm, personnel = [] }) => {
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay">
       <div className="modal-card animate-scale-up">
         <header className="modal-header">
@@ -123,7 +124,8 @@ const ActionModal = ({ isOpen, onClose, item, onConfirm, personnel = [] }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

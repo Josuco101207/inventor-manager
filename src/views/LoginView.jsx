@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { Package, Mail, Lock, ArrowRight, Loader2, Shield, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import './LoginView.css';
@@ -43,74 +43,97 @@ const LoginView = () => {
     if (errorMsg) setErrorMsg('');
   };
 
-
-
   return (
     <div className="login-container">
-      <div className="login-card animate-slide-up">
-        <header className="login-header flex flex-col items-center text-center mb-10">
-          <div className="logo-icon-large">
-            <Package size={36} color="#fff" strokeWidth={2.5} />
-          </div>
-          <h2>Identificación</h2>
-          <p>Control de Acceso Industriales</p>
-        </header>
+      {/* Animated Background */}
+      <div className="login-bg-gradient" />
+      <div className="login-orb-accent" />
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="f-group">
-            <label>Correo Electrónico</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="email" 
-                placeholder="tu@correo.com" 
-                required 
+      {/* Branding */}
+      <div className="login-branding login-animate-brand">
+        <div className="login-logo-ring">
+          <Package size={38} color="#fff" strokeWidth={2} />
+        </div>
+        <h1>
+          Inventor <span>Manager</span>
+        </h1>
+        <p className="login-branding-subtitle">
+          Sistema de Control Industrial
+        </p>
+      </div>
+
+      {/* Login Card */}
+      <div className="login-card login-animate-in">
+        <form onSubmit={handleSubmit}>
+          {/* Email */}
+          <div className="login-field">
+            <label className="login-field-label">Correo Electrónico</label>
+            <div className="login-input-wrapper">
+              <Mail className="login-input-icon" size={18} />
+              <input
+                type="email"
+                className="login-input"
+                placeholder="tu@correo.com"
+                required
                 value={email}
                 onChange={handleInputChange(setEmail)}
+                autoComplete="email"
               />
             </div>
           </div>
 
-          <div className="f-group">
-            <label>Contraseña</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="password" 
-                placeholder="••••••••" 
-                required 
+          {/* Password */}
+          <div className="login-field">
+            <label className="login-field-label">Contraseña</label>
+            <div className="login-input-wrapper">
+              <Lock className="login-input-icon" size={18} />
+              <input
+                type="password"
+                className="login-input"
+                placeholder="••••••••"
+                required
                 value={password}
                 onChange={handleInputChange(setPassword)}
+                autoComplete="current-password"
               />
             </div>
           </div>
 
+          {/* Error Message */}
           {errorMsg && (
-            <div className="animate-shake" style={{ background: '#fff1f1', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
-              <p style={{ color: '#dc2626', fontSize: '13px', fontWeight: '700', textAlign: 'center', margin: 0 }}>
-                ⚠️ {errorMsg}
-              </p>
+            <div className="login-error">
+              <AlertCircle className="login-error-icon" size={16} />
+              <p>{errorMsg}</p>
             </div>
           )}
 
-          <button type="submit" className="btn-primary flex items-center justify-center gap-2" disabled={isAuthLoading}>
-            {isAuthLoading ? <Loader2 className="animate-spin" size={20} /> : (
+          {/* Submit */}
+          <button type="submit" className="login-submit-btn" disabled={isAuthLoading}>
+            {isAuthLoading ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
               <>
-                Entrar al Sistema <ArrowRight size={18} />
+                Iniciar Sesión
+                <ArrowRight size={18} />
               </>
             )}
           </button>
+
+          {/* Secure Badge */}
+          <div className="login-secure-badge">
+            <Shield size={12} />
+            <span>Conexión segura y encriptada</span>
+          </div>
         </form>
-
-
-
-        <footer className="login-footer mt-10 text-center">
-          <p>
-            Si no tienes cuenta, solicita tu acceso al <br />
-            <strong>Administrador del Almacén</strong>.
-          </p>
-        </footer>
       </div>
+
+      {/* Footer */}
+      <footer className="login-footer">
+        <p>
+          ¿Sin cuenta? Solicítala al <strong>Administrador</strong>
+        </p>
+        <div className="login-bottom-line" />
+      </footer>
     </div>
   );
 };

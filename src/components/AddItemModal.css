@@ -1,7 +1,13 @@
 .add-item-modal {
-  max-width: 650px !important;
+  max-width: 950px !important;
 }
 
+.form-layout-horizontal {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
 .f-group {
   display: flex;
   flex-direction: column;
@@ -247,6 +253,11 @@
 
   .grid.gap-4 {
     gap: 0.75rem;
+  }
+
+  .form-layout-horizontal {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 }
 

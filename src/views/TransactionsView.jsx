@@ -166,27 +166,28 @@ const TransactionsView = () => {
                       {mov.item}
                     </span>
                     <span className="dash-timeline-sub">{mov.category || 'General'}</span>
-                    <div className="dash-timeline-footer" style={{ alignItems: 'center' }}>
+                    <div className="dash-timeline-footer">
                       <span className="dash-timeline-note">{mov.details || 'Sin detalles'}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] opacity-50 flex items-center gap-1">
+                      <div className="dash-timeline-actions">
+                        <span className="dash-timeline-user">
                           <Users size={10} /> {mov.user || 'Admin'}
                         </span>
-                        {mov.qty && <span className="dash-timeline-qty" style={{ background: `${cfg.color}15`, color: cfg.color }}>{mov.qty} pz</span>}
-                        {isAdmin && !mov.annulled && mov.action !== 'Anulación' && (
-                          <button 
-                            className="invt-btn-annul flex items-center justify-center ml-2" 
-                            style={{ width: '28px', height: '28px', borderRadius: '8px' }}
-                            title="Anular Movimiento"
-                            onClick={() => {
-                              if(window.confirm(`¿Seguro que deseas anular el movimiento de "${mov.item}"? Esta acción revertirá el stock.`)) {
-                                annulMovement(mov.id, userData?.name || 'Admin');
-                              }
-                            }}
-                          >
-                            <X size={14} />
-                          </button>
-                        )}
+                        <div className="dash-timeline-badges">
+                          {mov.qty && <span className="dash-timeline-qty" style={{ background: `${cfg.color}15`, color: cfg.color }}>{mov.qty} pz</span>}
+                          {isAdmin && !mov.annulled && mov.action !== 'Anulación' && (
+                            <button 
+                              className="invt-btn-annul"
+                              title="Anular Movimiento"
+                              onClick={() => {
+                                if(window.confirm(`¿Seguro que deseas anular el movimiento de "${mov.item}"? Esta acción revertirá el stock.`)) {
+                                  annulMovement(mov.id, userData?.name || 'Admin');
+                                }
+                              }}
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
