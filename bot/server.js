@@ -41,6 +41,10 @@ async function startBot() {
                 '--single-process',
                 '--disable-gpu'
             ]
+        },
+        webVersionCache: {
+            type: 'remote',
+            strict: true
         }
     });
 
