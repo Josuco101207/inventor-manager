@@ -99,8 +99,13 @@ async function startBot() {
 
                 // Si hay archivo, enviarlo
                 if (response.file) {
-                    const media = MessageMedia.fromFilePath(response.file);
-                    await client.sendMessage(msg.from, media);
+                    try {
+                        const media = MessageMedia.fromFilePath(response.file);
+                        await client.sendMessage(msg.from, media, { sendMediaAsDocument: true });
+                    } catch (fileError) {
+                        console.error("Error al enviar el archivo adjunto:", fileError);
+                        msg.reply("Hubo un problema al adjuntar el archivo, pero fue generado correctamente.");
+                    }
                 }
 
             } catch (error) {
