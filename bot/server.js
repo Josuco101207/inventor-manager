@@ -27,87 +27,92 @@ async function startBot() {
     // Iniciar Telegram
     initTelegramBot();
 
-    // Usamos LocalAuth para que la sesión se guarde en la carpeta .wwebjs_auth
-    const client = new Client({
-        authStrategy: new LocalAuth(),
-        puppeteer: {
-            executablePath: process.platform === 'linux' ? '/usr/bin/google-chrome-stable' : undefined,
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu'
-            ]
-        },
-        webVersionCache: {
-            type: 'none'
-        }
-    });
-
-    client.on('qr', (qr) => {
-        console.log('\n======================================================');
-        console.log('ESCANEA ESTE CÓDIGO QR CON TU WHATSAPP PARA VINCULAR EL BOT');
-        console.log('Ve a WhatsApp > Dispositivos Vinculados > Vincular un dispositivo');
-        console.log('======================================================\n');
-        qrcode.generate(qr, {small: true});
-    });
-
-    client.on('ready', async () => {
-        console.log('\n======================================================');
-        console.log('✅ ¡EL BOT ESTÁ LISTO Y CONECTADO A TU WHATSAPP!');
-        console.log('======================================================\n');
-    });
-
-client.on('message', async msg => {
-    try {
-        // Ignorar estados y mensajes de grupos
-        if (msg.isStatus || msg.from.includes('@g.us')) return;
-
-        const incomingMessage = msg.body;
-        const phoneNumber = msg.from.split('@')[0];
-
-        // Comando secreto para auto-autorizarse
-        if (incomingMessage === "!registrarme") {
-            const success = await dbTools.autorizarNumero(phoneNumber);
-            if (success) {
-                msg.reply("✅ Tu número ha sido registrado exitosamente. Ya puedes consultar el inventario.");
-            } else {
-                msg.reply("❌ Hubo un error al registrar tu número.");
+    if (process.env.DISABLE_WHATSAPP !== 'true') {
+        // Usamos LocalAuth para que la sesión se guarde en la carpeta .wwebjs_auth
+        const client = new Client({
+            authStrategy: new LocalAuth(),
+            puppeteer: {
+                executablePath: process.platform === 'linux' ? '/usr/bin/google-chrome-stable' : undefined,
+                args: [
+                    '--no-sandbox', 
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu'
+                ]
+            },
+            webVersionCache: {
+                type: 'none'
             }
-            return;
-        }
+        });
 
-        // Verificar autorización
-        const isAuth = await dbTools.isAuthorizedUser(phoneNumber);
-        
-        let response = { text: "" };
+        client.on('qr', (qr) => {
+            console.log('\n======================================================');
+            console.log('ESCANEA ESTE CÓDIGO QR CON TU WHATSAPP PARA VINCULAR EL BOT');
+            console.log('Ve a WhatsApp > Dispositivos Vinculados > Vincular un dispositivo');
+            console.log('======================================================\n');
+            qrcode.generate(qr, {small: true});
+        });
 
-        if (!isAuth) {
-            console.log(`Intento no autorizado desde ${phoneNumber}`);
-            response.text = "Lo siento, tu número no está autorizado. Para autorizarte, envía el mensaje: !registrarme";
-        } else {
-            console.log(`Procesando mensaje de ${phoneNumber}: ${incomingMessage}`);
-            response = await router.handleMessage(incomingMessage, phoneNumber);
-        }
+        client.on('ready', async () => {
+            console.log('\n======================================================');
+            console.log('✅ ¡EL BOT ESTÁ LISTO Y CONECTADO A TU WHATSAPP!');
+            console.log('======================================================\n');
+        });
 
-        // Enviar la respuesta de texto
-        await msg.reply(response.text);
+        client.on('message', async msg => {
+            try {
+                // Ignorar estados y mensajes de grupos
+                if (msg.isStatus || msg.from.includes('@g.us')) return;
 
-        // Si hay archivo, enviarlo
-        if (response.file) {
-            const media = MessageMedia.fromFilePath(response.file);
-            await client.sendMessage(msg.from, media);
-        }
+                const incomingMessage = msg.body;
+                const phoneNumber = msg.from.split('@')[0];
 
-    } catch (error) {
-        console.error("Error al procesar el mensaje:", error);
+                // Comando secreto para auto-autorizarse
+                if (incomingMessage === "!registrarme") {
+                    const success = await dbTools.autorizarNumero(phoneNumber);
+                    if (success) {
+                        msg.reply("✅ Tu cuenta ha sido registrada exitosamente. Ya puedes consultar el inventario.");
+                    } else {
+                        msg.reply("❌ Hubo un error al registrar tu cuenta.");
+                    }
+                    return;
+                }
+
+                // Verificar autorización
+                const isAuth = await dbTools.isAuthorizedUser(phoneNumber);
+                
+                let response = { text: "" };
+
+                if (!isAuth) {
+                    console.log(`Intento no autorizado desde ${phoneNumber}`);
+                    response.text = "Lo siento, tu número no está autorizado. Para autorizarte, envía el mensaje: !registrarme";
+                } else {
+                    console.log(`Procesando mensaje de ${phoneNumber}: ${incomingMessage}`);
+                    response = await router.handleMessage(incomingMessage, phoneNumber);
+                }
+
+                // Enviar la respuesta de texto
+                await msg.reply(response.text);
+
+                // Si hay archivo, enviarlo
+                if (response.file) {
+                    const media = MessageMedia.fromFilePath(response.file);
+                    await client.sendMessage(msg.from, media);
+                }
+
+            } catch (error) {
+                console.error("Error al procesar el mensaje:", error);
+                msg.reply("Lo siento, hubo un error interno al procesar tu solicitud.");
+            }
+        });
+
+        client.initialize();
+    } else {
+        console.log('⚠️ Módulo de WhatsApp desactivado. Solo funcionando en Telegram.');
     }
-});
-
-    client.initialize();
 }
 
 startBot().catch(console.error);
