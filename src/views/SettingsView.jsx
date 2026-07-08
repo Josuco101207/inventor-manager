@@ -95,31 +95,6 @@ const SettingsView = () => {
               </div>
             </section>
 
-            <section className="sv-card glass-card">
-              <div className="sv-card-header">
-                <h3 className="sv-card-title">Preferencias del Sistema</h3>
-                <div className="sv-card-icon icon-emerald">
-                  <Bell size={18} />
-                </div>
-              </div>
-              
-              <div className="settings-group">
-                <div className="settings-row">
-                  <div className="settings-label">
-                    <span className="title">Notificaciones Push</span>
-                    <span className="subtitle">Alertas de stock y movimientos</span>
-                  </div>
-                  <IOSSwitch checked={pushActive} onChange={() => setPushActive(!pushActive)} />
-                </div>
-                <div className="settings-row">
-                  <div className="settings-label">
-                    <span className="title">Reporte Semanal</span>
-                    <span className="subtitle">Resumen PDF al correo</span>
-                  </div>
-                  <IOSSwitch checked={reportActive} onChange={() => setReportActive(!reportActive)} />
-                </div>
-              </div>
-            </section>
           </div>
 
           {/* Columna 2 */}

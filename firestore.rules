@@ -84,7 +84,7 @@ service cloud.firestore {
     // COLECCIÓN: ITEMS (Inventario)
     // ═══════════════════════════════════════════════════════════════
     match /items/{itemId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
       
       allow create: if isStaff() 
         && canCreateCategory(request.resource.data.category)
@@ -96,7 +96,7 @@ service cloud.firestore {
       
       allow update: if isStaff() 
         && canEditCategory(resource.data.category)
-        && !(request.resource.data.category != resource.data.category)  // No cambiar categoría
+        && (request.resource.data.category == resource.data.category || canCreateCategory(request.resource.data.category))
         && validTimestamp('timestamp');
       
       allow delete: if isStaff() && canEditCategory(resource.data.category);
@@ -106,13 +106,13 @@ service cloud.firestore {
     // COLECCIÓN: MOVEMENTS (Historial)
     // ═══════════════════════════════════════════════════════════════
     match /movements/{movementId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
       
       // Crear: Solo append-only, validar campos requeridos
       allow create: if isStaff()
         && canCreateCategory(request.resource.data.category)
         && request.resource.data.keys().hasAll(['action', 'item', 'qty'])
-        && request.resource.data.action in ['Entrada', 'Salida', 'Préstamo', 'Devolución', 'Falla/Manto', 'Auditoría', 'Alta', 'Edición', 'Eliminación', 'Anulación']
+        && request.resource.data.action in ['Entrada', 'Salida', 'Préstamo', 'Devolución', 'Falla/Manto', 'Auditoría', 'Alta', 'Edición', 'Eliminación', 'Anulación', 'Asignación', 'Transferencia', 'Movimiento de Sección']
         && request.resource.data.qty is number
         && request.resource.data.qty >= 0
         && validTimestamp('timestamp');
@@ -131,32 +131,32 @@ service cloud.firestore {
     // COLECCIONES AUXILIARES
     // ═══════════════════════════════════════════════════════════════
     match /personnel/{docId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
       allow create: if isStaff() && request.resource.data.keys().hasAll(['name']);
       allow update: if isStaff();
       allow delete: if isStaff();
     }
 
     match /brands/{docId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
       allow create: if isStaff() && request.resource.data.keys().hasAll(['name']);
       allow update: if isStaff();
       allow delete: if isStaff();
     }
 
     match /whatsapp_users/{docId} {
-      allow read, write: if signedIn();
+      allow read, write: if isAdmin();
     }
 
     match /locations/{docId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
       allow create: if isStaff() && request.resource.data.keys().hasAll(['name']);
       allow update: if isStaff();
       allow delete: if isStaff();
     }
 
     match /custom_categories/{docId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
       allow create: if isStaff();
       allow update: if isStaff();
       allow delete: if isAdmin();
@@ -166,7 +166,7 @@ service cloud.firestore {
     // COLECCIÓN: INVOICES (Facturas)
     // ═══════════════════════════════════════════════════════════════
     match /invoices/{invoiceId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
       allow create: if isStaff() && request.resource.data.keys().hasAll(['folio', 'proveedor']);
       allow update: if isStaff();
       allow delete: if isAdmin();
@@ -176,7 +176,7 @@ service cloud.firestore {
     // COLECCIÓN: STATS (Precalculadas - solo backend/functions)
     // ═══════════════════════════════════════════════════════════════
     match /stats/{docId} {
-      allow read: if signedIn();
+      allow read: if isStaff();
       allow write: if false;  // Solo Cloud Functions
     }
   }

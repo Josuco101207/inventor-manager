@@ -432,7 +432,7 @@ h4 { font-size: 1.25rem; }
   box-shadow: var(--shadow-xl), 0 0 0 1px hsla(var(--border-color), 0.8);
   border: 1px solid hsla(var(--border-color), 0.5);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   transition: transform var(--transition-base), box-shadow var(--transition-base);
   animation: scaleIn var(--transition-slow) forwards;
 }

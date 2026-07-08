@@ -10,7 +10,7 @@ import { useInventory } from '../context/InventoryContextOptimized';
 import './MobileBottomNav.css';
 
 const MobileBottomNav = () => {
-  const { logout, userData, isAdmin } = useAuth();
+  const { logout, userData, isAdmin, isStaff } = useAuth();
   const { customCategories } = useInventory();
   const location = useLocation();
   const navigate = useNavigate();
@@ -127,13 +127,15 @@ const MobileBottomNav = () => {
                 <div className="bottom-sheet-list-item" onClick={() => navigate('/profile')}>
                   <User size={20} /> Mi Perfil
                 </div>
+                {isStaff && (
+                  <div className="bottom-sheet-list-item" onClick={() => navigate('/sections')}>
+                    <Settings size={20} /> Secciones
+                  </div>
+                )}
                 {isAdmin && (
                   <>
                     <div className="bottom-sheet-list-item" onClick={() => navigate('/users')}>
                       <Users size={20} /> Equipo
-                    </div>
-                    <div className="bottom-sheet-list-item" onClick={() => navigate('/secciones')}>
-                      <Settings size={20} /> Secciones
                     </div>
                     <div className="bottom-sheet-list-item" onClick={() => navigate('/settings')}>
                       <Settings size={20} /> Ajustes

@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
  * Mapeo de encabezados de Excel a campos de la base de datos Firestore.
  * Soporta variaciones con y sin dos puntos, mayúsculas/minúsculas.
  */
-const HEADER_MAP = {
+export const HEADER_MAP = {
   // Generales
   'Nombre': 'name',
   'Herramienta': 'name',
@@ -85,8 +85,7 @@ const getFuzzySignature = (str) => {
   return str.toString()
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]/g, '') // Quitar todo lo que no sea letra o número
-    .replace(/(.)\1+/g, '$1'); // Colapsar letras repetidas (pp -> p, ss -> s, etc)
+    .replace(/[^a-z0-9]/g, ''); // Quitar todo lo que no sea letra o número
 };
 
 /**
@@ -118,8 +117,8 @@ export const processInventoryExcel = (file, currentCategory) => {
           
           Object.keys(row).forEach(excelHeader => {
             const cleanHeader = excelHeader.trim();
-            const dbField = HEADER_MAP[cleanHeader];
-            if (dbField) {
+            const dbField = HEADER_MAP[cleanHeader] || cleanHeader; // Fallback para campos dinámicos
+            if (dbField && row[excelHeader] !== undefined && row[excelHeader] !== '') {
               rawItem[dbField] = row[excelHeader];
             }
           });
@@ -134,13 +133,19 @@ export const processInventoryExcel = (file, currentCategory) => {
           if (groupedItems.has(signature)) {
             // Ya existe: Sumamos cantidad
             const existing = groupedItems.get(signature);
-            const addQty = parseInt(rawItem.qty) || 1; // Si no hay cantidad en Excel, asumimos que cada fila es 1 unidad
+            const parsedAdd = parseInt(rawItem.qty);
+            const addQty = isNaN(parsedAdd) ? 1 : parsedAdd; // Si no hay cantidad en Excel, asumimos que cada fila es 1 unidad
             existing.qty += addQty;
           } else {
             // Nuevo: Lo inicializamos
-            rawItem.qty = parseInt(rawItem.qty) || 1;
-            rawItem.threshold = parseInt(rawItem.threshold) || 1;
-            rawItem.costo_unitario = parseFloat(rawItem.costo_unitario) || 0;
+            const parsedQty = parseInt(rawItem.qty);
+            rawItem.qty = isNaN(parsedQty) ? 1 : parsedQty;
+            
+            const parsedThresh = parseInt(rawItem.threshold);
+            rawItem.threshold = isNaN(parsedThresh) ? 1 : parsedThresh;
+            
+            const parsedCost = parseFloat(rawItem.costo_unitario);
+            rawItem.costo_unitario = isNaN(parsedCost) ? 0 : parsedCost;
             
             groupedItems.set(signature, rawItem);
           }

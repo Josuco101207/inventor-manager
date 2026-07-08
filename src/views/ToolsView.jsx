@@ -2,9 +2,13 @@ import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from '
 import { createPortal } from 'react-dom';
 import { useInventory } from '../context/InventoryContextOptimized';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase/config';
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import AddItemModal from '../components/AddItemModal';
+import SearchableSelect from '../components/SearchableSelect';
+import ImageModal from '../components/ImageModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { 
@@ -23,7 +27,7 @@ const getStatusClass = (status) => {
 const ToolCard = memo(({ 
   tool, isAdmin, isStaff, canEdit, 
   isSelected, onSelectToggle,
-  onEdit, onDelete, onLoan, onAssign, onReturn, onFault, onRepair, onQR, index
+  onEdit, onDelete, onLoan, onAssign, onReturn, onFault, onRepair, onQR, index, onImageClick
 }) => (
   <div 
     className={`tool-card animate-slide-up ${isSelected ? 'is-selected' : ''} ${isStaff ? 'has-selection-mode' : ''}`}
@@ -31,44 +35,72 @@ const ToolCard = memo(({
   >
     <div className={`tool-status-ribbon ${getStatusClass(tool.status)}`}></div>
     
-    {(isAdmin || canEdit) && (
-      <div className="tool-admin-actions">
-        <button className="btn-mini-action" onClick={() => onEdit(tool)} title="Editar">
-          <Edit3 size={12} />
-        </button>
-        {isAdmin && (
-          <button className="btn-mini-action delete" onClick={() => onDelete(tool.id, tool.name)} title="Eliminar">
-            <Trash2 size={12} />
-          </button>
-        )}
-      </div>
-    )}
 
-    <div className="tool-card-header">
-      {/* Selection Checkbox Custom */}
-      {isStaff && tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && tool.status !== 'Asignado' && (
-        <div className="tool-selection-box" onClick={(e) => { e.stopPropagation(); onSelectToggle(tool.id); }}>
-          <div className={`tool-checkbox-custom ${isSelected ? 'checked' : ''}`}>
-            {isSelected && <span className="check-mark">✓</span>}
+
+    <div className="tool-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', position: 'relative' }}>
+      
+      <div className="tool-header-content" style={{ display: 'flex', gap: '12px', flex: 1, paddingRight: '1rem', minWidth: 0 }}>
+        <div style={{ position: 'relative' }}>
+          {isStaff && tool.status !== 'Prestado' && tool.status !== 'Mantenimiento' && tool.status !== 'Asignado' && (
+            <div className="tool-selection-box" style={{ position: 'absolute', top: '-8px', left: '-8px', zIndex: 10 }} onClick={(e) => { e.stopPropagation(); onSelectToggle(tool.id); }}>
+              <div className={`tool-checkbox-custom ${isSelected ? 'checked' : ''}`} style={{ width: '20px', height: '20px', borderRadius: '4px' }}>
+                {isSelected && <span className="check-mark" style={{ fontSize: '12px' }}>✓</span>}
+              </div>
+            </div>
+          )}
+          
+          {tool.image ? (
+            <img 
+              src={tool.image} 
+              alt={tool.name} 
+              style={{ width: '52px', height: '52px', borderRadius: '14px', objectFit: 'cover', cursor: 'pointer', border: '1px solid hsla(var(--border-color), 0.4)', flexShrink: 0 }} 
+              onClick={(e) => { e.stopPropagation(); if(onImageClick) onImageClick(tool.image); }} 
+            />
+          ) : (
+            <div style={{ width: '52px', height: '52px', borderRadius: '14px', background: 'hsla(var(--bg-elevated), 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 'bold', color: 'hsl(var(--primary))', border: '1px solid hsla(var(--border-color), 0.4)', flexShrink: 0 }}>
+              {tool.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+        
+        <div className="tool-info" style={{ paddingRight: 0, minWidth: 0, flex: 1 }}>
+          <span className="tool-brand" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'hsl(var(--primary))', letterSpacing: '0.05em', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {tool.marca || 'GENÉRICO'}
+          </span>
+          <h3 className="tool-name" style={{ fontSize: '1.15rem', fontWeight: 800, color: 'hsl(var(--text-main))', lineHeight: 1.2, margin: '0 0 0.3rem 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {tool.name}
+          </h3>
+          <p className="tool-model" style={{ fontSize: '0.85rem', color: 'hsl(var(--text-muted))', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {tool.modelo || 'Sin modelo'} • <span className="font-mono text-gray-400">{tool.codigo || tool.id.substring(0,6)}</span>
+          </p>
+          <div className="tool-extra-meta mt-2 text-[10px] uppercase tracking-wider text-gray-400 flex flex-wrap gap-x-3">
+            {tool.item_number && <span>Item: {tool.item_number}</span>}
+            {tool.serie && <span>S/N: {tool.serie}</span>}
           </div>
         </div>
-      )}
-      <div className="tool-info">
-        <span className="tool-brand">{tool.marca || 'GENÉRICO'}</span>
-        <h3 className="tool-name">{tool.name}</h3>
-        <p className="tool-model">{tool.modelo || 'Sin modelo'} • <span className="font-mono text-gray-400">{tool.codigo || tool.id.substring(0,6)}</span></p>
-        <div className="tool-extra-meta mt-1 text-[10px] uppercase tracking-wider text-gray-400 flex flex-wrap gap-x-3">
-          {tool.item_number && <span>Item: {tool.item_number}</span>}
-          {tool.serie && <span>S/N: {tool.serie}</span>}
-        </div>
       </div>
-      <button 
-        className="tool-qr-button" 
-        onClick={() => onQR(tool)}
-        title="Ver Código QR"
-      >
-        <QrCode />
-      </button>
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {(isAdmin || canEdit) && (
+          <div className="tool-admin-actions" style={{ position: 'relative', top: 'auto', right: 'auto', opacity: 1 }}>
+            <button className="btn-mini-action" onClick={(e) => { e.stopPropagation(); onEdit(tool); }} title="Editar">
+              <Edit3 size={12} />
+            </button>
+            {isAdmin && (
+              <button className="btn-mini-action delete" onClick={(e) => { e.stopPropagation(); onDelete(tool.id, tool.name); }} title="Eliminar">
+                <Trash2 size={12} />
+              </button>
+            )}
+          </div>
+        )}
+        <button 
+          className="tool-qr-button" 
+          onClick={(e) => { e.stopPropagation(); onQR(tool); }}
+          title="Ver Código QR"
+        >
+          <QrCode size={16} />
+        </button>
+      </div>
     </div>
 
     <div>
@@ -125,7 +157,7 @@ const ToolCard = memo(({
 ));
 
 const ToolsView = () => {
-  const { items, personnel, addItem, editItem, deleteItem, loanItem, assignItem, bulkLoanItems, returnItem, reportMaintenance, completeMaintenance, loading } = useInventory();
+  const { items, personnel, addItem, editItem, deleteItem, loanItem, assignItem, bulkLoanItems, bulkAssignItems, returnItem, reportMaintenance, completeMaintenance, loading } = useInventory();
   const { isAdmin, isStaff, canEditIn, canAddTo, userData } = useAuth();
   const location = useLocation();
   
@@ -133,13 +165,31 @@ const ToolsView = () => {
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   const [selectedTool, setSelectedTool] = useState(null);
   const [selectedToolIds, setSelectedToolIds] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
   
+  const personnelOptions = useMemo(() => {
+    const uniquePersonnel = [];
+    const seen = new Set();
+    for (const p of personnel) {
+      if (!seen.has(p.name)) {
+        seen.add(p.name);
+        uniquePersonnel.push({
+          value: p.name,
+          label: p.name,
+          id: p.employeeId || p.id
+        });
+      }
+    }
+    return uniquePersonnel;
+  }, [personnel]);
+
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isBulkLoanModalOpen, setIsBulkLoanModalOpen] = useState(false);
+  const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false);
   const [isFaultModalOpen, setIsFaultModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState(null); // null | 'Prestado' | 'Mantenimiento' | 'Asignado'
@@ -153,6 +203,93 @@ const ToolsView = () => {
   const [filteredTools, setFilteredTools] = useState([]);
   const [visibleCount, setVisibleCount] = useState(30);
   const observer = useRef(null);
+
+  // Auto-import script for Coples
+  useEffect(() => {
+    if (window.location.hash === '#importNow') {
+      const runImport = async () => {
+        if(window.confirm('¿Importar los 9 coples a Herreria AHORA?')) {
+          const coples = [
+            { name: "Cople 131-C42", category: "Herreria", unit: "PZA", qty: 175, threshold: 5, status: "Disponible", codigo: "131-C42" },
+            { name: "Cople 128-C42", category: "Herreria", unit: "PZA", qty: 63, threshold: 5, status: "Disponible", codigo: "128-C42" },
+            { name: "Cople BT4533-GD", category: "Herreria", unit: "PZA", qty: 33, threshold: 5, status: "Disponible", codigo: "BT4533-GD" },
+            { name: "Cople BK44-GD", category: "Herreria", unit: "PZA", qty: 48, threshold: 5, status: "Disponible", codigo: "BK44-GD" },
+            { name: "Cople 119-C42", category: "Herreria", unit: "PZA", qty: 50, threshold: 5, status: "Disponible", codigo: "119-C42" },
+            { name: "Cople 176-C42", category: "Herreria", unit: "PZA", qty: 68, threshold: 5, status: "Disponible", codigo: "176-C42" },
+            { name: "Cople 104-C42", category: "Herreria", unit: "PZA", qty: 14, threshold: 2, status: "Disponible", codigo: "104-C42" },
+            { name: "Cople 158-C42", category: "Herreria", unit: "PZA", qty: 4, threshold: 2, status: "Disponible", codigo: "158-C42" },
+            { name: "Cople 116-C42", category: "Herreria", unit: "PZA", qty: 17, threshold: 2, status: "Disponible", codigo: "116-C42" }
+          ];
+          let added = 0;
+          for (let c of coples) {
+            try {
+              await addItem(c, userData?.name || 'Sistema AI');
+              added++;
+            } catch(e) {
+              console.error("Error adding " + c.name, e);
+            }
+          }
+          alert(`¡Se crearon ${added} coples exitosamente en Herreria!`);
+          window.location.hash = '';
+        }
+      };
+      runImport();
+    } else if (window.location.hash === '#cleanupDuplicates') {
+      const runCleanup = async () => {
+        if(window.confirm('¿Eliminar todos los duplicados y consolidar el stock (excepto en Herramientas)?')) {
+          const map = {};
+          for (let item of items) {
+            if (item.category === 'Herramientas') continue;
+            const key = item.category + '|' + item.name.toLowerCase();
+            if (!map[key]) map[key] = [];
+            map[key].push(item);
+          }
+
+          let deleted = 0;
+          let consolidated = 0;
+
+          for (let key in map) {
+            const group = map[key];
+            if (group.length > 1) {
+              // Sort by date or id, keep the first one
+              const keepItem = group[0];
+              let totalQty = 0;
+              let toDelete = [];
+              for (let i = 0; i < group.length; i++) {
+                totalQty += (group[i].qty || 0);
+                if (i > 0) toDelete.push(group[i].id);
+              }
+
+              try {
+                // Update the kept item with total qty
+                if (totalQty !== keepItem.qty) {
+                  await updateDoc(doc(db, 'items', keepItem.id), { qty: totalQty });
+                  consolidated++;
+                }
+
+                // Delete the rest
+                for (let id of toDelete) {
+                  await deleteDoc(doc(db, 'items', id));
+                  deleted++;
+                }
+              } catch(e) {
+                console.error('Error during cleanup:', e);
+              }
+            }
+          }
+          alert(`¡Limpieza completada! Se eliminaron ${deleted} registros duplicados y se consolidó el stock en ${consolidated} artículos.`);
+          window.location.hash = '';
+          // Firebase realtime updates will handle the UI state
+        }
+      };
+      runCleanup();
+    } else if (window.location.hash === '#debugHerreria') {
+      // Debug
+      const herreriaItems = items.filter(i => i.category.toLowerCase().includes('herreria') || i.category.toLowerCase().includes('herrería')).map(i => i.name + ' (' + i.category + ')');
+      alert(`Encontrados ${herreriaItems.length} items: ` + herreriaItems.join(', '));
+      window.location.hash = '';
+    }
+  }, [items, editItem, userData]);
 
   // Debounce search
   useEffect(() => {
@@ -177,12 +314,19 @@ const ToolsView = () => {
     return () => workerRef.current.terminate();
   }, []);
 
+  // Enviar INIT cuando cambia el inventario completo
+  useEffect(() => {
+    if (workerRef.current && items) {
+      workerRef.current.postMessage({ type: 'INIT', items });
+    }
+  }, [items]);
+
   // Postear al worker con debounce
   useEffect(() => {
     if (!workerRef.current || loading) return;
     const filterTimer = setTimeout(() => {
       workerRef.current.postMessage({
-        items,
+        type: 'FILTER',
         searchTerm: debouncedSearch,
         categoryTitle: 'Herramientas',
         activeSubcategory: 'TODAS',
@@ -192,7 +336,7 @@ const ToolsView = () => {
       });
     }, 50);
     return () => clearTimeout(filterTimer);
-  }, [items, debouncedSearch, loading, statusFilter]);
+  }, [debouncedSearch, loading, statusFilter]);
 
   // Intersection Observer para Infinite Scroll usando callback ref (seguro contra loops)
   const observerTarget = useCallback(node => {
@@ -217,7 +361,7 @@ const ToolsView = () => {
     );
   }
 
-  const userName = userData?.name || userData?.displayName || 'Jonathan';
+  const userName = userData?.name || userData?.displayName || 'Desconocido';
 
   const handleDelete = useCallback((id, name) => {
     if (window.confirm(`¿Eliminar la herramienta "${name}" permanentemente?`)) {
@@ -249,6 +393,14 @@ const ToolsView = () => {
     setIsBulkLoanModalOpen(false);
     setBorrowerName('');
     setSelectedToolIds([]); // Limpiar selección tras préstamo
+  };
+
+  const handleBulkAssignConfirm = async () => {
+    if (!borrowerName || selectedToolIds.length === 0) return;
+    await bulkAssignItems(selectedToolIds, borrowerName, userName);
+    setIsBulkAssignModalOpen(false);
+    setBorrowerName('');
+    setSelectedToolIds([]); // Limpiar selección tras asignación
   };
 
   const toggleToolSelection = useCallback((id) => {
@@ -287,7 +439,14 @@ const ToolsView = () => {
         setIsLoanModalOpen(true);
       }
     },
-    onAssign: (t) => { setSelectedTool(t); setIsAssignModalOpen(true); },
+    onAssign: (t) => { 
+      if (selectedToolIds.includes(t.id) && selectedToolIds.length > 1) {
+        setIsBulkAssignModalOpen(true);
+      } else {
+        setSelectedTool(t); 
+        setIsAssignModalOpen(true);
+      }
+    },
     onReturn: handleReturnConfirm,
     onFault: (t) => { setSelectedTool(t); setIsFaultModalOpen(true); },
     onRepair: handleRepairConfirm,
@@ -370,8 +529,8 @@ const ToolsView = () => {
       </header>
 
       {/* Floating Action Bar for Bulk Selection */}
-      {selectedToolIds.length > 0 && (
-        <div className="bulk-actions-bar animate-slide-up">
+      {selectedToolIds.length > 0 && createPortal(
+        <div className="bulk-actions-bar animate-slide-up" style={{ zIndex: 9999 }}>
           <div className="bulk-info">
             <span className="bulk-count">
               {selectedToolIds.length}
@@ -392,8 +551,15 @@ const ToolsView = () => {
             >
               <ArrowUpRight size={16} /> Prestar Lote
             </button>
+            <button 
+              className="btn-bulk-action bg-purple-500 hover:bg-purple-600 text-white"
+              onClick={() => setIsBulkAssignModalOpen(true)}
+            >
+              <UserCheck size={16} /> Asignar Lote
+            </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <section className="tools-grid">
@@ -415,6 +581,7 @@ const ToolsView = () => {
             onFault={handlers.onFault}
             onRepair={handlers.onRepair}
             onQR={handlers.onQR}
+            onImageClick={setSelectedImage}
           />
         ))}
         {filteredTools.length === 0 && (
@@ -433,44 +600,21 @@ const ToolsView = () => {
       )}
 
       <AddItemModal 
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        category="Herramientas"
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+        category="Herramientas" 
         initialData={selectedTool}
         onSave={(data) => {
           if (selectedTool) {
-            editItem(selectedTool.id, data, userName);
+            editItem(selectedTool.id, data, userData?.name || 'Desconocido');
           } else {
-            addItem(data, userName);
+            addItem(data, userData?.name || 'Desconocido');
           }
           setIsAddModalOpen(false);
         }}
       />
 
-      {isQRModalOpen && selectedTool && (
-        <div className="modal-overlay">
-          <div className="modal-card animate-scale-up qr-modal-content">
-            <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-800" onClick={() => setIsQRModalOpen(false)}>
-              <X size={24} />
-            </button>
-            
-            <div className="qr-large-wrapper" id="print-qr-section">
-              <QRCodeSVG value={selectedTool.codigo || selectedTool.id} size={200} level="H" includeMargin={true} />
-            </div>
-            
-            <h3 className="qr-tool-name">{selectedTool.name}</h3>
-            <p className="qr-tool-code">{selectedTool.codigo || selectedTool.id}</p>
-            
-            <div className="flex gap-4 mt-8 w-full max-w-xs">
-              <button className="btn-primary w-full flex items-center justify-center gap-2" onClick={() => window.print()}>
-                <Printer size={18} /> Imprimir QR
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isLoanModalOpen && selectedTool && (
+      {isLoanModalOpen && selectedTool && createPortal(
         <div className="modal-overlay">
           <div className="modal-card animate-scale-up">
             <header className="modal-header">
@@ -481,17 +625,17 @@ const ToolsView = () => {
               <p>¿A quién se le entrega <strong>{selectedTool.name}</strong>?</p>
             </header>
 
-            <div className="f-group">
+            <div className="f-group" style={{ position: 'relative', zIndex: 999 }}>
               <label>Nombre del Trabajador</label>
-              <input 
-                type="text" 
-                className="f-input" 
-                placeholder="Escribe el nombre aquí..." 
-                list="personnel-list"
-                value={borrowerName} 
-                onChange={(e) => setBorrowerName(e.target.value)} 
-                autoFocus
-              />
+              <div style={{ position: 'relative', zIndex: 9999 }}>
+                <SearchableSelect 
+                  options={personnelOptions}
+                  value={borrowerName}
+                  onChange={setBorrowerName}
+                  placeholder="Seleccionar trabajador..."
+                  allowFreeText={true}
+                />
+              </div>
             </div>
 
             <div className="flex gap-4">
@@ -499,10 +643,11 @@ const ToolsView = () => {
               <button className="btn-apple-primary flex-1" onClick={handleLoanConfirm} disabled={!borrowerName}>Confirmar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {isAssignModalOpen && selectedTool && (
+      {isAssignModalOpen && selectedTool && createPortal(
         <div className="modal-overlay">
           <div className="modal-card animate-scale-up">
             <header className="modal-header">
@@ -513,17 +658,17 @@ const ToolsView = () => {
               <p>¿A quién se le asigna <strong>{selectedTool.name}</strong>?</p>
             </header>
 
-            <div className="f-group">
+            <div className="f-group" style={{ position: 'relative', zIndex: 999 }}>
               <label>Nombre del Trabajador</label>
-              <input 
-                type="text" 
-                className="f-input" 
-                placeholder="Escribe el nombre aquí..." 
-                list="personnel-list"
-                value={borrowerName} 
-                onChange={(e) => setBorrowerName(e.target.value)} 
-                autoFocus
-              />
+              <div style={{ position: 'relative', zIndex: 9999 }}>
+                <SearchableSelect 
+                  options={personnelOptions}
+                  value={borrowerName}
+                  onChange={setBorrowerName}
+                  placeholder="Seleccionar trabajador..."
+                  allowFreeText={true}
+                />
+              </div>
             </div>
 
             <div className="flex gap-4">
@@ -531,10 +676,11 @@ const ToolsView = () => {
               <button className="btn-apple-primary flex-1" onClick={handleAssignConfirm} disabled={!borrowerName}>Confirmar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {isBulkLoanModalOpen && (
+      {isBulkLoanModalOpen && createPortal(
         <div className="modal-overlay">
           <div className="modal-card animate-scale-up">
             <header className="modal-header">
@@ -545,17 +691,17 @@ const ToolsView = () => {
               <p>¿A quién se le entregan las <strong>{selectedToolIds.length}</strong> herramientas seleccionadas?</p>
             </header>
 
-            <div className="f-group">
+            <div className="f-group" style={{ position: 'relative', zIndex: 999 }}>
               <label>Nombre del Trabajador</label>
-              <input 
-                type="text" 
-                className="f-input" 
-                placeholder="Escribe el nombre aquí..." 
-                list="personnel-list"
-                value={borrowerName} 
-                onChange={(e) => setBorrowerName(e.target.value)} 
-                autoFocus
-              />
+              <div style={{ position: 'relative', zIndex: 9999 }}>
+                <SearchableSelect 
+                  options={personnelOptions}
+                  value={borrowerName}
+                  onChange={setBorrowerName}
+                  placeholder="Seleccionar trabajador..."
+                  allowFreeText={true}
+                />
+              </div>
             </div>
 
             <div className="flex gap-4">
@@ -563,10 +709,44 @@ const ToolsView = () => {
               <button className="btn-apple-primary flex-1" onClick={handleBulkLoanConfirm} disabled={!borrowerName}>Confirmar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {isFaultModalOpen && selectedTool && (
+      {isBulkAssignModalOpen && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-card animate-scale-up">
+            <header className="modal-header">
+              <h3>
+                <UserCheck className="text-purple-500" size={28} />
+                Asignación Múltiple
+              </h3>
+              <p>¿A quién se le asignan las <strong>{selectedToolIds.length}</strong> herramientas seleccionadas?</p>
+            </header>
+
+            <div className="f-group" style={{ position: 'relative', zIndex: 999 }}>
+              <label>Nombre del Trabajador</label>
+              <div style={{ position: 'relative', zIndex: 9999 }}>
+                <SearchableSelect 
+                  options={personnelOptions}
+                  value={borrowerName}
+                  onChange={setBorrowerName}
+                  placeholder="Seleccionar trabajador..."
+                  allowFreeText={true}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button className="btn-apple-secondary flex-1" onClick={() => setIsBulkAssignModalOpen(false)}>Cancelar</button>
+              <button className="btn-apple-primary flex-1" onClick={handleBulkAssignConfirm} disabled={!borrowerName}>Confirmar</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {isFaultModalOpen && selectedTool && createPortal(
         <div className="modal-overlay">
           <div className="modal-card animate-scale-up">
             <header className="modal-header">
@@ -593,12 +773,13 @@ const ToolsView = () => {
               <button className="btn-apple-danger flex-1" onClick={handleFaultConfirm} disabled={!faultReason}>Reportar</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
 
 
-      {isScannerOpen && (
+      {isScannerOpen && createPortal(
         <div className="modal-overlay">
           <div className="modal-card animate-scale-up" style={{ width: '90%', maxWidth: '400px', padding: '1.5rem' }}>
             <header className="modal-header" style={{ position: 'relative', marginBottom: '1rem' }}>
@@ -658,12 +839,174 @@ const ToolsView = () => {
               Apunta la cámara al código QR para identificar la herramienta automáticamente.
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+      {isQRModalOpen && selectedTool && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-card animate-scale-up qr-modal-content">
+            <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-800" onClick={() => setIsQRModalOpen(false)}>
+              <X size={24} />
+            </button>
+            
+            <div className="qr-large-wrapper" id="print-qr-section">
+              <QRCodeSVG value={selectedTool.codigo || selectedTool.id} size={200} level="H" includeMargin={true} />
+              <p className="mt-4 font-bold text-gray-800 text-lg">{selectedTool.name}</p>
+              <p className="text-gray-500 font-mono">{selectedTool.codigo || selectedTool.id}</p>
+            </div>
+
+            <div className="flex gap-4 mt-8">
+              <button className="btn-apple-secondary flex-1" onClick={() => setIsQRModalOpen(false)}>Cerrar</button>
+              <button 
+                className="btn-apple-primary flex-1 flex items-center justify-center gap-2" 
+                onClick={() => {
+                  const svgElement = document.querySelector('#print-qr-section svg');
+                  const svgOuter = svgElement ? svgElement.outerHTML : '';
+                  const windowPrint = window.open('', '', 'width=800,height=600');
+                  const escapeHTML = (str) => {
+                    if (!str) return '';
+                    return String(str).replace(/[&<>'"]/g, 
+                      tag => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        "'": '&#39;',
+                        '"': '&quot;'
+                      }[tag] || tag)
+                    );
+                  };
+                  windowPrint.document.write(`
+                    <html>
+                      <head>
+                        <title>Imprimir Etiqueta</title>
+                        <style>
+                          body { 
+                            margin: 0; 
+                            padding: 20px;
+                            font-family: system-ui, -apple-system, sans-serif; 
+                            display: flex;
+                            justify-content: center;
+                            background: #f0f0f0; 
+                          }
+                          .label-box {
+                            width: 65mm;
+                            height: 35mm;
+                            background: #fff;
+                            border: 1px dashed #ccc;
+                            padding: 2mm 3mm;
+                            box-sizing: border-box;
+                            display: flex;
+                            flex-direction: row;
+                            align-items: center;
+                            gap: 3mm;
+                            color: #000;
+                          }
+                          .qr-wrapper {
+                            flex-shrink: 0;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                          }
+                          .qr-wrapper svg {
+                            width: 28mm;
+                            height: 28mm;
+                            display: block;
+                          }
+                          .text-wrapper {
+                            flex: 1;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+                            min-width: 0;
+                            overflow: hidden;
+                          }
+                          .brand {
+                            font-size: 6pt;
+                            font-weight: 800;
+                            text-transform: uppercase;
+                            margin: 0 0 2px 0;
+                            letter-spacing: 0.5px;
+                            color: #555;
+                          }
+                          .title {
+                            font-size: 9pt;
+                            font-weight: bold;
+                            margin: 0 0 3px 0;
+                            line-height: 1.1;
+                            display: -webkit-box;
+                            -webkit-line-clamp: 3;
+                            -webkit-box-orient: vertical;
+                            overflow: hidden;
+                          }
+                          .model {
+                            font-size: 7pt;
+                            color: #666;
+                            margin: 0 0 4px 0;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                          }
+                          .code {
+                            font-size: 7.5pt;
+                            font-family: monospace;
+                            font-weight: bold;
+                            margin: 0;
+                            background: #eee;
+                            padding: 2px 4px;
+                            display: inline-block;
+                            border-radius: 2px;
+                            align-self: flex-start;
+                          }
+                          
+                          @media print {
+                            @page { margin: 0; size: 65mm 35mm; }
+                            body { padding: 0; background: none; display: block; }
+                            .label-box { border: none; width: 100%; height: 100%; page-break-inside: avoid; }
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="label-box">
+                          <div class="qr-wrapper">
+                            ${svgOuter}
+                          </div>
+                          <div class="text-wrapper">
+                            <div class="brand">${escapeHTML(selectedTool.marca || 'GENÉRICO')}</div>
+                            <div class="title">${escapeHTML(selectedTool.name)}</div>
+                            ${selectedTool.modelo ? `<div class="model">Mod: ${escapeHTML(selectedTool.modelo)}</div>` : ''}
+                            <div class="code">${escapeHTML(selectedTool.codigo || selectedTool.id.substring(0, 8))}</div>
+                          </div>
+                        </div>
+                      </body>
+                    </html>
+                  `);
+                  windowPrint.document.close();
+                  windowPrint.focus();
+                  setTimeout(() => {
+                    windowPrint.print();
+                    windowPrint.close();
+                  }, 250);
+                }}
+              >
+                <Printer size={18} /> Imprimir
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Global Personnel Datalist for all modals */}
       <datalist id="personnel-list">
         {personnel.map(p => <option key={p.id} value={p.name} />)}
       </datalist>
+
+      {selectedImage && (
+        <ImageModal 
+          imageUrl={selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
+      )}
     </main>
   );
 };

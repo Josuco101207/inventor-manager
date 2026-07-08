@@ -12,7 +12,7 @@ export const ScannerAIProvider = ({ children }) => {
   const [extractedData, setExtractedData] = useState(null);
   const [error, setError] = useState('');
   
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyC8r2Pl-F9hGv9SlG5suzS4qOqCloHUz2s';
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   const processFile = async (selectedFile) => {
     if (!apiKey) {

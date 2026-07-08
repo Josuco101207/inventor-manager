@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import ActionModal from '../components/ActionModal';
 import AddItemModal from '../components/AddItemModal';
+import ImageModal from '../components/ImageModal';
 import { 
   Plus, Download, Upload, Search, Loader2, Trash2, Edit3, 
   ClipboardCheck, X, FileSpreadsheet, Filter, ChevronDown, 
@@ -19,7 +20,7 @@ import './ParquesView.css';
 
 const TableRow = memo(({ 
   item, index, isAdmin, isStaff, canEdit, 
-  onEdit, onDelete, onAction, onAudit 
+  onEdit, onDelete, onAction, onAudit, setSelectedImage 
 }) => {
   if (!item) return null;
 
@@ -32,7 +33,11 @@ const TableRow = memo(({
       {/* Artículo / Sede */}
       <div className="parques-cell-art">
         <div className="parques-avatar">
-          {item.name ? item.name.charAt(0).toUpperCase() : '?'}
+          {item.image ? (
+            <img src={item.image} alt={item.name} className="parques-avatar-img" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setSelectedImage(item.image); }} />
+          ) : (
+            item.name ? item.name.charAt(0).toUpperCase() : '?'
+          )}
         </div>
         <div className="parques-item-info">
           <span className="parques-item-name">{item.name || 'Sin nombre'}</span>
@@ -113,6 +118,7 @@ const ParquesView = () => {
   const [auditReason, setAuditReason] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importSummary, setImportSummary] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const workerRef = useRef(null);
   const [filteredItems, setFilteredItems] = useState([]);
@@ -294,6 +300,7 @@ const ParquesView = () => {
                   isAdmin={isAdmin}
                   isStaff={isStaff}
                   canEdit={canEditIn('Parques')}
+                  setSelectedImage={setSelectedImage}
                   onEdit={(item) => { setSelectedItem(item); setIsAddModalOpen(true); }}
                   onDelete={(id, name) => { if (window.confirm(`¿Eliminar ${name}?`)) deleteItem(id, userName); }}
                   onAction={(item) => { setSelectedItem(item); setIsStockModalOpen(true); }}
@@ -404,6 +411,13 @@ const ParquesView = () => {
         <button className="mobile-fab" onClick={() => { setSelectedItem(null); setIsAddModalOpen(true); }}>
           <Plus size={28} />
         </button>
+      )}
+
+      {selectedImage && (
+        <ImageModal 
+          imageUrl={selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
       )}
     </main>
   );

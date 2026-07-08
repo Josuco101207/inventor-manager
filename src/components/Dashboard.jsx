@@ -44,7 +44,7 @@ const actionColors = {
 
 const Dashboard = () => {
   const { items, movements, loading, globalStats, customCategories } = useInventory();
-  const { userData } = useAuth();
+  const { userData, isStaff } = useAuth();
   const navigate = useNavigate();
   const todayStr = toLocalDateString(new Date());
   const [movDate, setMovDate] = useState(todayStr);
@@ -189,6 +189,17 @@ const Dashboard = () => {
                 <span className="dash-cat-name">{cat.title}</span>
               </div>
             ))}
+            
+            {/* Botón para Administrar / Crear Secciones */}
+            {isStaff && (
+              <div className="dash-cat-item" onClick={() => navigate('/sections')} style={{ border: '1px dashed hsla(var(--primary), 0.3)' }}>
+                <div className="dash-cat-icon" style={{ backgroundColor: 'hsla(var(--primary), 0.1)', color: 'hsl(var(--primary))' }}>
+                  <Layers size={22} />
+                </div>
+                <span className="dash-cat-name">Administrar Secciones</span>
+              </div>
+            )}
+            
           </div>
         </div>
       </div>

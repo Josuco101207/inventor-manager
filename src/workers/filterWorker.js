@@ -1,10 +1,17 @@
 /**
  * Worker para filtrar el inventario.
  */
-self.onmessage = (e) => {
-  const { items, searchTerm, categoryTitle, activeSubcategory, selectedBrand, selectedLocation, statusFilter } = e.data;
+let localItems = [];
 
-  if (!items || !Array.isArray(items)) {
+self.onmessage = (e) => {
+  const { type, items, searchTerm, categoryTitle, activeSubcategory, selectedBrand, selectedLocation, statusFilter } = e.data;
+
+  if (type === 'INIT') {
+    localItems = items;
+    return;
+  }
+
+  if (!localItems || !Array.isArray(localItems)) {
     self.postMessage([]);
     return;
   }
@@ -12,14 +19,18 @@ self.onmessage = (e) => {
   const searchLow = searchTerm ? searchTerm.toLowerCase().trim() : '';
 
   const filtered = [];
-  for (let i = 0, len = items.length; i < len; i++) {
-    const item = items[i];
+  for (let i = 0, len = localItems.length; i < len; i++) {
+    const item = localItems[i];
     
     // Filtros por categoría
     if (item.category !== categoryTitle) continue;
     if (activeSubcategory !== 'TODAS' && item.subcategory !== activeSubcategory) continue;
     if (selectedBrand !== 'Todas' && item.marca !== selectedBrand) continue;
-    if (selectedLocation !== 'Todas' && item.location !== selectedLocation) continue;
+    if (selectedLocation !== 'Todas') {
+      const hasStockInLoc = item.stockByLocation && item.stockByLocation[selectedLocation] > 0;
+      const isLegacyLoc = item.location === selectedLocation;
+      if (!hasStockInLoc && !isLegacyLoc) continue;
+    }
     if (statusFilter && item.status !== statusFilter) continue;
     
     // Búsqueda textual solo si hay término

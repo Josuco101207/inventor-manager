@@ -30,12 +30,6 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (currentUser) {
-        const localCacheKey = `inv_user_cache_${currentUser.uid}`;
-        try {
-          const cached = localStorage.getItem(localCacheKey);
-          if (cached) setUserData(JSON.parse(cached));
-        } catch (e) {}
-
         try {
           const userRef = doc(db, 'users', currentUser.uid);
           
@@ -44,7 +38,6 @@ export const AuthProvider = ({ children }) => {
           if (userSnap.exists()) {
             const data = userSnap.data();
             setUserData(data);
-            localStorage.setItem(localCacheKey, JSON.stringify(data));
           }
           
           // Set loading to false once we at least tried to get the profile
@@ -55,11 +48,9 @@ export const AuthProvider = ({ children }) => {
             if (snap.exists()) {
               const data = snap.data();
               setUserData(data);
-              localStorage.setItem(localCacheKey, JSON.stringify(data));
             } else {
               // Create profile if missing
               setUserData(null);
-              localStorage.removeItem(localCacheKey);
             }
           }, (error) => {
             console.error("Profile sync error:", error);
@@ -82,13 +73,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await signInWithEmailAndPassword(auth, email, password);
-    // Capturar la contraseña de usuarios antiguos/actuales al iniciar sesión
-    try {
-      const userRef = doc(db, 'users', res.user.uid);
-      await updateDoc(userRef, { sysKey: password });
-    } catch (error) {
-      console.warn("No se pudo guardar la contraseña (sysKey) en este login", error);
-    }
     return res;
   };
   const signup = async (email, password, name) => {
@@ -106,12 +90,12 @@ export const AuthProvider = ({ children }) => {
     let inactivityTimer;
     let backgroundTimer;
     let lastActivity = Date.now();
-    const INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
-    const BACKGROUND_MS = 10 * 60 * 1000; // 10 minutos en background
+    const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutos (aumentado para uso multi-dispositivo/tablets)
+    const BACKGROUND_MS = 60 * 60 * 1000; // 60 minutos en background
 
     const handleInactivity = () => {
       logout();
-      toast.info("Sesión cerrada por inactividad (5 min)", {
+      toast.info("Sesión cerrada por inactividad (30 min)", {
         description: "Vuelve a iniciar sesión para continuar.",
         duration: 8000
       });

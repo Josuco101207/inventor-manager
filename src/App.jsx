@@ -24,8 +24,40 @@ import { Loader2, Lock } from 'lucide-react';
 import MobileBottomNav from './components/MobileBottomNav';
 import GlobalScanner from './components/GlobalScanner'; // <== AGREGADO
 
+const ViewProtectedRoute = ({ viewId, children }) => {
+  const { loading, userData, isAdmin } = useAuth();
+
+  const hasViewAccess = (vId) => {
+    if (isAdmin) return true;
+    const defaultAllowed = ['dashboard', 'profile'];
+    if (defaultAllowed.includes(vId)) return true;
+    if (!userData) return false;
+    // Retrocompatibilidad: Si no tiene el campo (usuario antiguo), tiene acceso
+    if (!userData.allowedViews) return true;
+    return userData.allowedViews.includes(vId);
+  };
+
+  if (loading) return null;
+  if (hasViewAccess(viewId)) return children;
+  
+  return (
+    <div className="flex flex-col items-center justify-center h-full p-8 text-center animate-fade-in">
+      <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mb-6">
+        <Lock size={40} />
+      </div>
+      <h2 className="text-2xl font-black mb-2">Acceso Restringido</h2>
+      <p className="text-muted max-w-xs mx-auto mb-8">
+        No tienes permisos para ver esta sección. Contacta a un administrador para solicitar acceso.
+      </p>
+      <button className="btn-apple-primary px-8" onClick={() => window.location.href = '/'}>
+        Volver al Inicio
+      </button>
+    </div>
+  );
+};
+
 const RootApp = () => {
-  const { user, loading, userData, isAdmin } = useAuth();
+  const { user, loading, isStaff, isAdmin } = useAuth();
   const { customCategories } = useInventory();
 
   if (loading) {
@@ -49,37 +81,7 @@ const RootApp = () => {
       </div>
     );
   }
-
-  const hasViewAccess = (viewId) => {
-    if (isAdmin) return true;
-    const defaultAllowed = ['dashboard', 'profile'];
-    if (defaultAllowed.includes(viewId)) return true;
-    if (!userData) return false;
-    // Retrocompatibilidad: Si no tiene el campo (usuario antiguo), tiene acceso
-    if (!userData.allowedViews) return true;
-    return userData.allowedViews.includes(viewId);
-  };
-
-  const ViewProtectedRoute = ({ viewId, children }) => {
-    if (loading) return null;
-    if (hasViewAccess(viewId)) return children;
-    
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center animate-fade-in">
-        <div className="w-20 h-20 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mb-6">
-          <Lock size={40} />
-        </div>
-        <h2 className="text-2xl font-black mb-2">Acceso Restringido</h2>
-        <p className="text-muted max-w-xs mx-auto mb-8">
-          No tienes permisos para ver esta sección. Contacta a Jonathan para solicitar acceso.
-        </p>
-        <button className="btn-apple-primary px-8" onClick={() => window.location.href = '/'}>
-          Volver al Inicio
-        </button>
-      </div>
-    );
-  };
-
+  
   if (!user) {
     return <LoginView />;
   }
@@ -109,7 +111,7 @@ const RootApp = () => {
               <Route path="/analytics" element={<ViewProtectedRoute viewId="analytics"><AnalyticsView /></ViewProtectedRoute>} />
               <Route path="/transactions" element={<ViewProtectedRoute viewId="transactions"><TransactionsView /></ViewProtectedRoute>} />
               <Route path="/facturas" element={<ViewProtectedRoute viewId="facturas"><InvoicesView /></ViewProtectedRoute>} />
-              <Route path="/sections" element={isAdmin ? <SectionAdminView /> : <Navigate to="/" />} />
+              <Route path="/sections" element={isStaff ? <SectionAdminView /> : <Navigate to="/" />} />
               <Route path="/settings" element={isAdmin ? <SettingsView /> : <Navigate to="/" />} />
               <Route path="/profile" element={<ProfileView />} />
               <Route path="/users" element={isAdmin ? <UserManagementView /> : <Navigate to="/" />} />

@@ -1,26 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, RefreshCw, ArrowUpCircle, ArrowDownCircle, User, AlertCircle } from 'lucide-react';
+import { X, RefreshCw, ArrowUpCircle, ArrowDownCircle, User, AlertCircle, MapPin } from 'lucide-react';
+import { useInventory } from '../context/InventoryContextOptimized';
+import SearchableSelect from './SearchableSelect';
 import './ActionModal.css';
 
 const ActionModal = ({ isOpen, onClose, item, onConfirm, personnel = [] }) => {
+  const { locations } = useInventory();
   const [qty, setQty] = useState(1);
   const [action, setAction] = useState('Entrada');
   const [details, setDetails] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState('General');
+
+  const personnelOptions = React.useMemo(() => {
+    const uniquePersonnel = [];
+    const seen = new Set();
+    for (const p of personnel) {
+      if (!seen.has(p.name)) {
+        seen.add(p.name);
+        uniquePersonnel.push({
+          value: p.name,
+          label: p.name,
+          id: p.employeeId || p.id
+        });
+      }
+    }
+    return uniquePersonnel;
+  }, [personnel]);
+
+  useEffect(() => {
+    if (isOpen && item) {
+      setSelectedLocation(item.location || 'General');
+      setQty(1);
+      setAction('Entrada');
+      setDetails('');
+    }
+  }, [isOpen, item]);
 
   if (!isOpen || !item) return null;
 
   const isSalida = action === 'Salida';
-  const isValid = qty && parseInt(qty) > 0 && (!isSalida || details.trim().length > 0);
+  const isValid = qty && parseInt(qty) > 0 && details.trim().length > 0;
 
   const handleConfirm = () => {
     if (!isValid) return;
     const finalQty = isSalida ? -parseInt(qty) : parseInt(qty);
     const detailText = details.trim() ? `Entregado a: ${details.trim()}` : '';
-    onConfirm(item.id, finalQty, detailText);
-    setDetails('');
-    setQty(1);
-    setAction('Entrada');
+    onConfirm(item.id, finalQty, detailText, selectedLocation);
     onClose();
   };
 
@@ -57,6 +83,8 @@ const ActionModal = ({ isOpen, onClose, item, onConfirm, personnel = [] }) => {
             </div>
           </div>
 
+
+
           {/* Quantity */}
           <div className="f-group">
             <label>Cantidad ({item?.unit || 'Piezas'})</label>
@@ -71,34 +99,25 @@ const ActionModal = ({ isOpen, onClose, item, onConfirm, personnel = [] }) => {
             />
           </div>
 
-          {/* Recipient — always shown, REQUIRED for Salida */}
-          <div className="f-group">
-            <label>
-              <User size={14} style={{ marginRight: 6 }} />
-              {isSalida ? 'Entregado a (OBLIGATORIO)' : 'Recibe / Destinatario (Opcional)'}
+          {/* Recipient — always shown, REQUIRED */}
+          <div className="f-group" style={{ position: 'relative', zIndex: 99999 }}>
+            <label className="f-label mb-2">
+              <User size={14} className="inline mr-2 opacity-70" />
+              Recibe / Destinatario (OBLIGATORIO)
             </label>
 
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                className="f-input"
-                list="personnel-list-modal"
+            <div style={{ position: 'relative', zIndex: 99999 }}>
+              <SearchableSelect 
+                options={personnelOptions}
                 value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                placeholder={isSalida ? 'Nombre de quien recibe...' : 'Nombre (opcional)...'}
-                style={{
-                  borderColor: isSalida && details.trim().length === 0 ? 'hsl(var(--danger))' : undefined,
-                }}
+                onChange={setDetails}
+                placeholder="Seleccionar destinatario..."
+                allowFreeText={true}
               />
-              <datalist id="personnel-list-modal">
-                {personnel.map(p => (
-                  <option key={p.id} value={p.name} />
-                ))}
-              </datalist>
             </div>
 
-            {/* Warning message when Salida and empty */}
-            {isSalida && details.trim().length === 0 && (
+            {/* Warning message when empty */}
+            {details.trim().length === 0 && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 marginTop: 8, padding: '8px 12px', borderRadius: 10,
@@ -112,7 +131,7 @@ const ActionModal = ({ isOpen, onClose, item, onConfirm, personnel = [] }) => {
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-4">
+          <div className="flex gap-4" style={{ position: 'relative', zIndex: 1 }}>
             <button className="btn-apple-secondary flex-1" onClick={onClose}>Cancelar</button>
             <button
               className={`flex-1 ${isSalida ? 'btn-apple-danger' : 'btn-apple-primary'}`}

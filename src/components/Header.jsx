@@ -18,7 +18,7 @@ const categoryToRoute = (category) => {
 
 const Header = () => {
   const { userData, isAdmin } = useAuth();
-  const { connectionStatus, lastSync, items } = useInventory();
+  const { connectionStatus, pendingWrites, lastSync, items } = useInventory();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   
@@ -81,15 +81,17 @@ const Header = () => {
   };
 
   const getStatusIcon = () => {
+    if (pendingWrites > 0) return <RefreshCw size={14} className="text-amber-500 animate-spin" />;
     if (connectionStatus === 'online') return <Wifi size={14} className="text-emerald-500" />;
     if (connectionStatus === 'reconnecting') return <RefreshCw size={14} className="text-amber-500 animate-spin" />;
     return <WifiOff size={14} className="text-rose-500" />;
   };
 
   const getStatusText = () => {
+    if (pendingWrites > 0) return 'Sincronizando...';
     if (connectionStatus === 'online') return 'En línea';
-    if (connectionStatus === 'reconnecting') return 'Sincronizando...';
-    return 'Desconectado';
+    if (connectionStatus === 'reconnecting') return 'Reconectando...';
+    return 'Sin conexión';
   };
 
   return (
@@ -163,7 +165,7 @@ const Header = () => {
         <div className="user-profile">
           <div className="user-info">
             <span className="user-name">{userName}</span>
-            <span className="user-role">{isAdmin ? 'Jonathan' : 'Operador'}</span>
+            <span className="user-role">{isAdmin ? 'Administrador' : 'Operador'}</span>
           </div>
           <div className="header-avatar">
             {userInitials}

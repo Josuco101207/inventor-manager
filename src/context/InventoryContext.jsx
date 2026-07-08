@@ -16,6 +16,7 @@ import {
   getDocs,
   where
 } from 'firebase/firestore';
+import initialPersonnel from '../data/personnel.json';
 import { toast } from 'sonner';
 import { OptimizedDataService } from '../firebase/optimizedFirestore';
 
@@ -66,16 +67,19 @@ export const InventoryProvider = ({ children }) => {
     if (!user) return;
     const fetchStats = async () => {
       try {
-        // 1. Conteos Básicos
-        const [itemCount, moveCount] = await Promise.all([
-          OptimizedDataService.getCollectionCount('items'),
-          OptimizedDataService.getCollectionCount('movements')
-        ]);
+        // 1. Conteos Básicos secuenciales con delay para evitar Error 429 (Too Many Requests / Quota Exceeded)
+        const itemCount = await OptimizedDataService.getCollectionCount('items');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        const moveCount = await OptimizedDataService.getCollectionCount('movements');
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         // 2. Conteo de Stock Crítico
         // Nota: Firestore no permite comparar dos campos en un query.
         // Como solución temporal eficiente, filtramos los items locales cargados + un query de qty=0
         const outOfStockCount = await OptimizedDataService.getCollectionCount('items', [where('qty', '==', 0)]);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
         // FIX: Usar items actual del estado en lugar de ref para evitar race condition
         const localCritical = items.filter(i => (i.qty || 0) <= (i.threshold || 0) && (i.qty || 0) > 0).length;
 
@@ -89,13 +93,15 @@ export const InventoryProvider = ({ children }) => {
           return { d, nextD, name: d.toLocaleDateString('es-ES', { weekday: 'short' }) };
         });
 
-        const activityPromises = last7Days.map(day => 
-          OptimizedDataService.getCollectionCount('movements', [
+        const activityCounts = [];
+        for (const day of last7Days) {
+          const count = await OptimizedDataService.getCollectionCount('movements', [
             where('timestamp', '>=', day.d),
             where('timestamp', '<', day.nextD)
-          ])
-        );
-        const activityCounts = await Promise.all(activityPromises);
+          ]);
+          activityCounts.push(count);
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
         
         const activityData = last7Days.map((day, idx) => ({
           name: day.name,
@@ -183,7 +189,22 @@ export const InventoryProvider = ({ children }) => {
         OptimizedDataService.getCollectionOptimized('locations', [orderBy('name', 'asc')], 100)
       ]);
 
-      setPersonnel(personnelSnap.snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      let loadedPersonnel = personnelSnap.snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      if (loadedPersonnel.length === 0) {
+        // Seed personnel if empty
+        console.log("Seeding initial personnel data...");
+        const batch = writeBatch(db);
+        const personnelRef = collection(db, 'personnel');
+        initialPersonnel.forEach((person) => {
+          const newDocRef = doc(personnelRef);
+          batch.set(newDocRef, { ...person, createdAt: serverTimestamp() });
+        });
+        await batch.commit();
+        loadedPersonnel = initialPersonnel.map(p => ({ ...p }));
+      }
+
+      setPersonnel(loadedPersonnel);
       setBrands(brandsSnap.snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLocations(locationsSnap.snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       
@@ -220,7 +241,7 @@ export const InventoryProvider = ({ children }) => {
   }, []);
 
   // ─── CAPA 4: Optimistic UI — Stock Update ───
-  const updateStock = useCallback(async (itemId, change, userName = 'Jonathan', customDetails = '') => {
+  const updateStock = useCallback(async (itemId, change, userName = 'Desconocido', customDetails = '') => {
     const currentItems = itemsRef.current;
     const itemIndex = currentItems.findIndex(i => i.id === itemId);
     if (itemIndex === -1) return;
@@ -272,7 +293,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const loanItem = useCallback(async (itemId, borrower, userName = 'Jonathan') => {
+  const loanItem = useCallback(async (itemId, borrower, userName = 'Desconocido') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     
     // Para herramientas, permitimos el préstamo si está marcada como Disponible, 
@@ -307,7 +328,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const bulkLoanItems = useCallback(async (itemIds, borrower, userName = 'Jonathan') => {
+  const bulkLoanItems = useCallback(async (itemIds, borrower, userName = 'Desconocido') => {
     const availableItems = itemsRef.current.filter(i => 
       itemIds.includes(i.id) && 
       ((i.qty || 0) > 0 || i.status === 'Disponible')
@@ -347,7 +368,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const returnItem = useCallback(async (itemId, userName = 'Jonathan') => {
+  const returnItem = useCallback(async (itemId, userName = 'Desconocido') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -374,7 +395,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const reportMaintenance = useCallback(async (itemId, reason, userName = 'Jonathan') => {
+  const reportMaintenance = useCallback(async (itemId, reason, userName = 'Desconocido') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -394,7 +415,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const completeMaintenance = useCallback(async (itemId, userName = 'Jonathan') => {
+  const completeMaintenance = useCallback(async (itemId, userName = 'Desconocido') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -414,7 +435,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const auditStock = useCallback(async (itemId, physicalQty, userName = 'Jonathan', reason = '') => {
+  const auditStock = useCallback(async (itemId, physicalQty, userName = 'Desconocido', reason = '') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
@@ -434,7 +455,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const addItem = useCallback(async (newItem, userName = 'Jonathan') => {
+  const addItem = useCallback(async (newItem, userName = 'Desconocido') => {
     try {
       // Si es herramienta y no trae cantidad, por defecto es 1
       const defaultQty = newItem.category === 'Herramientas' ? 1 : 0;
@@ -454,7 +475,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const deleteItem = useCallback(async (itemId, userName = 'Jonathan') => {
+  const deleteItem = useCallback(async (itemId, userName = 'Desconocido') => {
     try {
       const item = itemsRef.current.find(i => i.id === itemId);
       await deleteDoc(doc(db, 'items', itemId));
@@ -465,7 +486,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const editItem = useCallback(async (itemId, updatedFields, userName = 'Jonathan') => {
+  const editItem = useCallback(async (itemId, updatedFields, userName = 'Desconocido') => {
     try {
       const item = itemsRef.current.find(i => i.id === itemId);
       const itemRef = doc(db, 'items', itemId);
@@ -596,8 +617,8 @@ export const InventoryProvider = ({ children }) => {
     if (isAutoWiping) return;
     try {
       setIsAutoWiping(true);
-      const collections = ['items', 'movements', 'personnel', 'users'];
-      toast.loading("ELIMINANDO TODA LA BASE DE DATOS...", { id: 'wipe' });
+      const collections = ['items', 'personnel', 'users'];
+      toast.loading("ELIMINANDO BASE DE DATOS (Items, Personal, Usuarios)...", { id: 'wipe' });
       
       let totalDocs = 0;
       for (const colName of collections) {
@@ -643,7 +664,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [isAutoWiping]);
 
-  const deleteItemsByCategory = useCallback(async (category, userName = 'Jonathan') => {
+  const deleteItemsByCategory = useCallback(async (category, userName = 'Desconocido') => {
     try {
       const categoryItems = itemsRef.current.filter(i => i.category === category);
       if (categoryItems.length === 0) {
@@ -675,7 +696,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [addMovement]);
 
-  const clearDatabaseCategories = useCallback(async (categories, userName = 'Jonathan') => {
+  const clearDatabaseCategories = useCallback(async (categories, userName = 'Desconocido') => {
     try {
       toast.loading("LIMPIANDO ÁREAS SELECCIONADAS...", { id: 'clear-db' });
       

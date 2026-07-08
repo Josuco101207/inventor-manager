@@ -75,12 +75,12 @@ async function isAuthorizedUser(phoneNumber) {
 async function searchItems({ keyword }) {
   try {
     const snapshot = await getDocs(collection(db, 'items'));
-    let results = [];
+    let allItems = [];
     const lowerKeyword = keyword ? keyword.toLowerCase() : '';
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
-      results.push({
+      allItems.push({
         id: docSnap.id,
         name: data.name || '',
         category: data.category || '',
@@ -89,39 +89,81 @@ async function searchItems({ keyword }) {
         item_number: data.item_number || '',
         quantity: data.qty || 0,
         location: data.location || 'N/A',
+        unit: data.unit || '',
+        pieces_per_unit: data.pieces_per_unit || null,
         combinedText: `${data.name || ''} ${data.category || ''} ${data.subcategory || ''} ${data.grupo || ''} ${data.item_number || ''}`
       });
     });
 
     if (!lowerKeyword) {
-      return JSON.stringify(results.map(r => {
+      return JSON.stringify(allItems.map(r => {
         delete r.combinedText;
         return r;
       }));
     }
 
-    const fuse = new Fuse(results, {
+    // PASO 1: Preparar palabras clave (manejar plurales simples para que coincidan con singular)
+    const keywords = lowerKeyword.split(/\s+/).map(kw => {
+      if (kw.length > 3) {
+        if (kw.endsWith('es')) return kw.slice(0, -2); // ej: balones -> balon, coples -> copl (copl entra en cople)
+        if (kw.endsWith('s')) return kw.slice(0, -1);  // ej: lonas -> lona, amarillos -> amarillo
+      }
+      return kw;
+    });
+
+    let exactMatches = allItems.filter(item => {
+      const text = item.combinedText.toLowerCase();
+      // Usar fronteras de palabra (\b) para evitar que "lona" haga match dentro de "escaLONAda"
+      return keywords.every(kw => {
+        // Escapar caracteres especiales por si acabo el usuario mete un + o (
+        const safeKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`\\b${safeKw}`, 'i').test(text);
+      });
+    });
+
+    // Si no encuentra con TODAS las palabras, intentar con AL MENOS UNA (solo si la palabra tiene más de 3 letras)
+    if (exactMatches.length === 0) {
+      const validKeywords = keywords.filter(kw => kw.length > 3);
+      if (validKeywords.length > 0) {
+        exactMatches = allItems.filter(item => {
+          const text = item.combinedText.toLowerCase();
+          return validKeywords.some(kw => {
+            const safeKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return new RegExp(`\\b${safeKw}`, 'i').test(text);
+          });
+        });
+      }
+    }
+
+    // PASO 2: Si la búsqueda exacta encontró resultados, usarlos directamente
+    if (exactMatches.length > 0) {
+      let results = exactMatches.map(item => {
+        delete item.combinedText;
+        return item;
+      });
+      results = results.slice(0, 150);
+      return JSON.stringify(results);
+    }
+
+    // PASO 3: Solo si no hay resultados exactos, usar búsqueda fuzzy como respaldo EXTREMADAMENTE ESTRICTO
+    const fuse = new Fuse(allItems, {
       keys: ['combinedText'],
-      threshold: 0.6, // 0.6 permite coincidencias mucho más flexibles (ej. "protector" encuentra "PROTECTOR DE TUBO")
+      threshold: 0.15, // Muy estricto para evitar que "lonas" traiga "balones"
+      ignoreFieldNorm: true,
       ignoreLocation: true,
-      useExtendedSearch: true,
       includeScore: true
     });
 
     let searchResults = fuse.search(lowerKeyword);
-    if (searchResults.length > 0) {
-      const bestScore = searchResults[0].score;
-      searchResults = searchResults.filter(r => r.score <= bestScore + 0.15);
-    }
+    searchResults = searchResults.filter(r => r.score < 0.2); // Solo coincidencias casi perfectas
     
-    results = searchResults.map(result => {
+    let results = searchResults.map(result => {
       const item = result.item;
       delete item.combinedText;
       return item;
     });
 
-    // Limitar a los 50 mejores resultados para no saturar el mensaje de WhatsApp
-    results = results.slice(0, 50);
+    results = results.slice(0, 150);
 
     if (results.length === 0) {
       return "No se encontraron artículos con esa descripción o categoría. Por favor verifica si el nombre está bien escrito o si la categoría existe.";
@@ -171,6 +213,7 @@ async function registerMovement({ itemName, quantity, type, userPhone }) {
     const fuse = new Fuse(allItems, {
       keys: ['combinedText'],
       threshold: 0.6,
+      ignoreFieldNorm: true,
       ignoreLocation: true,
       useExtendedSearch: true,
       includeScore: true
@@ -184,6 +227,12 @@ async function registerMovement({ itemName, quantity, type, userPhone }) {
     
     if (searchResults.length === 0) {
       return `No encontré ningún artículo parecido a "${itemName}". Revisa la ortografía.`;
+    }
+
+    if (searchResults.length > 1) {
+      // Ambigüedad detectada
+      let nombres = searchResults.map(r => `- ${r.item.name}`).join('\n');
+      return `⚠️ ¡Encontré varios artículos parecidos y no quiero equivocarme! ¿A cuál te refieres exactamente?\n\n${nombres}\n\n(Por favor, dime el nombre exacto de la lista)`;
     }
 
     targetItem = searchResults[0].item;
@@ -254,14 +303,37 @@ async function autorizarNumero(phoneNumber) {
 async function analyzeMovements(question) {
   try {
     const { orderBy, limit } = require('firebase/firestore');
-    const movsQ = query(collection(db, 'movements'), orderBy('timestamp', 'desc'), limit(150));
+    
+    // Traer todos los items para hacer match si falta el itemName en el historial
+    const itemsSnap = await getDocs(collection(db, 'items'));
+    const itemsDict = {};
+    itemsSnap.forEach(d => {
+      itemsDict[d.id] = d.data().name || 'Desconocido';
+    });
+
+    const movsQ = query(collection(db, 'movements'), orderBy('timestamp', 'desc'), limit(20));
     const movsSnap = await getDocs(movsQ);
     
     let history = [];
     movsSnap.forEach(docSnap => {
       const data = docSnap.data();
+      
+      let articuloNombre = data.itemName;
+      if (!articuloNombre) {
+        if (itemsDict[data.item]) {
+          // Old Bot: data.item is the Doc ID
+          articuloNombre = itemsDict[data.item];
+        } else if (data.item) {
+          // Web App: data.item is the text name
+          articuloNombre = data.item;
+        } else if (itemsDict[data.itemId]) {
+          // Fallback
+          articuloNombre = itemsDict[data.itemId];
+        }
+      }
+
       history.push({
-        articulo: data.itemName,
+        articulo: articuloNombre || 'Artículo Desconocido',
         accion: data.action,
         cantidad: data.qty,
         fecha: data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Desconocida',

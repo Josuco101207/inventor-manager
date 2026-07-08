@@ -153,7 +153,7 @@
   -webkit-backdrop-filter: blur(20px);
   border-radius: 30px;
   border: 1px solid hsla(var(--border-color), 0.3);
-  padding: 2.2rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -165,6 +165,45 @@
   transform: translateY(-5px);
   border-color: hsla(var(--primary), 0.4);
   box-shadow: 0 15px 35px -10px rgba(0,0,0,0.5), 0 0 20px hsla(var(--primary), 0.1);
+}
+
+.tool-card.has-selection-mode {
+  cursor: pointer;
+}
+
+.tool-card.is-selected {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary)), 0 10px 30px hsla(var(--primary), 0.2);
+  background: hsla(var(--primary), 0.05);
+}
+
+.tool-selection-box {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+.tool-checkbox-custom {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid hsla(var(--text-main), 0.3);
+  background: hsla(var(--bg-elevated), 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.tool-checkbox-custom.checked {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.tool-checkbox-custom .check-mark {
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
 }
 
 .tool-status-ribbon {
@@ -406,4 +445,118 @@
   .tool-name { font-size: 1.2rem; }
   .tool-card { padding: 1.25rem; border-radius: 20px; }
   .tool-actions { gap: 0.5rem; }
+}
+
+/* ─── Bulk Actions Bar ─── */
+.bulk-actions-bar {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: hsla(var(--bg-elevated), 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid hsla(var(--border-color), 0.5);
+  border-radius: 24px;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 100;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 20px hsla(var(--primary), 0.2);
+}
+
+.bulk-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bulk-count {
+  background: hsl(var(--primary));
+  color: white;
+  font-weight: 800;
+  font-size: 1.1rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.bulk-text {
+  font-weight: 700;
+  color: hsl(var(--text-main));
+}
+
+.bulk-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-bulk-cancel {
+  background: transparent;
+  border: 1px solid hsla(var(--border-color), 0.5);
+  color: hsl(var(--text-muted));
+  padding: 0.6rem 1rem;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-bulk-cancel:hover {
+  background: hsla(var(--bg-elevated), 1);
+  color: hsl(var(--text-main));
+}
+
+.btn-bulk-action {
+  background: hsla(var(--primary), 0.15);
+  color: hsl(var(--primary));
+  border: none;
+  padding: 0.6rem 1.25rem;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-bulk-action:hover {
+  background: hsla(var(--primary), 0.25);
+  transform: translateY(-2px);
+}
+
+.btn-bulk-action.bg-purple-500 {
+  background: hsl(var(--accent-purple));
+  color: white;
+}
+
+.btn-bulk-action.bg-purple-500:hover {
+  background: hsla(var(--accent-purple), 0.9);
+  box-shadow: 0 4px 15px hsla(var(--accent-purple), 0.4);
+}
+
+@media (max-width: 768px) {
+  .bulk-actions-bar {
+    width: 90%;
+    flex-direction: column;
+    gap: 1rem;
+    bottom: 5rem;
+    padding: 1.5rem;
+  }
+  
+  .bulk-buttons {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .btn-bulk-cancel, .btn-bulk-action {
+    width: 100%;
+    justify-content: center;
+  }
 }

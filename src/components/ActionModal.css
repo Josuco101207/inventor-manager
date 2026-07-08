@@ -15,16 +15,17 @@
   transition: all 0.3s;
 }
 
-.modal-card {
+/* Override global .modal-card from index.css */
+.modal-overlay .modal-card.animate-scale-up {
   background: hsl(var(--bg-card));
   width: 100%;
-  max-width: 500px;
-  padding: 3rem;
+  max-width: 720px;
+  padding: 3rem 3.5rem;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   border: 1px solid hsl(var(--border-color));
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   transition: background-color 0.3s, border-color 0.3s;
 }
 
@@ -33,14 +34,14 @@
 }
 
 .modal-header h3 {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 900;
   color: hsl(var(--text-main));
   letter-spacing: -0.03em;
 }
 
 .f-group label {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
   color: hsl(var(--text-muted));
@@ -51,12 +52,12 @@
 
 .f-input {
   width: 100%;
-  padding: 1rem 1.25rem;
+  padding: 1.15rem 1.25rem;
   border-radius: 16px;
   border: 1px solid hsl(var(--border-color));
   background-color: hsl(var(--bg-main));
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 600;
   color: hsl(var(--text-main));
   transition: all 0.2s;
@@ -105,10 +106,10 @@
   background: hsl(var(--primary));
   color: white;
   border: none;
-  padding: 1rem;
+  padding: 1.15rem;
   border-radius: 16px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 4px 12px hsla(var(--primary), 0.3);
@@ -118,10 +119,10 @@
   background: #ff3b30;
   color: white;
   border: none;
-  padding: 1rem;
+  padding: 1.15rem;
   border-radius: 16px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
@@ -131,10 +132,10 @@
   background: hsl(var(--bg-main));
   color: hsl(var(--text-main));
   border: 1px solid hsl(var(--border-color));
-  padding: 1rem;
+  padding: 1.15rem;
   border-radius: 16px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -161,11 +162,11 @@
 
 .op-btn {
   flex: 1;
-  padding: 0.75rem;
+  padding: 0.85rem;
   border-radius: 14px;
   border: none;
   font-weight: 800;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -195,14 +196,15 @@
     padding: 0;
   }
 
-  .modal-card {
+  .modal-overlay .modal-card.animate-scale-up {
     max-width: 100%;
     width: 100%;
     border-radius: 24px 24px 0 0;
-    padding: 2rem 1.5rem 7.5rem; /* Sufficient padding to clear mobile bottom nav */
+    padding: 2rem 1.5rem 7.5rem;
     padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
     max-height: 90vh;
     overflow-y: auto;
+    overflow-x: visible;
     animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
@@ -234,3 +236,97 @@
   }
 }
 
+/* ─── Bulk Modals ─── */
+.bulk-modal-list {
+  margin-top: 0.5rem;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.bulk-modal-header {
+  background: rgba(255,255,255,0.05);
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: hsl(var(--text-muted));
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.bulk-modal-item {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  transition: background 0.2s;
+}
+
+.bulk-modal-item:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.bulk-modal-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bulk-modal-item-name {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+  margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: hsl(var(--text-main));
+}
+
+.bulk-modal-item-stock {
+  font-size: 11px;
+  color: hsl(var(--text-muted));
+}
+
+.bulk-modal-item-qty {
+  width: 90px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bulk-input-compact {
+  width: 100%;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 6px 8px;
+  text-align: center;
+  font-weight: 700;
+  color: white;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.bulk-input-compact:focus {
+  border-color: hsl(var(--primary));
+}
+
+.bulk-input-error {
+  font-size: 10px;
+  color: hsl(var(--danger));
+  margin-top: 4px;
+  text-align: center;
+  white-space: nowrap;
+}

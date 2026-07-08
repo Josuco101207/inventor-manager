@@ -25,8 +25,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: 'index.html', // Offline fallback: siempre sirve el app shell
         runtimeCaching: [
-          // Imágenes de Firebase
+          // Imágenes de Firebase Storage
           {
             urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
@@ -56,18 +57,11 @@ export default defineConfig({
               expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 },
               cacheableResponse: { statuses: [0, 200] }
             }
-          },
-          // Firestore API
-          {
-            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'firestore-api-cache',
-              networkTimeoutSeconds: 15,
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] }
-            }
           }
+          // NOTA: Firestore REST cache ELIMINADO intencionalmente.
+          // El SDK de Firestore usa WebSockets (no REST) para onSnapshot,
+          // y tiene su propia persistencia IndexedDB. Cachear REST solo
+          // afectaba a getCountFromServer y servía datos obsoletos por 24h.
         ]
       }
     })

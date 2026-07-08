@@ -3,14 +3,14 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { 
   Package, Wrench, PenTool, Cpu, Printer, Landmark,
   LayoutDashboard, Settings, User, LogOut, ShieldCheck, Users, Layers, Archive, History, Activity,
-  Menu, X, FileText, Box, Tag, Key
+  Menu, X, FileText, Box, Tag, Key, MapPin
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useInventory } from '../context/InventoryContextOptimized';
 import './Sidebar.css';
 
 const Sidebar = () => {
-  const { logout, userData, isAdmin } = useAuth();
+  const { logout, userData, isAdmin, isStaff } = useAuth();
   const { customCategories } = useInventory(); // <== AGREGADO
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
@@ -212,18 +212,20 @@ const Sidebar = () => {
                 <span>Mi Perfil</span>
               </NavLink>
             </li>
+            {isStaff && (
+              <li>
+                <NavLink to="/sections" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                  <Layers size={20} />
+                  <span>Secciones</span>
+                </NavLink>
+              </li>
+            )}
             {isAdmin && (
               <>
                 <li>
                   <NavLink to="/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <Users size={20} />
                     <span>Equipo</span>
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to="/sections" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                    <Layers size={20} />
-                    <span>Secciones</span>
                   </NavLink>
                 </li>
                 <li>
