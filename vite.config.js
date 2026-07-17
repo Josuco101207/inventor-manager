@@ -72,7 +72,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          ui: ['lucide-react', 'recharts', 'sonner', 'react-window'],
+          ui: ['lucide-react', 'recharts', 'sonner', 'react-virtuoso'],
           utils: ['xlsx', 'qrcode.react']
         }
       }

@@ -2,14 +2,27 @@
  * Worker para filtrar el inventario.
  */
 let localItems = [];
+let lastFilterState = null;
 
 self.onmessage = (e) => {
   const { type, items, searchTerm, categoryTitle, activeSubcategory, selectedBrand, selectedLocation, statusFilter } = e.data;
 
   if (type === 'INIT') {
     localItems = items;
+    if (lastFilterState) {
+      applyFilters(lastFilterState);
+    }
     return;
   }
+
+  if (type === 'FILTER') {
+    lastFilterState = { searchTerm, categoryTitle, activeSubcategory, selectedBrand, selectedLocation, statusFilter };
+    applyFilters(lastFilterState);
+  }
+};
+
+function applyFilters(filters) {
+  const { searchTerm, categoryTitle, activeSubcategory, selectedBrand, selectedLocation, statusFilter } = filters;
 
   if (!localItems || !Array.isArray(localItems)) {
     self.postMessage([]);
@@ -78,4 +91,4 @@ self.onmessage = (e) => {
   }
 
   self.postMessage(result);
-};
+}

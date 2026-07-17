@@ -18,9 +18,9 @@ import {
   ClipboardCheck, Activity, Layers, Printer, ChevronDown, Landmark,
   RotateCcw, HandMetal, Package, AlertTriangle, MapPin, ArrowRight, ArrowRightLeft, ArrowDownCircle, X, QrCode
 } from 'lucide-react';
-import { exportToExcel } from '../utils/exportUtils';
 import { processInventoryExcel, HEADER_MAP } from '../utils/importUtils';
 import { toast } from 'sonner';
+import { Virtuoso } from 'react-virtuoso';
 // Eliminada virtualización compleja para máxima compatibilidad
 import './ToolsView.css'; 
 import './ParquesView.css';
@@ -71,7 +71,7 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
             />
           )}
           {item.image ? (
-            <img src={item.image} alt={item.name} className="invt-avatar glass-panel" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setSelectedImage(item.image); }} />
+            <img src={item.image} alt={item.name} loading="lazy" className="invt-avatar glass-panel" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setSelectedImage(item.image); }} />
           ) : (
             <div className="invt-avatar glass-panel">
               {item.name.charAt(0).toUpperCase()}
@@ -111,13 +111,6 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
               <span className={`invt-stock-num stock-${stockClass}`}>{item.qty || 0}</span>
               <span className="invt-stock-unit">{item.unit || 'pz'}</span>
             </div>
-            {item.stockByLocation && Object.keys(item.stockByLocation).length > 0 && (
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {Object.entries(item.stockByLocation).filter(([_, q]) => q > 0).map(([loc, q]) => (
-                  <span key={loc} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{loc}: {q}</span>
-                ))}
-              </div>
-            )}
             <div className="invt-stock-progress-container">
               <div className="invt-stock-bar-bg">
                 <div 
@@ -136,10 +129,6 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
         {/* Referencia (Location + Min) */}
         <div className="invt-cell-ref">
             <span className="invt-badge-min">Mín: {item.threshold || 0}</span>
-            <div className="invt-loc-text">
-              <Landmark size={12} className="invt-loc-icon" />
-              {item.location || 'General'}
-            </div>
           </div>
         {/* Actions */}
         <div className="invt-cell-act" style={{ marginLeft: '0' }}>
@@ -181,8 +170,6 @@ const InventoryView = ({ categoryTitle }) => {
   const { items, personnel, updateStock, addItem, deleteItem, editItem, loanItem, returnItem, bulkAddItems, auditStock, loading, fetchMoreItems, hasMore, customCategories, transferStock, moveItemToSection, bulkUpdateStock, bulkMoveSection } = useInventory();
   const { isAdmin, isStaff, userData, canAddTo, canEditIn } = useAuth();
   const location = useLocation();
-  const [visibleCount, setVisibleCount] = useState(40);
-  const observer = useRef(null);
   // Estados de UI
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -207,19 +194,10 @@ const InventoryView = ({ categoryTitle }) => {
   const [filteredItems, setFilteredItems] = useState([]);
   const workerRef = useRef(null);
 
-  // Infinite Scroll Observer usando callback ref
-  const observerTarget = useCallback(node => {
-    if (loading) return;
-    if (observer.current) observer.current.disconnect();
-    
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        setVisibleCount(prev => prev + 40);
-      }
-    }, { threshold: 0.1, rootMargin: '200px' });
-    
-    if (node) observer.current.observe(node);
-  }, [loading]);
+  const [scrollParent, setScrollParent] = useState(null);
+  useEffect(() => {
+    setScrollParent(document.querySelector('.main-content'));
+  }, []);
 
   // Inicializar Worker (solo una vez)
   useEffect(() => {
@@ -234,14 +212,12 @@ const InventoryView = ({ categoryTitle }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
-      setVisibleCount(40); // Reset scroll on search
     }, 150);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   // Reset count on filter change
   useEffect(() => {
-    setVisibleCount(40);
     setSelectedItems(new Set()); // Limpiar selección al cambiar de categoría/filtros
   }, [activeSubcategory, selectedBrand, selectedLocation, categoryTitle, debouncedSearch]);
 
@@ -356,13 +332,17 @@ const InventoryView = ({ categoryTitle }) => {
             />
           </div>
           <div className="action-buttons-group">
-            <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={() => exportToExcel(filteredItems, `inv_${categoryTitle}_filtrado`, categoryTitle)}>
+            <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={async () => {
+              const { exportToExcel } = await import('../utils/exportUtils');
+              exportToExcel(filteredItems, `inv_${categoryTitle}_filtrado`, categoryTitle);
+            }}>
               <Filter size={18} />
               <span className="desktop-only-text">Filtrados</span>
             </button>
 
-            <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={() => {
+            <button className="btn-scan-qr" style={{ padding: '0.75rem 1rem' }} onClick={async () => {
               const allItems = items.filter(i => i.category === categoryTitle);
+              const { exportToExcel } = await import('../utils/exportUtils');
               exportToExcel(allItems, `inv_${categoryTitle}_total`, categoryTitle);
             }}>
               <Download size={18} />
@@ -451,7 +431,10 @@ const InventoryView = ({ categoryTitle }) => {
         <div className="invt-body">
           {filteredItems.length > 0 ? (
             <>
-              {filteredItems.slice(0, visibleCount).map((item, index) => (
+              <Virtuoso 
+                customScrollParent={scrollParent}
+                data={filteredItems}
+                itemContent={(index, item) => (
                   <InventoryRow 
                     key={item.id}
                     item={item}
@@ -467,13 +450,8 @@ const InventoryView = ({ categoryTitle }) => {
                     isSelected={selectedItems.has(item.id)}
                     onToggleSelect={handleToggleSelect}
                   />
-              ))}
-
-              {visibleCount < filteredItems.length && (
-                <div ref={observerTarget} style={{ display: 'flex', justifyContent: 'center', padding: '2.5rem 0' }}>
-                  <Loader2 className="animate-spin" style={{ color: 'hsl(var(--primary))' }} size={32} />
-                </div>
-              )}
+                )}
+              />
             </>
           ) : (
             <div className="invt-empty-state">

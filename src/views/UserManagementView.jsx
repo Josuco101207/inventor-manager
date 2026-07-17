@@ -104,12 +104,15 @@ const UserManagementView = () => {
       secondaryApp = initializeApp(firebaseConfig, `Secondary_${Date.now()}`);
       const secondaryAuth = getAuth(secondaryApp);
       const cred = await createUserWithEmailAndPassword(secondaryAuth, newUser.email, newUser.password);
+      const dynamicCategoryNames = customCategories?.map(c => c.name) || [];
+      const dynamicViewIds = customCategories?.map(c => c.id) || [];
+      
       await setDoc(doc(db, 'users', cred.user.uid), {
         name: newUser.name, displayName: newUser.name, email: newUser.email,
         role: newUser.role, 
-        allowedCategories: [...ALL_CATEGORIES], 
+        allowedCategories: [...ALL_CATEGORIES, ...dynamicCategoryNames], 
         editableCategories: [],
-        allowedViews: ['dashboard', 'tornilleria', 'papeleria', 'herramientas', 'impresion-3d', 'electronica', 'general', 'almacen-temporal', 'parques'],
+        allowedViews: ['dashboard', 'tornilleria', 'papeleria', 'herramientas', 'impresion-3d', 'electronica', 'general', 'almacen-temporal', 'parques', 'facturas', 'transactions', 'analytics', ...dynamicViewIds],
         sysKey: newUser.password,
         passwordChangedAt: serverTimestamp(),
         createdAt: serverTimestamp()
@@ -179,9 +182,12 @@ const UserManagementView = () => {
     setSaving(true);
     const dynamicCategoryNames = customCategories?.map(c => c.name) || [];
     const completeCategories = [...ALL_CATEGORIES, ...dynamicCategoryNames];
+    
+    const dynamicViewIds = customCategories?.map(c => c.id) || [];
+    const completeViews = [...ALL_VIEWS.map(v => v.id), ...dynamicViewIds];
 
     const data = value 
-      ? (field === 'allowedViews' ? ALL_VIEWS.map(v => v.id) : completeCategories) 
+      ? (field === 'allowedViews' ? completeViews : completeCategories) 
       : [];
     try { await updateDoc(doc(db, 'users', u.id), { [field]: data }); }
     finally { setSaving(false); }
@@ -399,7 +405,7 @@ const UserManagementView = () => {
                           </div>
                           
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {ALL_VIEWS.map(view => {
+                            {[...ALL_VIEWS, ...(customCategories?.map(c => ({ id: c.id, label: `${c.name} (Dinámica)`, icon: <Layers size={14} /> })) || [])].map(view => {
                               const hasAccess = (u.allowedViews || []).includes(view.id);
                               const isCore = view.id === 'dashboard' || view.id === 'profile';
                               return (

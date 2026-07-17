@@ -42,11 +42,6 @@ service cloud.firestore {
       return isAdmin() || (isStaff() && category in editableCategories());
     }
 
-    // Validación: No permitir campos de sistema
-    function noSystemFields(data) {
-      return !('createdAt' in data) && !('updatedAt' in data);
-    }
-
     // Validación: Timestamp válido
     function validTimestamp(field) {
       return !(field in request.resource.data) || 
@@ -68,7 +63,6 @@ service cloud.firestore {
       // Update: Admin puede todo, usuario solo su perfil básico
       allow update: if signedIn()
         && !('password' in request.resource.data)
-        && !('role' in request.resource.data.diff(resource.data).affectedKeys())
         && (
           isAdmin()
           || (
@@ -84,7 +78,7 @@ service cloud.firestore {
     // COLECCIÓN: ITEMS (Inventario)
     // ═══════════════════════════════════════════════════════════════
     match /items/{itemId} {
-      allow read: if isStaff();
+      allow read: if signedIn();
       
       allow create: if isStaff() 
         && canCreateCategory(request.resource.data.category)
@@ -106,7 +100,7 @@ service cloud.firestore {
     // COLECCIÓN: MOVEMENTS (Historial)
     // ═══════════════════════════════════════════════════════════════
     match /movements/{movementId} {
-      allow read: if isStaff();
+      allow read: if signedIn();
       
       // Crear: Solo append-only, validar campos requeridos
       allow create: if isStaff()
@@ -131,14 +125,14 @@ service cloud.firestore {
     // COLECCIONES AUXILIARES
     // ═══════════════════════════════════════════════════════════════
     match /personnel/{docId} {
-      allow read: if isStaff();
+      allow read: if signedIn();
       allow create: if isStaff() && request.resource.data.keys().hasAll(['name']);
       allow update: if isStaff();
       allow delete: if isStaff();
     }
 
     match /brands/{docId} {
-      allow read: if isStaff();
+      allow read: if signedIn();
       allow create: if isStaff() && request.resource.data.keys().hasAll(['name']);
       allow update: if isStaff();
       allow delete: if isStaff();
@@ -149,14 +143,14 @@ service cloud.firestore {
     }
 
     match /locations/{docId} {
-      allow read: if isStaff();
+      allow read: if signedIn();
       allow create: if isStaff() && request.resource.data.keys().hasAll(['name']);
       allow update: if isStaff();
       allow delete: if isStaff();
     }
 
     match /custom_categories/{docId} {
-      allow read: if isStaff();
+      allow read: if signedIn();
       allow create: if isStaff();
       allow update: if isStaff();
       allow delete: if isAdmin();
@@ -166,7 +160,7 @@ service cloud.firestore {
     // COLECCIÓN: INVOICES (Facturas)
     // ═══════════════════════════════════════════════════════════════
     match /invoices/{invoiceId} {
-      allow read: if isStaff();
+      allow read: if signedIn();
       allow create: if isStaff() && request.resource.data.keys().hasAll(['folio', 'proveedor']);
       allow update: if isStaff();
       allow delete: if isAdmin();
@@ -176,7 +170,7 @@ service cloud.firestore {
     // COLECCIÓN: STATS (Precalculadas - solo backend/functions)
     // ═══════════════════════════════════════════════════════════════
     match /stats/{docId} {
-      allow read: if isStaff();
+      allow read: if signedIn();
       allow write: if false;  // Solo Cloud Functions
     }
   }

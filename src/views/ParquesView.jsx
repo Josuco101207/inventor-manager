@@ -11,9 +11,9 @@ import {
   ClipboardCheck, X, FileSpreadsheet, Filter, ChevronDown, 
   Activity, Package, AlertTriangle, Landmark
 } from 'lucide-react';
-import { exportToExcel } from '../utils/exportUtils';
 import { processParquesExcel } from '../utils/importUtils';
 import { toast } from 'sonner';
+import { Virtuoso } from 'react-virtuoso';
 // Eliminada virtualización compleja para máxima compatibilidad
 import './ToolsView.css'; 
 import './ParquesView.css';
@@ -34,7 +34,7 @@ const TableRow = memo(({
       <div className="parques-cell-art">
         <div className="parques-avatar">
           {item.image ? (
-            <img src={item.image} alt={item.name} className="parques-avatar-img" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setSelectedImage(item.image); }} />
+            <img src={item.image} alt={item.name} loading="lazy" className="parques-avatar-img" style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setSelectedImage(item.image); }} />
           ) : (
             item.name ? item.name.charAt(0).toUpperCase() : '?'
           )}
@@ -123,22 +123,10 @@ const ParquesView = () => {
   const workerRef = useRef(null);
   const [filteredItems, setFilteredItems] = useState([]);
 
-  const [visibleCount, setVisibleCount] = useState(40);
-  const observerTarget = useRef(null);
-
-  // Infinite Scroll Observer
+  const [scrollParent, setScrollParent] = useState(null);
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount(prev => Math.min(prev + 40, filteredItems.length));
-        }
-      },
-      { threshold: 0.1, rootMargin: '200px' }
-    );
-    if (observerTarget.current) observer.observe(observerTarget.current);
-    return () => observer.disconnect();
-  }, [filteredItems.length]);
+    setScrollParent(document.querySelector('.main-content'));
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 150);
@@ -149,29 +137,40 @@ const ParquesView = () => {
     workerRef.current = new Worker(new URL('../workers/filterWorker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
       setFilteredItems(e.data);
-      setVisibleCount(40); // Reset al filtrar
     };
     return () => workerRef.current.terminate();
   }, []);
 
+  // Enviar INIT cuando cambia el inventario completo
+  useEffect(() => {
+    if (workerRef.current && items) {
+      workerRef.current.postMessage({ type: 'INIT', items });
+    }
+  }, [items]);
+
+  // Postear al worker con debounce
   useEffect(() => {
     if (!workerRef.current || loading) return;
-    workerRef.current.postMessage({
-      items,
-      searchTerm: debouncedSearch,
-      categoryTitle: 'Parques',
-      activeSubcategory,
-      selectedBrand: 'Todas',
-      selectedLocation: 'Todas'
-    });
-  }, [items, debouncedSearch, activeSubcategory, loading]);
+    const filterTimer = setTimeout(() => {
+      workerRef.current.postMessage({
+        type: 'FILTER',
+        searchTerm: debouncedSearch,
+        categoryTitle: 'Parques',
+        activeSubcategory,
+        selectedBrand: 'Todas',
+        selectedLocation: 'Todas'
+      });
+    }, 50);
+    return () => clearTimeout(filterTimer);
+  }, [debouncedSearch, activeSubcategory, loading]);
 
   const subcategories = useMemo(() => {
     const parks = items.filter(i => i.category === 'Parques');
     return ['TODAS', ...new Set(parks.map(i => i.subcategory || 'Sin Sede'))];
   }, [items]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const { exportToExcel } = await import('../utils/exportUtils');
     exportToExcel(filteredItems, `parques_${activeSubcategory}`, `Parques - ${activeSubcategory}`);
   };
 
@@ -291,8 +290,10 @@ const ParquesView = () => {
         
         <div className="parques-body">
           {filteredItems.length > 0 ? (
-            <>
-              {filteredItems.slice(0, visibleCount).map((item, index) => (
+            <Virtuoso 
+              customScrollParent={scrollParent}
+              data={filteredItems} 
+              itemContent={(index, item) => (
                 <TableRow 
                   key={item.id}
                   item={item}
@@ -306,14 +307,8 @@ const ParquesView = () => {
                   onAction={(item) => { setSelectedItem(item); setIsStockModalOpen(true); }}
                   onAudit={(item) => { setSelectedItem(item); setIsAuditModalOpen(true); }}
                 />
-              ))}
-              
-              {visibleCount < filteredItems.length && (
-                <div ref={observerTarget} className="flex justify-center py-10">
-                  <Loader2 className="animate-spin text-blue-500" size={32} />
-                </div>
-              )}
-            </>
+              )} 
+            />
           ) : (
             <div className="invt-empty-state">
               <div className="invt-empty-icon-wrap">

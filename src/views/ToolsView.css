@@ -135,17 +135,17 @@
   transform: translateY(-2px);
 }
 
-/* ─── Grid & Cards ─── */
-.tools-grid {
+/* ─── Grid & Cards (Standard Virtuoso List Row Chunking) ─── */
+.tools-grid-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
-  padding-bottom: 5rem;
+  padding-bottom: 1.5rem;
 }
 
-@media (max-width: 1500px) {
-  .tools-grid { grid-template-columns: repeat(3, 1fr); }
-}
+.tools-grid-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.tools-grid-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.tools-grid-row.cols-2 { grid-template-columns: repeat(2, 1fr); gap: 1rem; padding-bottom: 1rem; }
+.tools-grid-row.cols-1 { grid-template-columns: 1fr; gap: 1rem; padding-bottom: 1rem; }
 
 .tool-card {
   background: hsla(var(--bg-card), 0.6);
@@ -156,6 +156,7 @@
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
+  width: 100%;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;

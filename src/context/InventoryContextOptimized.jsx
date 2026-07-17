@@ -307,9 +307,11 @@ export const InventoryProvider = ({ children }) => {
       }
     };
     fetchStats();
-    // Incrementar intervalo a 10 min para evitar 429
-    const interval = setInterval(fetchStats, 600000); 
-    return () => clearInterval(interval);
+    // OPTIMIZACIÓN: Se eliminó el setInterval(fetchStats, 600000) 
+    // que realizaba múltiples llamadas al servidor (getCountFromServer) 
+    // en segundo plano. Esto ahorra miles de lecturas innecesarias, 
+    // preservando una excelente UX porque el stock crítico sigue
+    // actualizándose localmente mediante el useEffect contiguo.
   }, [user]);
 
   // Actualizar solo localCritical cuando los items cambian sin llamar a red
@@ -1464,23 +1466,23 @@ export const InventoryProvider = ({ children }) => {
   }, [addMovement]);
 
   // AUDITORÍA
-  const auditStock = useCallback(async (itemId, physicalQty, userName = 'Desconocido', reason = '', locationName = 'General') => {
+  const auditStock = useCallback(async (itemId, physicalQty, userName = 'Desconocido', reason = '') => {
     const item = itemsRef.current.find(i => i.id === itemId);
     if (!item) return;
 
-    const currentStockByLoc = item.stockByLocation || {};
-    const effectiveLocation = locationName || item.location || 'General';
-    const locQty = currentStockByLoc[effectiveLocation] || 0;
-    
-    const diff = physicalQty - locQty;
+    const previousQty = item.qty || 0;
+    const diff = physicalQty - previousQty;
     if (diff === 0) return; // No hay cambios
 
-    const previousQty = item.qty || 0;
-    const newTotalQty = previousQty + diff;
+    const newTotalQty = physicalQty;
+
+    const effectiveLocation = item.location || 'General';
+    const currentStockByLoc = item.stockByLocation || {};
+    const locQty = currentStockByLoc[effectiveLocation] || 0;
 
     const newStockByLocation = {
       ...currentStockByLoc,
-      [effectiveLocation]: physicalQty
+      [effectiveLocation]: Math.max(0, locQty + diff)
     };
 
     setItems(prev => prev.map(i => i.id === itemId ? { ...i, qty: newTotalQty, stockByLocation: newStockByLocation } : i));

@@ -282,9 +282,9 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
         }
       }
 
-      // STRICTLY limit data to ONLY configured fields, name, category, and image
+      // STRICTLY limit data to ONLY configured fields, name, category, image, and standard inventory fields
       const configuredFields = customCat?.fields?.map(f => f.name) || [];
-      const allowedKeys = ['name', 'category', 'image', ...configuredFields];
+      const allowedKeys = ['name', 'category', 'image', 'qty', 'threshold', 'unit', 'pieces_per_unit', 'location', ...configuredFields];
 
       Object.keys(submitData).forEach(key => {
         if (!allowedKeys.includes(key)) {
@@ -534,15 +534,12 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
           </div>
 
           <div className={isFullWidthLayout ? "mb-6" : "form-layout-horizontal mb-6"}>
-            {!isDynamicCategory && (
-              <div className="main-fields" style={isFullWidthLayout ? { marginBottom: '2rem' } : {}}>
-                <div className="flex gap-4 mb-4">
-                {!isDynamicCategory && (
-                  <div className="f-group flex-1">
-                    <label>Nombre del Artículo</label>
-                    <input name="name" required value={formData.name} placeholder="Ej: Tornillo Hexagonal..." onChange={handleChange} className="w-full" />
-                  </div>
-                )}
+            <div className="main-fields" style={isFullWidthLayout ? { marginBottom: '2rem' } : {}}>
+              <div className="flex gap-4 mb-4">
+                <div className="f-group flex-1">
+                  <label>Nombre del Artículo</label>
+                  <input name="name" required value={formData.name} placeholder="Ej: Tornillo Hexagonal..." onChange={handleChange} className="w-full" />
+                </div>
                 {showAdvanced && !isDynamicCategory && (
                   <div className="f-group flex-1">
                     <label>Costo Unitario ($)</label>
@@ -551,7 +548,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                 )}
               </div>
               
-              {!isDynamicCategory && !showAdvanced && (
+              {!showAdvanced && (
                 <div className="mb-4" style={{ textAlign: 'center' }}>
                   <button type="button" onClick={() => setShowAdvanced(true)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '8px', color: 'var(--text-muted)', fontSize: '0.85rem', cursor: 'pointer' }}>
                     + Configurar Cantidad y Opciones Avanzadas
@@ -559,7 +556,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                 </div>
               )}
 
-              {!isDynamicCategory && showAdvanced && category !== 'Herramientas' && (
+              {showAdvanced && category !== 'Herramientas' && (
                 <>
                   <div className="flex gap-4 mb-4">
                     <div className="f-group flex-1">
@@ -603,7 +600,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                 </>
               )}
 
-              {!isDynamicCategory && showAdvanced && (
+              {showAdvanced && (
                 <div className="f-group">
                   <label>Observaciones / Notas</label>
                   <textarea 
@@ -617,8 +614,6 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                 </div>
               )}
               </div>
-            )}
-
             <div className="category-fields" style={isFullWidthLayout ? { width: '100%' } : {}}>
               <div className={isDynamicCategory ? "" : "dynamic-section h-full"}>
                 {!isDynamicCategory && <h4 className="text-sm font-bold text-muted mb-4 uppercase tracking-widest">Detalles Especiales</h4>}

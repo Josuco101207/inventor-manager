@@ -15,7 +15,7 @@ import {
   Search, Plus, QrCode, ArrowUpRight, ArrowDownLeft, AlertTriangle, 
   Printer, X, Edit3, Trash2, Loader2, Wrench, ScanLine, RotateCcw, Download, UserCheck
 } from 'lucide-react';
-import { exportToExcel } from '../utils/exportUtils';
+import { Virtuoso } from 'react-virtuoso';
 import './ToolsView.css';
 
 const getStatusClass = (status) => {
@@ -53,6 +53,7 @@ const ToolCard = memo(({
             <img 
               src={tool.image} 
               alt={tool.name} 
+              loading="lazy"
               style={{ width: '52px', height: '52px', borderRadius: '14px', objectFit: 'cover', cursor: 'pointer', border: '1px solid hsla(var(--border-color), 0.4)', flexShrink: 0 }} 
               onClick={(e) => { e.stopPropagation(); if(onImageClick) onImageClick(tool.image); }} 
             />
@@ -198,11 +199,35 @@ const ToolsView = () => {
   const [borrowerName, setBorrowerName] = useState('');
   const [faultReason, setFaultReason] = useState('');
 
+  const [scrollParent, setScrollParent] = useState(null);
+  useEffect(() => {
+    setScrollParent(document.querySelector('.main-content'));
+  }, []);
+
   // Worker y paginación
   const workerRef = useRef(null);
   const [filteredTools, setFilteredTools] = useState([]);
-  const [visibleCount, setVisibleCount] = useState(30);
-  const observer = useRef(null);
+
+  const [cols, setCols] = useState(4);
+  useEffect(() => {
+    const updateCols = () => {
+      if (window.innerWidth <= 768) setCols(1);
+      else if (window.innerWidth <= 1024) setCols(2);
+      else if (window.innerWidth <= 1500) setCols(3);
+      else setCols(4);
+    };
+    updateCols();
+    window.addEventListener('resize', updateCols);
+    return () => window.removeEventListener('resize', updateCols);
+  }, []);
+
+  const gridRows = useMemo(() => {
+    const r = [];
+    for (let i = 0; i < filteredTools.length; i += cols) {
+      r.push(filteredTools.slice(i, i + cols));
+    }
+    return r;
+  }, [filteredTools, cols]);
 
   // Auto-import script for Coples
   useEffect(() => {
@@ -295,15 +320,9 @@ const ToolsView = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
-      setVisibleCount(30); // Reset scroll on search
     }, 150);
     return () => clearTimeout(timer);
   }, [searchTerm]);
-
-  // Reset count on filter change
-  useEffect(() => {
-    setVisibleCount(30);
-  }, [statusFilter]);
 
   // Inicializar Worker
   useEffect(() => {
@@ -337,20 +356,6 @@ const ToolsView = () => {
     }, 50);
     return () => clearTimeout(filterTimer);
   }, [debouncedSearch, loading, statusFilter]);
-
-  // Intersection Observer para Infinite Scroll usando callback ref (seguro contra loops)
-  const observerTarget = useCallback(node => {
-    if (loading) return;
-    if (observer.current) observer.current.disconnect();
-    
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        setVisibleCount(prev => prev + 30);
-      }
-    }, { threshold: 0.1, rootMargin: '200px' });
-    
-    if (node) observer.current.observe(node);
-  }, [loading]);
 
   if (loading) {
     return (
@@ -453,7 +458,6 @@ const ToolsView = () => {
     onQR: (t) => { setSelectedTool(t); setIsQRModalOpen(true); }
   }), [handleDelete, handleReturnConfirm, handleRepairConfirm, selectedToolIds]);
 
-  const visibleTools = filteredTools.slice(0, visibleCount);
   const canEditTools = canEditIn('Herramientas');
 
   return (
@@ -511,7 +515,8 @@ const ToolsView = () => {
 
           <button 
             className="btn-scan-qr"
-            onClick={() => {
+            onClick={async () => {
+              const { exportToExcel } = await import('../utils/exportUtils');
               const allTools = items.filter(i => i.category === 'Herramientas');
               exportToExcel(allTools, 'todas_las_herramientas', 'Herramientas');
             }}
@@ -562,28 +567,38 @@ const ToolsView = () => {
         document.body
       )}
 
-      <section className="tools-grid">
-        {visibleTools.map((tool, index) => (
-          <ToolCard 
-            key={tool.id}
-            tool={tool}
-            index={index}
-            isAdmin={isAdmin}
-            isStaff={isStaff}
-            canEdit={canEditTools}
-            isSelected={selectedToolIds.includes(tool.id)}
-            onSelectToggle={toggleToolSelection}
-            onEdit={handlers.onEdit}
-            onDelete={handlers.onDelete}
-            onLoan={handlers.onLoan}
-            onAssign={handlers.onAssign}
-            onReturn={handlers.onReturn}
-            onFault={handlers.onFault}
-            onRepair={handlers.onRepair}
-            onQR={handlers.onQR}
-            onImageClick={setSelectedImage}
+      <section>
+        {scrollParent && (
+          <Virtuoso 
+            customScrollParent={scrollParent}
+            data={gridRows} 
+            itemContent={(index, rowItems) => (
+              <div className={`tools-grid-row cols-${cols}`}>
+                {rowItems.map((tool, idx) => (
+                  <ToolCard 
+                    key={tool.id}
+                    tool={tool}
+                    index={index * cols + idx}
+                    isAdmin={isAdmin}
+                    isStaff={isStaff}
+                    canEdit={canEditTools}
+                    isSelected={selectedToolIds.includes(tool.id)}
+                    onSelectToggle={toggleToolSelection}
+                    onEdit={handlers.onEdit}
+                    onDelete={handlers.onDelete}
+                    onLoan={handlers.onLoan}
+                    onAssign={handlers.onAssign}
+                    onReturn={handlers.onReturn}
+                    onFault={handlers.onFault}
+                    onRepair={handlers.onRepair}
+                    onQR={handlers.onQR}
+                    onImageClick={setSelectedImage}
+                  />
+                ))}
+              </div>
+            )} 
           />
-        ))}
+        )}
         {filteredTools.length === 0 && (
           <div className="col-12 text-center py-12 text-gray-400" style={{ gridColumn: '1 / -1' }}>
             <Wrench size={48} className="mx-auto mb-4 opacity-20" />
@@ -591,13 +606,6 @@ const ToolsView = () => {
           </div>
         )}
       </section>
-      
-      {/* Infinite Scroll Trigger */}
-      {visibleCount < filteredTools.length && (
-        <div ref={observerTarget} className="flex justify-center py-8">
-          <Loader2 className="animate-spin text-blue-500" size={32} />
-        </div>
-      )}
 
       <AddItemModal 
         isOpen={isAddModalOpen} 
