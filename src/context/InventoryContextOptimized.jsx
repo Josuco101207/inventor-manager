@@ -17,7 +17,8 @@ import {
   where,
   startAfter,
   getDoc,
-  increment
+  increment,
+  runTransaction
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 import initialPersonnel from '../data/personnel.json';
@@ -153,7 +154,7 @@ export const InventoryProvider = ({ children }) => {
     const aux = cache.get(CACHE_KEYS.AUX_DATA);
     return aux?.locations || [];
   });
-  const [customCategories, setCustomCategories] = useState([]); // <== AGREGADO
+
   
   const [loading, setLoading] = useState(true);
   const [lastSync, setLastSync] = useState(() => {
@@ -222,7 +223,7 @@ export const InventoryProvider = ({ children }) => {
       setBrands([]);
       setLocations([]);
       setGlobalStats({ items: 0, movements: 0, critical: 0, activity: [] });
-      setCustomCategories([]);
+
       setLoading(true);
       lastDocRef.current = null;
       setHasMoreItems(true);
@@ -230,19 +231,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [user]);
 
-  // ═══════════════════════════════════════════════════════════════
-  // Cargar Categorías Dinámicas
-  // ═══════════════════════════════════════════════════════════════
-  useEffect(() => {
-    if (!user) return;
-    const unsubscribe = onSnapshot(collection(db, 'custom_categories'), (snapshot) => {
-      const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setCustomCategories(cats);
-    }, (error) => {
-      console.error("Error fetching custom categories:", error);
-    });
-    return () => unsubscribe();
-  }, [user]);
+
 
   // ═══════════════════════════════════════════════════════════════
   // Cargar estadísticas del dashboard
@@ -251,15 +240,6 @@ export const InventoryProvider = ({ children }) => {
     if (!user) return;
     const fetchStats = async () => {
       try {
-        const itemCount = await OptimizedDataService.getCollectionCount('items');
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        const moveCount = await OptimizedDataService.getCollectionCount('movements');
-        await new Promise(resolve => setTimeout(resolve, 200));
-
-        const outOfStockCount = await OptimizedDataService.getCollectionCount('items', [where('qty', '==', 0)]);
-        await new Promise(resolve => setTimeout(resolve, 200));
-
         const last7Days = [6, 5, 4, 3, 2, 1, 0].map(i => {
           const d = new Date();
           d.setHours(0,0,0,0);
@@ -269,16 +249,18 @@ export const InventoryProvider = ({ children }) => {
           return { d, nextD, name: d.toLocaleDateString('es-ES', { weekday: 'short' }) };
         });
 
-        const activityCounts = [];
-        for (const day of last7Days) {
-          const count = await OptimizedDataService.getCollectionCount('movements', [
+        const promises = [
+          OptimizedDataService.getCollectionCount('items'),
+          OptimizedDataService.getCollectionCount('movements'),
+          OptimizedDataService.getCollectionCount('items', [where('qty', '==', 0)]),
+          ...last7Days.map(day => OptimizedDataService.getCollectionCount('movements', [
             where('timestamp', '>=', day.d),
             where('timestamp', '<', day.nextD)
-          ]);
-          activityCounts.push(count);
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-        
+          ]))
+        ];
+
+        const [itemCount, moveCount, outOfStockCount, ...activityCounts] = await Promise.all(promises);
+
         const activityData = last7Days.map((day, idx) => ({
           name: day.name,
           movimientos: activityCounts[idx]
@@ -567,15 +549,15 @@ export const InventoryProvider = ({ children }) => {
     const oldQty = item.qty || 0;
     const newQty = oldQty + change;
     
-    // Validación: No stock negativo
-    if (newQty < 0) {
+    // Validación: No stock negativo (Eliminada a petición del usuario para permitir sacar de ubicaciones sin stock)
+    /* if (newQty < 0) {
       toast.error("Stock insuficiente", { description: `Solo hay ${oldQty} unidades disponibles en total` });
       return;
-    }
+    } */
     
     const newStockByLocation = {
       ...currentStockByLoc,
-      [effectiveLocation]: Math.max(0, newLocQty) // Prevent negative in the mapping, but don't block
+      [effectiveLocation]: newLocQty
     };
 
     // OPTIMISTIC: Actualizar UI inmediatamente
@@ -587,35 +569,49 @@ export const InventoryProvider = ({ children }) => {
     });
 
     try {
-      const batch = writeBatch(db);
-      
       const itemRef = doc(db, 'items', itemId);
-      batch.update(itemRef, {
-        qty: increment(change),
-        [`stockByLocation.${effectiveLocation}`]: increment(change),
-        lastModified: serverTimestamp()
-      });
-      
       const moveRef = doc(collection(db, 'movements'));
-      batch.set(moveRef, {
-        action: change > 0 ? 'Entrada' : 'Salida',
-        item: item.name,
-        itemId: item.id,
-        qty: Math.abs(change),
-        user: userName,
-        details: customDetails || `${change > 0 ? 'Reposición' : 'Gasto'} de material en ${effectiveLocation}`,
-        category: item.category,
-        sourceLocation: change < 0 ? effectiveLocation : null,
-        destinationLocation: change > 0 ? effectiveLocation : null,
-        subcategory: item.subcategory || '',
-        timestamp: serverTimestamp()
-      });
       
-      await withRetry(() => batch.commit());
+      await runTransaction(db, async (transaction) => {
+        const itemDoc = await transaction.get(itemRef);
+        if (!itemDoc.exists()) {
+          throw new Error("El artículo no existe en la base de datos.");
+        }
+        
+        const dbData = itemDoc.data();
+        const dbQty = dbData.qty || 0;
+        const dbStockByLoc = dbData.stockByLocation || {};
+        const dbLocQty = dbStockByLoc[effectiveLocation] || 0;
+        
+        // Validación de stock de ubicación eliminada
+        /* if (dbQty + change < 0 || dbLocQty + change < 0) {
+          throw new Error(`Stock insuficiente en el servidor para la ubicación: ${effectiveLocation}.`);
+        } */
+        
+        transaction.update(itemRef, {
+          qty: increment(change),
+          [`stockByLocation.${effectiveLocation}`]: increment(change),
+          lastModified: serverTimestamp()
+        });
+        
+        transaction.set(moveRef, {
+          action: change > 0 ? 'Entrada' : 'Salida',
+          item: item.name,
+          itemId: item.id,
+          qty: Math.abs(change),
+          user: userName,
+          details: customDetails || `${change > 0 ? 'Reposición' : 'Gasto'} de material en ${effectiveLocation}`,
+          category: item.category,
+          sourceLocation: change < 0 ? effectiveLocation : null,
+          destinationLocation: change > 0 ? effectiveLocation : null,
+          subcategory: item.subcategory || '',
+          timestamp: serverTimestamp()
+        });
+      });
       
       toast.success(`${change > 0 ? 'Entrada' : 'Salida'} en ${effectiveLocation} registrada`);
     } catch (e) {
-      // ROLLBACK
+      // ROLLBACK robusto (busca por id, no por índice)
       setItems(prev => {
         const rollback = [...prev];
         const idx = rollback.findIndex(i => i.id === itemId);
@@ -623,7 +619,7 @@ export const InventoryProvider = ({ children }) => {
         cache.set(CACHE_KEYS.ITEMS, rollback);
         return rollback;
       });
-      toast.error("Error - cambios revertidos");
+      toast.error(e.message || "Error al actualizar inventario - cambios revertidos");
     }
   }, [addMovement]);
 
@@ -640,10 +636,11 @@ export const InventoryProvider = ({ children }) => {
     
     const fromQty = currentStockByLoc[fromLocation] || 0;
     
-    if (fromQty < qty) {
+    // Validación de stock transferido eliminada a petición del usuario
+    /* if (fromQty < qty) {
       toast.error(`Stock insuficiente en ${fromLocation}`, { description: `Solo hay ${fromQty} unidades disponibles.` });
       return;
-    }
+    } */
 
     const toQty = currentStockByLoc[toLocation] || 0;
     
@@ -707,12 +704,15 @@ export const InventoryProvider = ({ children }) => {
     
     const rollbackState = [];
     const newItemsList = [...currentItems];
-    const batch = writeBatch(db);
+    const entries = Object.entries(quantitiesMap).filter(([_, q]) => {
+      const c = parseInt(q);
+      return !isNaN(c) && c !== 0;
+    });
 
-    for (const [itemId, qtyString] of Object.entries(quantitiesMap)) {
+    if (entries.length === 0) return;
+
+    for (const [itemId, qtyString] of entries) {
       const change = parseInt(qtyString);
-      if (isNaN(change) || change === 0) continue;
-
       const itemIndex = newItemsList.findIndex(i => i.id === itemId);
       if (itemIndex === -1) continue;
 
@@ -725,58 +725,81 @@ export const InventoryProvider = ({ children }) => {
       const oldQty = item.qty || 0;
       const newQty = oldQty + change;
       
-      if (newQty < 0) {
+      // Validación eliminada
+      /* if (newQty < 0) {
         toast.error(`Stock insuficiente para ${item.name}`);
         return; 
-      }
+      } */
       
       const newStockByLocation = {
         ...currentStockByLoc,
-        [effectiveLocation]: Math.max(0, newLocQty)
+        [effectiveLocation]: newLocQty
       };
 
-      rollbackState.push({ index: itemIndex, oldQty, oldStockByLocation: currentStockByLoc });
+      rollbackState.push({ id: itemId, oldQty, oldStockByLocation: currentStockByLoc });
       newItemsList[itemIndex] = { ...item, qty: newQty, stockByLocation: newStockByLocation };
-
-      const itemRef = doc(db, 'items', itemId);
-      batch.update(itemRef, {
-        qty: increment(change),
-        [`stockByLocation.${effectiveLocation}`]: increment(change),
-        lastModified: serverTimestamp()
-      });
-
-      const moveRef = doc(collection(db, 'movements'));
-      const action = change > 0 ? 'Entrada' : 'Salida';
-      const detailText = customDetails || `${change > 0 ? 'Reposición' : 'Gasto'} de material en lote (${effectiveLocation})`;
-      batch.set(moveRef, {
-        action,
-        item: item.name,
-        itemId: item.id,
-        qty: Math.abs(change),
-        user: userName,
-        details: detailText,
-        category: item.category,
-        sourceLocation: change < 0 ? effectiveLocation : null,
-        destinationLocation: change > 0 ? effectiveLocation : null,
-        subcategory: item.subcategory || '',
-        timestamp: serverTimestamp()
-      });
     }
 
     if (rollbackState.length === 0) return;
 
+    // Actualización optimista local
     setItems(newItemsList);
     cache.set(CACHE_KEYS.ITEMS, newItemsList);
 
     try {
-      await withRetry(() => batch.commit());
+      // Chunking para Firestore (Max 500 operaciones por batch, usamos 250 items = 500 ops)
+      const CHUNK_SIZE = 250;
+      for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
+        const chunk = entries.slice(i, i + CHUNK_SIZE);
+        const batch = writeBatch(db);
+        
+        for (const [itemId, qtyString] of chunk) {
+          const change = parseInt(qtyString);
+          const itemIndex = newItemsList.findIndex(x => x.id === itemId);
+          if (itemIndex === -1) continue;
+          
+          const item = newItemsList[itemIndex];
+          const effectiveLocation = locationName || item.location || 'General';
+          
+          const itemRef = doc(db, 'items', itemId);
+          batch.update(itemRef, {
+            qty: increment(change),
+            [`stockByLocation.${effectiveLocation}`]: increment(change),
+            lastModified: serverTimestamp()
+          });
+
+          const moveRef = doc(collection(db, 'movements'));
+          const action = change > 0 ? 'Entrada' : 'Salida';
+          const detailText = customDetails || `${change > 0 ? 'Reposición' : 'Gasto'} de material en lote (${effectiveLocation})`;
+          batch.set(moveRef, {
+            action,
+            item: item.name,
+            itemId: item.id,
+            qty: Math.abs(change),
+            user: userName,
+            details: detailText,
+            category: item.category,
+            sourceLocation: change < 0 ? effectiveLocation : null,
+            destinationLocation: change > 0 ? effectiveLocation : null,
+            subcategory: item.subcategory || '',
+            timestamp: serverTimestamp()
+          });
+        }
+        // Ejecución secuencial para no ahogar la red ni exceder cuotas de Firebase
+        await withRetry(() => batch.commit());
+      }
+      
       toast.success(`Operación en lote registrada exitosamente`);
     } catch (e) {
       console.error("[BulkUpdate] Error:", e);
+      // Rollback robusto por ID
       setItems(prev => {
         const rollbackList = [...prev];
-        rollbackState.forEach(({ index, oldQty, oldStockByLocation }) => {
-          rollbackList[index] = { ...rollbackList[index], qty: oldQty, stockByLocation: oldStockByLocation };
+        rollbackState.forEach(({ id, oldQty, oldStockByLocation }) => {
+          const idx = rollbackList.findIndex(x => x.id === id);
+          if (idx !== -1) {
+            rollbackList[idx] = { ...rollbackList[idx], qty: oldQty, stockByLocation: oldStockByLocation };
+          }
         });
         cache.set(CACHE_KEYS.ITEMS, rollbackList);
         return rollbackList;
@@ -805,10 +828,11 @@ export const InventoryProvider = ({ children }) => {
       const currentStockByLoc = item.stockByLocation || {};
       const fromQty = currentStockByLoc[fromLocation] || 0;
       
-      if (fromQty < qty) {
+      // Validación eliminada
+      /* if (fromQty < qty) {
         toast.error(`Stock insuficiente en ${fromLocation} para ${item.name}`);
         return; 
-      }
+      } */
 
       const toQty = currentStockByLoc[toLocation] || 0;
       const newStockByLocation = {
@@ -1661,7 +1685,7 @@ export const InventoryProvider = ({ children }) => {
     connectionStatus, pendingWrites,
     updateStock, transferStock, moveItemToSection, addItem, deleteItem, editItem,
     loanItem, bulkLoanItems, assignItem, bulkAssignItems, returnItem, reportMaintenance, completeMaintenance, auditStock,
-    bulkAddItems, annulMovement, loadMoreItems, fetchMoreItems: loadMoreItems, clearCache, customCategories,
+    bulkAddItems, annulMovement, loadMoreItems, fetchMoreItems: loadMoreItems, clearCache,
     addBrand, addLocation, updateLocation, deleteLocation, itemsRef, bulkUpdateStock, bulkTransferStock, bulkMoveSection
   }), [
     items, movements, personnel, brands, locations,
@@ -1669,7 +1693,7 @@ export const InventoryProvider = ({ children }) => {
     connectionStatus, pendingWrites,
     updateStock, transferStock, moveItemToSection, addItem, deleteItem, editItem,
     loanItem, bulkLoanItems, assignItem, bulkAssignItems, returnItem, reportMaintenance, completeMaintenance, auditStock,
-    bulkAddItems, annulMovement, loadMoreItems, clearCache, customCategories,
+    bulkAddItems, annulMovement, loadMoreItems, clearCache,
     addBrand, addLocation, updateLocation, deleteLocation, bulkUpdateStock, bulkTransferStock, bulkMoveSection
   ]);
 
