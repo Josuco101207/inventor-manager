@@ -4,6 +4,7 @@ import { X, Save, Plus, Wrench, Layers, Upload, Image as ImageIcon, Trash2, Load
 import { useInventory } from '../context/InventoryContextOptimized';
 import { storage } from '../firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import { HEADER_MAP } from '../utils/importUtils';
 import './ActionModal.css'; // Reusing base modal styles
 import './AddItemModal.css';
@@ -66,7 +67,8 @@ const CATEGORY_SCHEMAS = {
 };
 
 const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
-  const { brands, locations, addBrand, addLocation, items, customCategories } = useInventory();
+  const { brands, locations, addBrand, addLocation, items } = useInventory();
+  const { customCategories } = useCustomCategories();
   const [newBrandName, setNewBrandName] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isAddingBrand, setIsAddingBrand] = useState(false);
@@ -156,7 +158,22 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: name === 'qty' || name === 'threshold' ? parseInt(value) || 0 : value }));
+    const NUMERIC_FIELDS = new Set([
+      'qty', 'threshold', 'costo_unitario', 'paquete', 
+      'presentacion', 'costo_reparacion', 'recuento_reparaciones'
+    ]);
+    const INTEGER_FIELDS = new Set(['qty', 'threshold', 'paquete', 'recuento_reparaciones', 'presentacion']);
+    
+    let parsedValue = value;
+    if (NUMERIC_FIELDS.has(name)) {
+      if (value === '') {
+        parsedValue = '';
+      } else {
+        parsedValue = INTEGER_FIELDS.has(name) ? parseInt(value, 10) || 0 : parseFloat(value) || 0;
+      }
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: parsedValue }));
   };
 
   const compressImage = (file) => {

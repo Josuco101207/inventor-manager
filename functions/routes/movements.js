@@ -1,8 +1,9 @@
 const express = require("express");
 const admin = require("firebase-admin");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 const router = express.Router();
-const db = admin.firestore();
+const db = getFirestore();
 
 /**
  * GET /movements
@@ -44,21 +45,37 @@ router.get("/", async (req, res) => {
  */
 router.post("/", async (req, res) => {
   try {
-    const data = req.body;
+    const { action, item, qty, category, notes } = req.body;
     
-    if (!data.action || !data.item || data.qty === undefined || data.category === undefined) {
-      return res.status(400).json({ error: "Missing required fields: action, item, qty, category" });
+    const validActions = ['Entrada', 'Salida', 'Préstamo', 'Devolución', 'Falla/Manto', 'Auditoría', 'Alta', 'Edición', 'Eliminación', 'Anulación', 'Asignación', 'Transferencia', 'Movimiento de Sección'];
+
+    if (!action || !validActions.includes(action)) {
+      return res.status(400).json({ error: "Invalid or missing action" });
     }
-    
-    if (typeof data.qty !== "number" || data.qty < 0) {
-      return res.status(400).json({ error: "Invalid qty: must be a non-negative number" });
+    if (!item || typeof item !== 'string' || item.length > 100) {
+      return res.status(400).json({ error: "Invalid or missing item ID" });
+    }
+    if (qty === undefined || typeof qty !== 'number' || qty < 0 || qty > 10000) {
+      return res.status(400).json({ error: "Invalid qty: must be a number between 0 and 10000" });
+    }
+    if (category === undefined || typeof category !== 'string' || category.length > 50) {
+      return res.status(400).json({ error: "Invalid or missing category" });
     }
 
-    // Add metadata
-    data.timestamp = admin.firestore.FieldValue.serverTimestamp();
-    data.apiSource = req.apiUser ? req.apiUser.name : "API";
+    const safeData = {
+      action,
+      item,
+      qty,
+      category,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      apiSource: req.apiUser ? req.apiUser.name : "API"
+    };
+
+    if (notes && typeof notes === 'string') {
+      safeData.notes = notes.substring(0, 500); // Max 500 chars
+    }
     
-    const docRef = await db.collection("movements").add(data);
+    const docRef = await db.collection("movements").add(safeData);
     res.status(201).json({ id: docRef.id, message: "Movement created successfully" });
   } catch (error) {
     console.error("Error creating movement:", error);

@@ -127,3 +127,22 @@
   color: hsl(var(--primary));
   flex-shrink: 0;
 }
+
+@media (max-width: 768px) {
+  .searchable-select-dropdown {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
+    z-index: 100000;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .searchable-select-options {
+    max-height: 40vh;
+  }
+  .searchable-select-search input {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+}

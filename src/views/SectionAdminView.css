@@ -417,7 +417,7 @@
 
 @media (max-width: 768px) {
   .section-admin-view {
-    padding: 1rem 1rem 6rem 1rem;
+    padding: 1rem 1rem calc(110px + env(safe-area-inset-bottom, 0px)) 1rem;
   }
   .admin-header {
     flex-direction: column;
@@ -462,9 +462,9 @@
     margin-left: auto;
   }
   .btn-remove-field {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
   }
 }
 

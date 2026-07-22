@@ -53,7 +53,8 @@ service cloud.firestore {
     // COLECCIÓN: USERS
     // ═══════════════════════════════════════════════════════════════
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      // Permitir que cualquier usuario autenticado lea (rompe el ciclo de isAdmin evaluando userDoc)
+      allow read: if signedIn();
 
       // Crear: Solo admin o el propio usuario (primer login)
       allow create: if signedIn()
@@ -67,7 +68,7 @@ service cloud.firestore {
           isAdmin()
           || (
             request.auth.uid == userId
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'displayName', 'email', 'photoURL', 'sysKey'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'displayName', 'email', 'photoURL'])
           )
         );
 

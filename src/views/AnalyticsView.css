@@ -345,6 +345,10 @@
 }
 
 @media (max-width: 768px) {
+  .analytics-view {
+    padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  }
+
   .analytics-container {
     padding: 1rem;
   }
@@ -402,6 +406,7 @@
 
   .selector-select {
     font-size: 1rem;
+    min-height: 44px; /* Touch target */
   }
 
   .analytics-grid {

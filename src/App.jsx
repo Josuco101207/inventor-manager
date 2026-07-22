@@ -16,6 +16,7 @@ const InvoicesView = lazy(() => import('./views/InvoicesView'));
 const SectionAdminView = lazy(() => import('./views/SectionAdminView'));
 
 import { InventoryProvider, useInventory } from './context/InventoryContextOptimized';
+import { CustomCategoriesProvider, useCustomCategories } from './context/CustomCategoriesContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ScannerAIProvider } from './context/ScannerAIContext'; // <== AGREGADO
@@ -58,7 +59,7 @@ const ViewProtectedRoute = ({ viewId, children }) => {
 
 const RootApp = () => {
   const { user, loading, isStaff, isAdmin } = useAuth();
-  const { customCategories } = useInventory();
+  const { customCategories } = useCustomCategories();
 
   if (loading) {
     return (
@@ -131,11 +132,13 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <InventoryProvider>
-          <ScannerAIProvider>
-            <RootApp />
-          </ScannerAIProvider>
-        </InventoryProvider>
+        <CustomCategoriesProvider>
+          <InventoryProvider>
+            <ScannerAIProvider>
+              <RootApp />
+            </ScannerAIProvider>
+          </InventoryProvider>
+        </CustomCategoriesProvider>
       </ThemeProvider>
     </AuthProvider>
   );

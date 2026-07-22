@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useInventory } from '../context/InventoryContextOptimized';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -167,7 +168,8 @@ const InventoryRow = React.memo(({ item, index, categoryTitle, isAdmin, isStaff,
 });
 
 const InventoryView = ({ categoryTitle }) => {
-  const { items, personnel, updateStock, addItem, deleteItem, editItem, loanItem, returnItem, bulkAddItems, auditStock, loading, fetchMoreItems, hasMore, customCategories, transferStock, moveItemToSection, bulkUpdateStock, bulkMoveSection } = useInventory();
+  const { items, personnel, updateStock, addItem, deleteItem, editItem, loanItem, returnItem, bulkAddItems, auditStock, loading, fetchMoreItems, hasMore, transferStock, moveItemToSection, bulkUpdateStock, bulkMoveSection } = useInventory();
+  const { customCategories } = useCustomCategories();
   const { isAdmin, isStaff, userData, canAddTo, canEditIn } = useAuth();
   const location = useLocation();
   // Estados de UI
@@ -228,7 +230,7 @@ const InventoryView = ({ categoryTitle }) => {
     }
   }, [items]);
 
-  // Disparar filtrado cuando cambian los criterios (con pequeño debounce para evitar saturación)
+  // Disparar filtrado cuando cambian los criterios o los datos base
   useEffect(() => {
     if (!workerRef.current) return;
     
@@ -241,10 +243,10 @@ const InventoryView = ({ categoryTitle }) => {
         selectedBrand,
         selectedLocation
       });
-    }, 50); // Mínimo delay para agrupar actualizaciones rápidas de Firestore
+    }, 50);
     
     return () => clearTimeout(filterTimer);
-  }, [debouncedSearch, categoryTitle, activeSubcategory, selectedBrand, selectedLocation]);
+  }, [debouncedSearch, categoryTitle, activeSubcategory, selectedBrand, selectedLocation, items]);
 
   const subcategories = useMemo(() => [
     'TODAS', 

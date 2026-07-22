@@ -466,3 +466,55 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsla(var(--text-muted), 0.5);
 }
+
+/* ─── Enhanced Mobile Responsive Fixes ─── */
+@media (max-width: 768px) {
+  .sv-content {
+    padding-bottom: 110px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .sv-grid {
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .sv-header h2 {
+    font-size: 1.5rem;
+  }
+  .sv-header p {
+    font-size: 0.875rem;
+  }
+  .sv-card {
+    padding: 1.25rem;
+  }
+  .sv-input, .sv-danger-select {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+  .sv-btn-add, .sv-btn-full, .sv-btn-danger, .sv-btn-success, .sv-btn-delete-bg {
+    min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sv-brand-pill {
+    min-height: 44px;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+  }
+  .sv-btn-delete {
+    width: 32px;
+    height: 32px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .settings-row {
+    padding: 0.75rem;
+    min-height: 56px;
+  }
+  .modern-switch {
+    transform: scale(0.9);
+  }
+  button, input, select {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

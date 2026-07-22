@@ -409,7 +409,7 @@
 
 @media (max-width: 768px) {
   .tools-view {
-    padding: 1rem 1rem 6rem;
+    padding: 1rem 1rem 110px 1rem;
     width: 100%;
     max-width: 100vw;
     box-sizing: border-box;
@@ -424,28 +424,89 @@
   }
   
   .tools-title-group h2 { font-size: 2rem; }
-  .tools-actions { flex-direction: column; align-items: stretch; }
+  
+  .tools-actions { 
+    flex-direction: column; 
+    align-items: stretch; 
+    gap: 0.75rem; 
+  }
+  
   .search-box-wrapper { width: 100%; }
   
-  .tools-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .search-box-wrapper input {
+    min-height: 48px;
+    font-size: 1rem;
+    border-radius: 16px;
+  }
+  
+  .btn-scan-qr, .btn-primary-tools {
+    width: 100%;
+    justify-content: center;
+    min-height: 48px;
+    border-radius: 16px;
+    font-size: 0.95rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .tools-grid-row { gap: 1rem; padding-bottom: 1rem; }
   
   .tool-card {
-    padding: 1.5rem;
-    border-radius: 24px;
-    background: hsla(var(--bg-card), 0.6);
+    padding: 1.25rem;
+    border-radius: 20px;
+    background: hsla(var(--bg-card), 0.7);
   }
   
   .tool-card:hover { transform: none; box-shadow: none; }
-  .tool-admin-actions { opacity: 1; }
-  .tool-actions { flex-wrap: wrap; }
-  .btn-tool-action { min-height: 44px; font-size: 0.8rem; }
+  
+  .tool-card-header {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+  
+  .tool-admin-actions { 
+    opacity: 1; 
+    position: static;
+    flex-direction: column;
+  }
+  
+  .btn-mini-action {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .tool-actions { 
+    flex-direction: column;
+    gap: 0.75rem;
+    flex-wrap: nowrap;
+    margin-top: 1.25rem;
+  }
+  
+  .btn-tool-action { 
+    min-height: 48px;
+    font-size: 0.95rem;
+    width: 100%;
+    border-radius: 16px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .tool-qr-button {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 @media (max-width: 480px) {
+  .tools-view { padding: 1rem 0.5rem 110px 0.5rem; }
   .tools-title-group h2 { font-size: 1.6rem; }
-  .tool-name { font-size: 1.2rem; }
-  .tool-card { padding: 1.25rem; border-radius: 20px; }
-  .tool-actions { gap: 0.5rem; }
+  .tool-name { font-size: 1.15rem; }
+  .tool-card { padding: 1rem; border-radius: 16px; }
+  .tool-actions { gap: 0.6rem; }
 }
 
 /* ─── Bulk Actions Bar ─── */
@@ -544,20 +605,26 @@
 
 @media (max-width: 768px) {
   .bulk-actions-bar {
-    width: 90%;
+    width: calc(100% - 2rem);
     flex-direction: column;
     gap: 1rem;
-    bottom: 5rem;
-    padding: 1.5rem;
+    bottom: 90px;
+    padding: 1.25rem;
+    border-radius: 20px;
   }
   
   .bulk-buttons {
     width: 100%;
     flex-direction: column;
+    gap: 0.75rem;
   }
   
   .btn-bulk-cancel, .btn-bulk-action {
     width: 100%;
     justify-content: center;
+    min-height: 48px;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    -webkit-tap-highlight-color: transparent;
   }
 }

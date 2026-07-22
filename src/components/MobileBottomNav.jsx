@@ -7,11 +7,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useInventory } from '../context/InventoryContextOptimized';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import './MobileBottomNav.css';
 
 const MobileBottomNav = () => {
   const { logout, userData, isAdmin, isStaff } = useAuth();
-  const { customCategories } = useInventory();
+  const { customCategories } = useCustomCategories();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);

@@ -7,11 +7,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useInventory } from '../context/InventoryContextOptimized';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import './Sidebar.css';
 
 const Sidebar = () => {
   const { logout, userData, isAdmin, isStaff } = useAuth();
-  const { customCategories } = useInventory(); // <== AGREGADO
+  const { customCategories } = useCustomCategories(); // <== AGREGADO
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 

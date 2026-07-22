@@ -1,12 +1,25 @@
 rules_version = '2';
-
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // Imágenes de items — solo staff puede escribir, todos autenticados pueden leer
+    match /items/{imageId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 5 * 1024 * 1024  // Max 5MB
+        && request.resource.contentType.matches('image/.*');  // Solo imágenes
+    }
+    
+    // Fotos de perfil — solo el propio usuario
+    match /users/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId
+        && request.resource.size < 2 * 1024 * 1024  // Max 2MB
+        && request.resource.contentType.matches('image/.*');
+    }
+    
+    // Denegar todo lo demás
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

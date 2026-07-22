@@ -223,19 +223,21 @@
   .add-item-modal {
     max-width: 100% !important;
     border-radius: 24px 24px 0 0 !important;
+    padding: 2.5rem 1.25rem 110px !important;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
   }
 
   .ios-settings-row {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 6px;
     min-height: auto;
-    padding: 0.6rem 1rem;
+    padding: 0.85rem 1rem;
   }
 
   .ios-settings-row label {
     flex: none;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: hsl(var(--text-muted));
   }
 
@@ -247,6 +249,8 @@
   .ios-input-container select {
     text-align: left;
     direction: ltr;
+    font-size: 16px; /* prevent zoom */
+    min-height: 36px;
   }
 
   .dynamic-section {
@@ -261,6 +265,47 @@
   .form-layout-horizontal {
     grid-template-columns: 1fr;
     gap: 1.5rem;
+  }
+  
+  .main-fields .flex.gap-4 {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .f-group input, .f-group select, .f-group textarea {
+    min-height: 48px;
+    padding: 1rem;
+    font-size: 16px; /* prevent iOS zoom */
+  }
+
+  .btn-primary, .btn-secondary {
+    min-height: 54px;
+    font-size: 1rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn-add-quick, .btn-cancel-quick {
+    width: 48px;
+    height: 48px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .image-upload-container {
+    min-height: 140px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .image-preview-wrapper {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .add-item-modal {
+    padding: 2.5rem 1rem 110px !important;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
   }
 }
 

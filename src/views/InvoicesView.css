@@ -719,6 +719,13 @@ select.iv-table-input {
 
 /* ─── Responsive: Phone ─── */
 @media (max-width: 768px) {
+  .invoices-view {
+    padding-bottom: 110px;
+    padding-left: env(safe-area-inset-left, 16px);
+    padding-right: env(safe-area-inset-right, 16px);
+    gap: 1rem;
+  }
+
   .iv-header {
     flex-direction: column;
     align-items: flex-start;
@@ -730,15 +737,26 @@ select.iv-table-input {
 
   .iv-header-actions button {
     flex: 1;
+    min-height: 44px;
   }
 
   .iv-card {
     padding: 1rem;
     border-radius: 18px;
+    margin-bottom: 1rem;
   }
 
   .iv-invoice-header {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .iv-input, select.iv-input {
+    min-height: 44px;
+  }
+
+  .iv-currency-toggle {
+    min-height: 44px;
   }
 
   .iv-totals {
@@ -747,21 +765,56 @@ select.iv-table-input {
 
   .iv-totals-box {
     min-width: 100%;
+    padding: 1rem;
   }
 
   .iv-footer {
     flex-direction: column;
+    gap: 0.5rem;
   }
 
   .iv-footer button {
     width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  /* List sorting controls */
+  .iv-list-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .iv-sort-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .iv-sort-select {
+    min-height: 44px;
+  }
+
+  /* Invoice Row items */
+  .iv-invoices-list {
+    padding: 0;
   }
 
   .iv-invoice-row {
     grid-template-columns: 1fr auto;
+    grid-template-areas: 
+      "folio total"
+      "date items";
     gap: 0.5rem;
+    padding: 1rem;
   }
 
+  .iv-invoice-row-folio { grid-area: folio; }
+  .iv-invoice-row-total { grid-area: total; text-align: right; }
+  .iv-invoice-row-date { grid-area: date; display: block; }
+  .iv-invoice-row-items { grid-area: items; display: block; text-align: right; }
+  
   .iv-invoice-row-provider {
     display: none;
   }
@@ -769,6 +822,14 @@ select.iv-table-input {
   .iv-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding: 4px;
+  }
+  
+  .iv-tab {
+    flex: 1;
+    min-height: 44px;
+    justify-content: center;
   }
 
   /* Invoice Line Items Mobile Override */
@@ -791,6 +852,7 @@ select.iv-table-input {
     padding: 1rem;
     background: hsl(var(--bg-main));
     position: relative;
+    box-shadow: var(--shadow-sm);
   }
 
   .iv-table td {
@@ -798,12 +860,13 @@ select.iv-table-input {
     border-bottom: 1px solid hsla(var(--border-color), 0.5);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     text-align: left;
   }
 
   .iv-table td:last-child {
     border-bottom: none;
+    padding-top: 1rem !important;
   }
 
   .iv-table td:nth-child(2)::before { content: "OC"; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
@@ -816,20 +879,52 @@ select.iv-table-input {
   .iv-table td:nth-child(9)::before { content: "Importe Total"; font-size: 10px; font-weight: 800; color: hsl(var(--text-muted)); text-transform: uppercase; }
 
   .iv-table td.iv-row-num {
-    display: none;
+    display: block;
+    background: hsla(var(--primary), 0.08);
+    color: hsl(var(--primary));
+    padding: 4px 8px !important;
+    border-radius: 8px;
+    width: max-content;
+    margin-bottom: 0.5rem;
+    border-bottom: none;
   }
 
   .iv-table-input {
     width: 100%;
+    min-height: 44px;
+    font-size: 1rem;
   }
 
   .iv-table-wrapper {
     overflow-x: visible;
     border: none;
     border-radius: 0;
+    margin-top: 0;
+  }
+  
+  .iv-delete-row {
+    min-height: 44px;
+    width: 100%;
+    background: hsla(var(--danger), 0.08);
+    color: hsl(var(--danger));
+    font-weight: 600;
+  }
+  
+  .iv-delete-row:hover {
+    background: hsla(var(--danger), 0.15);
+  }
+  
+  .iv-add-row {
+    min-height: 44px;
+  }
+  
+  /* Readonly list when viewing */
+  .iv-readonly-table td {
+    flex-direction: row !important;
+    justify-content: space-between;
+    align-items: center;
   }
 }
-
 
 /* ─── Responsive: Small Phone ─── */
 @media (max-width: 480px) {
@@ -841,5 +936,9 @@ select.iv-table-input {
 
   .iv-header h1 {
     font-size: 1.3rem;
+  }
+  
+  .iv-invoice-row {
+    font-size: 0.9rem;
   }
 }

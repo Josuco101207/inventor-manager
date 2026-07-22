@@ -15,7 +15,7 @@
     "rewrites": [
       {
         "source": "/api/**",
-        "function": "api"
+        "function": "server"
       },
       {
         "source": "**",

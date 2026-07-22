@@ -339,6 +339,13 @@
 
 @media (max-width: 600px) {
   .scanner-overlay { padding: 0.5rem; align-items: flex-end; }
-  .scanner-modal { border-radius: 28px 28px 0 0; max-height: 95vh; }
+  .scanner-modal { 
+    border-radius: 28px 28px 0 0; 
+    max-height: 95vh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
   .review-header-info { flex-direction: column; }
+  .btn-primary, .btn-secondary {
+    min-height: 48px; /* Touch target */
+  }
 }

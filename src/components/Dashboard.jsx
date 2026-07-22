@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { useInventory } from '../context/InventoryContextOptimized';
 import { useAuth } from '../context/AuthContext';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import Header from './Header';
 import './Dashboard.css';
 
@@ -43,7 +44,8 @@ const actionColors = {
 };
 
 const Dashboard = () => {
-  const { items, movements, loading, globalStats, customCategories } = useInventory();
+  const { items, movements, loading, globalStats } = useInventory();
+  const { customCategories } = useCustomCategories();
   const { userData, isStaff } = useAuth();
   const navigate = useNavigate();
   const todayStr = toLocalDateString(new Date());

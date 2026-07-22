@@ -92,7 +92,7 @@ const ActionModal = ({ isOpen, onClose, item, onConfirm, personnel = [] }) => {
               type="number"
               className="f-input text-lg font-bold"
               value={qty}
-              onChange={(e) => setQty(e.target.value)}
+              onChange={(e) => setQty(e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0)}
               placeholder="0"
               autoFocus
               min={1}

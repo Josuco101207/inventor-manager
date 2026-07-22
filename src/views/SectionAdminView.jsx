@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useInventory } from '../context/InventoryContextOptimized';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import { Plus, Trash2, Save, Layout, Layers, Box, Tag, Key, Edit2, X, Info, Car, MonitorSmartphone, Shield, Shirt } from 'lucide-react';
@@ -96,7 +97,7 @@ const PRESETS = [
 
 const SectionAdminView = () => {
   const { userData, isAdmin } = useAuth();
-  const { customCategories } = useInventory();
+  const { customCategories } = useCustomCategories();
   
   const [name, setName] = useState('');
   const [iconName, setIconName] = useState('Layers');

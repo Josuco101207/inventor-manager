@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Save, Trash2, AlertOctagon, Plus, Tag, Map, Bell, X, FileSpreadsheet } from 'lucide-react';
-import { useInventory } from '../context/InventoryContextOptimized';
 import { useAuth } from '../context/AuthContext';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import Header from '../components/Header';
 import { exportFullDatabase } from '../utils/exportUtils';
 import { toast } from 'sonner';
 import './SettingsView.css';
 
 const SettingsView = () => {
-  const { items, brands, locations, addBrand, deleteBrand, addLocation, deleteLocation, clearDatabaseCategories, customCategories } = useInventory();
+  const { items, brands, locations, addBrand, deleteBrand, addLocation, deleteLocation, clearDatabaseCategories } = useInventory();
+  const { customCategories } = useCustomCategories();
   const { isAdmin } = useAuth();
   const [newBrand, setNewBrand] = useState('');
   const [newLocName, setNewLocName] = useState('');

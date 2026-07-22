@@ -229,92 +229,7 @@ const ToolsView = () => {
     return r;
   }, [filteredTools, cols]);
 
-  // Auto-import script for Coples
-  useEffect(() => {
-    if (window.location.hash === '#importNow') {
-      const runImport = async () => {
-        if(window.confirm('¿Importar los 9 coples a Herreria AHORA?')) {
-          const coples = [
-            { name: "Cople 131-C42", category: "Herreria", unit: "PZA", qty: 175, threshold: 5, status: "Disponible", codigo: "131-C42" },
-            { name: "Cople 128-C42", category: "Herreria", unit: "PZA", qty: 63, threshold: 5, status: "Disponible", codigo: "128-C42" },
-            { name: "Cople BT4533-GD", category: "Herreria", unit: "PZA", qty: 33, threshold: 5, status: "Disponible", codigo: "BT4533-GD" },
-            { name: "Cople BK44-GD", category: "Herreria", unit: "PZA", qty: 48, threshold: 5, status: "Disponible", codigo: "BK44-GD" },
-            { name: "Cople 119-C42", category: "Herreria", unit: "PZA", qty: 50, threshold: 5, status: "Disponible", codigo: "119-C42" },
-            { name: "Cople 176-C42", category: "Herreria", unit: "PZA", qty: 68, threshold: 5, status: "Disponible", codigo: "176-C42" },
-            { name: "Cople 104-C42", category: "Herreria", unit: "PZA", qty: 14, threshold: 2, status: "Disponible", codigo: "104-C42" },
-            { name: "Cople 158-C42", category: "Herreria", unit: "PZA", qty: 4, threshold: 2, status: "Disponible", codigo: "158-C42" },
-            { name: "Cople 116-C42", category: "Herreria", unit: "PZA", qty: 17, threshold: 2, status: "Disponible", codigo: "116-C42" }
-          ];
-          let added = 0;
-          for (let c of coples) {
-            try {
-              await addItem(c, userData?.name || 'Sistema AI');
-              added++;
-            } catch(e) {
-              console.error("Error adding " + c.name, e);
-            }
-          }
-          alert(`¡Se crearon ${added} coples exitosamente en Herreria!`);
-          window.location.hash = '';
-        }
-      };
-      runImport();
-    } else if (window.location.hash === '#cleanupDuplicates') {
-      const runCleanup = async () => {
-        if(window.confirm('¿Eliminar todos los duplicados y consolidar el stock (excepto en Herramientas)?')) {
-          const map = {};
-          for (let item of items) {
-            if (item.category === 'Herramientas') continue;
-            const key = item.category + '|' + item.name.toLowerCase();
-            if (!map[key]) map[key] = [];
-            map[key].push(item);
-          }
-
-          let deleted = 0;
-          let consolidated = 0;
-
-          for (let key in map) {
-            const group = map[key];
-            if (group.length > 1) {
-              // Sort by date or id, keep the first one
-              const keepItem = group[0];
-              let totalQty = 0;
-              let toDelete = [];
-              for (let i = 0; i < group.length; i++) {
-                totalQty += (group[i].qty || 0);
-                if (i > 0) toDelete.push(group[i].id);
-              }
-
-              try {
-                // Update the kept item with total qty
-                if (totalQty !== keepItem.qty) {
-                  await updateDoc(doc(db, 'items', keepItem.id), { qty: totalQty });
-                  consolidated++;
-                }
-
-                // Delete the rest
-                for (let id of toDelete) {
-                  await deleteDoc(doc(db, 'items', id));
-                  deleted++;
-                }
-              } catch(e) {
-                console.error('Error during cleanup:', e);
-              }
-            }
-          }
-          alert(`¡Limpieza completada! Se eliminaron ${deleted} registros duplicados y se consolidó el stock en ${consolidated} artículos.`);
-          window.location.hash = '';
-          // Firebase realtime updates will handle the UI state
-        }
-      };
-      runCleanup();
-    } else if (window.location.hash === '#debugHerreria') {
-      // Debug
-      const herreriaItems = items.filter(i => i.category.toLowerCase().includes('herreria') || i.category.toLowerCase().includes('herrería')).map(i => i.name + ' (' + i.category + ')');
-      alert(`Encontrados ${herreriaItems.length} items: ` + herreriaItems.join(', '));
-      window.location.hash = '';
-    }
-  }, [items, editItem, userData]);
+  // Debug scripts removed for security
 
   // Debounce search
   useEffect(() => {
@@ -433,11 +348,17 @@ const ToolsView = () => {
     }
   }, [completeMaintenance, userName]);
 
+  const selectedToolIdsRef = useRef(selectedToolIds);
+  useEffect(() => {
+    selectedToolIdsRef.current = selectedToolIds;
+  }, [selectedToolIds]);
+
   const handlers = useMemo(() => ({
     onEdit: (t) => { setSelectedTool(t); setIsAddModalOpen(true); },
     onDelete: handleDelete,
     onLoan: (t) => { 
-      if (selectedToolIds.includes(t.id) && selectedToolIds.length > 1) {
+      const currentIds = selectedToolIdsRef.current;
+      if (currentIds.includes(t.id) && currentIds.length > 1) {
         setIsBulkLoanModalOpen(true);
       } else {
         setSelectedTool(t); 
@@ -445,7 +366,8 @@ const ToolsView = () => {
       }
     },
     onAssign: (t) => { 
-      if (selectedToolIds.includes(t.id) && selectedToolIds.length > 1) {
+      const currentIds = selectedToolIdsRef.current;
+      if (currentIds.includes(t.id) && currentIds.length > 1) {
         setIsBulkAssignModalOpen(true);
       } else {
         setSelectedTool(t); 
@@ -456,7 +378,7 @@ const ToolsView = () => {
     onFault: (t) => { setSelectedTool(t); setIsFaultModalOpen(true); },
     onRepair: handleRepairConfirm,
     onQR: (t) => { setSelectedTool(t); setIsQRModalOpen(true); }
-  }), [handleDelete, handleReturnConfirm, handleRepairConfirm, selectedToolIds]);
+  }), [handleDelete, handleReturnConfirm, handleRepairConfirm]);
 
   const canEditTools = canEditIn('Herramientas');
 

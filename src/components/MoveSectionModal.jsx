@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowRight, Layers, Tag } from 'lucide-react';
-import { useInventory } from '../context/InventoryContextOptimized';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import './ActionModal.css';
 
 const MoveSectionModal = ({ isOpen, onClose, item, onConfirm }) => {
-  const { customCategories } = useInventory();
+  const { customCategories } = useCustomCategories();
   const [targetSection, setTargetSection] = useState('');
 
   if (!isOpen || !item) return null;

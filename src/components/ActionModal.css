@@ -200,12 +200,25 @@
     max-width: 100%;
     width: 100%;
     border-radius: 24px 24px 0 0;
-    padding: 2rem 1.5rem 7.5rem;
-    padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
-    max-height: 90vh;
+    padding: 2.5rem 1.5rem 110px;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom));
+    max-height: 92vh;
     overflow-y: auto;
-    overflow-x: visible;
-    animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    overflow-x: hidden;
+    animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  }
+
+  .modal-overlay .modal-card.animate-scale-up::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 48px;
+    height: 5px;
+    background: hsl(var(--border-color));
+    border-radius: 9999px;
+    z-index: 10;
   }
 
   @keyframes slideUpSheet {
@@ -216,23 +229,56 @@
   .close-btn {
     top: 1rem;
     right: 1rem;
+    width: 44px;
+    height: 44px;
+    background: hsla(var(--bg-main), 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .modal-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.5rem;
   }
 
   .operation-toggle {
-    border-radius: 14px;
+    border-radius: 16px;
+    padding: 6px;
   }
 
   .op-btn {
     padding: 0.85rem;
-    font-size: 0.85rem;
-    min-height: 44px;
+    font-size: 0.95rem;
+    min-height: 48px;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .btn-apple-primary,
   .btn-apple-danger,
   .btn-apple-secondary {
-    min-height: 44px;
-    font-size: 0.95rem;
+    min-height: 54px;
+    font-size: 1rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .f-input {
+    min-height: 48px;
+    padding: 1rem;
+    font-size: 16px; /* Prevents iOS auto-zoom */
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay .modal-card.animate-scale-up {
+    padding: 2.5rem 1rem 110px;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom));
+  }
+  
+  .modal-header h3 {
+    font-size: 1.35rem;
   }
 }
 

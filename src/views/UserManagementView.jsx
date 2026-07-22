@@ -5,6 +5,7 @@ import { collection, onSnapshot, query, doc, updateDoc, deleteDoc, setDoc, serve
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useInventory } from '../context/InventoryContextOptimized';
+import { useCustomCategories } from '../context/CustomCategoriesContext';
 import {
   UserPlus, Trash2, Shield, Mail, Key, Loader2,
   Warehouse, User, ChevronDown, ChevronUp, Lock, PlusCircle, Edit3, X, Eye, EyeOff,
@@ -47,15 +48,10 @@ const PermToggle = ({ active, onClick, color, disabled }) => (
   <button
     onClick={onClick}
     disabled={disabled}
+    className="um-perm-toggle"
     style={{
-      width: 28, height: 28,
-      borderRadius: 8,
-      border: `2px solid ${active ? color : '#e2e8f0'}`,
+      borderColor: active ? color : '#e2e8f0',
       background: active ? `${color}18` : 'transparent',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      cursor: disabled ? 'default' : 'pointer',
-      transition: 'all 0.15s',
-      flexShrink: 0,
     }}
     title={active ? 'Quitar permiso' : 'Dar permiso'}
   >
@@ -83,7 +79,7 @@ const UserManagementView = () => {
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [revealedPassword, setRevealedPassword] = useState(null);
   const [isVerifyingAdmin, setIsVerifyingAdmin] = useState(false);
-  const { customCategories } = useInventory();
+  const { customCategories } = useCustomCategories();
 
   useEffect(() => {
     const q = query(collection(db, 'users'));
@@ -113,7 +109,6 @@ const UserManagementView = () => {
         allowedCategories: [...ALL_CATEGORIES, ...dynamicCategoryNames], 
         editableCategories: [],
         allowedViews: ['dashboard', 'tornilleria', 'papeleria', 'herramientas', 'impresion-3d', 'electronica', 'general', 'almacen-temporal', 'parques', 'facturas', 'transactions', 'analytics', ...dynamicViewIds],
-        sysKey: newUser.password,
         passwordChangedAt: serverTimestamp(),
         createdAt: serverTimestamp()
       });
@@ -204,14 +199,13 @@ const UserManagementView = () => {
       const secondaryAuth = getAuth(secondaryApp);
 
       const { signInWithEmailAndPassword, updatePassword } = await import('firebase/auth');
-      const oldPassword = changingPasswordUser.sysKey || currentPasswordInput;
+      const oldPassword = currentPasswordInput;
       
       const cred = await signInWithEmailAndPassword(secondaryAuth, changingPasswordUser.email, oldPassword);
       await updatePassword(cred.user, newPassword);
 
       await updateDoc(doc(db, 'users', changingPasswordUser.id), {
-        passwordChangedAt: serverTimestamp(),
-        sysKey: newPassword
+        passwordChangedAt: serverTimestamp()
       });
 
       await signOut(secondaryAuth);
@@ -257,11 +251,7 @@ const UserManagementView = () => {
       const currentUser = getAuth().currentUser;
       await signInWithEmailAndPassword(secondaryAuth, currentUser.email, adminPasswordInput);
       
-      if (viewingPasswordUser.sysKey) {
-        setRevealedPassword(viewingPasswordUser.sysKey);
-      } else {
-        setRevealedPassword("USUARIO ANTIGUO - Contraseña no registrada");
-      }
+      setRevealedPassword("Por políticas de seguridad, las contraseñas ya no se pueden visualizar en texto plano. Utiliza el restablecimiento por correo.");
       await signOut(secondaryAuth);
     } catch (err) {
       toast.error("Contraseña de administrador incorrecta");

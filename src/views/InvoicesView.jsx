@@ -69,15 +69,17 @@ const InvoicesView = () => {
   }, []);
 
   // ─── Line helpers ───
+  const round2 = (num) => Math.round(num * 100) / 100;
+
   const updateLine = useCallback((idx, field, value) => {
     setLines(prev => {
       const copy = [...prev];
       copy[idx] = { ...copy[idx], [field]: value };
       const qty = parseFloat(copy[idx].cantidad) || 0;
       const price = parseFloat(copy[idx].precioUnitario) || 0;
-      copy[idx].importeTotal = qty * price;
+      copy[idx].importeTotal = round2(qty * price);
       const manIva = copy[idx].ivaManual;
-      copy[idx].ivaCalc = manIva !== '' ? parseFloat(manIva) || 0 : copy[idx].importeTotal * IVA_RATE;
+      copy[idx].ivaCalc = manIva !== '' ? round2(parseFloat(manIva) || 0) : round2(copy[idx].importeTotal * IVA_RATE);
       return copy;
     });
   }, []);
@@ -137,8 +139,6 @@ const InvoicesView = () => {
 
   // ─── Totals ───
   const totals = useMemo(() => {
-    // FIX: Usar precisión decimal de 2 lugares para evitar errores de centavos
-    const round2 = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
     let subtotal = 0, iva = 0;
     lines.forEach(l => { 
       subtotal = round2(subtotal + (l.importeTotal || 0)); 
@@ -170,6 +170,7 @@ const InvoicesView = () => {
 
       if (validLines.length === 0 && !folio && !proveedor) {
         toast.error('La factura está vacía');
+        setSaving(false);
         return;
       }
 
@@ -254,7 +255,7 @@ const InvoicesView = () => {
         </div>
         <div className="iv-card">
           <div className="iv-table-wrapper">
-            <table className="iv-table">
+            <table className="iv-table iv-readonly-table">
               <thead><tr>
                 <th>#</th><th>OC</th><th>Cant</th><th>U.M</th><th>FrgnName</th><th>Descripción</th><th>P. Unit</th><th>IVA</th><th>Importe</th>
               </tr></thead>

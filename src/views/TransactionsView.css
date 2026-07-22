@@ -271,9 +271,9 @@
   }
 
   .invt-btn-annul {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
   }
 
   .invt-body {
@@ -307,6 +307,7 @@
   flex-direction: column;
   gap: 1.5rem;
   padding: 1rem 0;
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
   max-width: 900px;
   margin: 0 auto;
   width: 100%;

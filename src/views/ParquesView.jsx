@@ -203,7 +203,7 @@ const ParquesView = () => {
   }
 
   return (
-    <main className="tools-view animate-fade-in relative min-h-screen p-8 flex flex-col">
+    <main className="tools-view animate-fade-in relative min-h-screen p-4 md:p-8 pb-[110px] md:pb-8 flex flex-col">
       <Header />
       
       <header className="tools-header mb-8">
