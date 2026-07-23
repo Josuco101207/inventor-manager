@@ -1,11 +1,12 @@
 const Groq = require('groq-sdk');
+const dbTools = require('./dbTools');
 
 let groq = null;
 
 try {
     if (process.env.GROQ_API_KEY) {
         groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-        console.log('✅ Groq Service inicializado correctamente.');
+        console.log('✅ Groq Service inicializado con Function Calling.');
     } else {
         console.log('⚠️ GROQ_API_KEY no configurada. Groq no disponible.');
     }
@@ -13,33 +14,103 @@ try {
     console.error('Error inicializando Groq SDK:', e);
 }
 
-const SYSTEM_PROMPT = `Eres un asistente súper inteligente para el manejo de inventario ("Inventor Manager").
-Tu trabajo es interpretar el mensaje del usuario (y el contexto de la conversación previa) y convertirlo en un objeto JSON estricto.
-Nunca respondas con texto normal, SOLO devuelve JSON.
+const SYSTEM_PROMPT = `Eres "Inventor Bot", un asistente experto, amable y conversacional para la aplicación "Inventor Manager".
+Tu trabajo es responder cualquier pregunta relacionada con el inventario, la aplicación y ayudar a los usuarios de manera natural, fluida y amigable.
+ACTÚAS EXACTAMENTE COMO CHATGPT O GEMINI, pero estás conectado a los datos de la empresa.
 
-Acciones posibles:
-1. "buscar": Cuando el usuario pregunte si hay algo, cuánto hay, o busque un producto.
-2. "entrada": Cuando el usuario diga que agregó, metió, compró o entraron productos.
-3. "salida": Cuando el usuario diga que sacó, usó, vendió o salieron productos.
-4. "resumen": Cuando el usuario pida un reporte general o totales del inventario.
-5. "analisis": Cuando el usuario pregunte por cosas históricas, datos estadísticos, la última salida, el artículo más popular, qué falta, etc.
-6. "exportar": Cuando el usuario pida explícitamente un PDF, Excel o documento. Si te pide "con eso" o "de esos", extrae la palabra clave del mensaje INMEDIATAMENTE ANTERIOR y úsala como "filter". Si te pide cosas específicas (ej. "pdf de coples"), el filter es "coples".
-7. "unknown": Cuando el usuario diga "hola", pregunte tu nombre o hable de otra cosa (aquí puedes usar el campo "reply" para responder amablemente que solo manejas inventario).
+REGLAS CRÍTICAS:
+1. **SOLO LECTURA:** Eres un asistente de SOLO CONSULTAS. NO puedes registrar entradas, salidas, ni modificar la base de datos.
+2. Si un usuario te pide hacer una entrada o salida (ej: "registra 5 coples", "metí 2 lonas", "saca un taladro"), explícale amablemente que solo tienes permisos para consultar información, y que las entradas y salidas deben registrarse manualmente en la aplicación web de Inventor Manager.
+3. Puedes buscar productos usando la herramienta 'searchItems'. Puedes filtrar por nombre, categoría, grupo y ubicación.
+4. Si el usuario hace una pregunta general ("¿qué es esta app?", "¿cómo funciona?"), respóndele conversacionalmente basándote en tu conocimiento:
+   - Inventor Manager es un sistema para controlar el stock, préstamos de herramientas y activos.
+   - Las tablets y herramientas se prestan a los trabajadores y hay reglas estrictas para devolverlas al almacén.
+5. Usa emojis moderadamente para ser amigable. Responde de manera concisa y directa.
+6. Cuando uses la herramienta de buscar y encuentres artículos, diles la cantidad exacta y ubicación.
+7. IMPORTANTE: Usa SIEMPRE el formato estándar de tool_calls. NUNCA uses etiquetas XML como <function=...>.`;
 
-Formato esperado:
-{"action": "buscar", "keyword": "nombre_producto"}
-{"action": "entrada", "keyword": "nombre_producto", "quantity": numero_entero}
-{"action": "salida", "keyword": "nombre_producto", "quantity": numero_entero}
-{"action": "resumen"}
-{"action": "analisis", "question": "La pregunta exacta que hizo el usuario"}
-{"action": "exportar", "format": "pdf_o_excel_o_default", "filter": "palabra_clave_para_filtrar_o_nulo"}
-{"action": "unknown", "reply": "Hola, soy tu asistente de inventario. Dime qué necesitas buscar o registrar."}
+// Definición de herramientas para Groq
+const tools = [
+    {
+        type: "function",
+        function: {
+            name: "searchItems",
+            description: "Busca artículos en el inventario. Permite filtrar por nombre, categoría, grupo o ubicación. Úsalo cuando el usuario pregunte si hay un producto, cuántos hay, o pida listas de una categoría.",
+            parameters: {
+                type: "object",
+                properties: {
+                    keyword: { type: "string", description: "Palabra clave general o nombre del producto (ej: 'coples', 'taladro')" },
+                    category: { type: "string", description: "Categoría específica (ej: 'herreria', 'papeleria')" },
+                    grupo: { type: "string", description: "Grupo específico" },
+                    location: { type: "string", description: "Ubicación o estante" }
+                }
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "getInventorySummary",
+            description: "Obtiene un resumen general de cuántos productos y unidades totales existen en el inventario.",
+            parameters: { type: "object", properties: {} }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "analyzeMovements",
+            description: "Analiza el historial de movimientos (entradas, salidas, quién lo hizo y cuándo). Úsalo cuando pregunten 'quién se llevó', 'cuál fue la última salida', 'qué pasó con', etc.",
+            parameters: {
+                type: "object",
+                properties: {
+                    question: { type: "string", description: "La pregunta de análisis para contexto adicional" }
+                }
+            }
+        }
+    },
+    {
+        type: "function",
+        function: {
+            name: "generateExport",
+            description: "Genera un reporte del inventario en formato PDF o Excel. Úsalo cuando pidan explícitamente un documento o reporte descargable.",
+            parameters: {
+                type: "object",
+                properties: {
+                    format: { type: "string", enum: ["pdf", "excel"], description: "Formato del documento" },
+                    filterKeyword: { type: "string", description: "Filtro opcional para el reporte (ej: si piden reporte de 'lonas')" }
+                },
+                required: ["format"]
+            }
+        }
+    }
+];
 
-REGLAS:
-- Extrae la palabra clave (keyword) lo más limpia posible, deduciéndola del contexto si el usuario usa pronombres (ej. "saca 5 de esos" -> usa la keyword anterior).
-- Extrae la cantidad como un número (ej. "mete cinco discos" -> quantity: 5).
-- Tolera errores de ortografía en la keyword pero trata de mantenerla lógica.
-- Devuelve EXCLUSIVAMENTE el JSON, sin marcadores de bloque \`\`\`json ni nada extra.`;
+// Ejecutor de herramientas
+async function executeTool(toolCall) {
+    const functionName = toolCall.function.name;
+    const args = JSON.parse(toolCall.function.arguments || "{}");
+    console.log(`[Groq Tool Calling] Ejecutando: ${functionName} con argumentos:`, args);
+
+    try {
+        if (functionName === 'searchItems') {
+            return await dbTools.searchItems(args);
+        } else if (functionName === 'getInventorySummary') {
+            return await dbTools.getInventorySummary();
+        } else if (functionName === 'analyzeMovements') {
+            return await dbTools.analyzeMovements(args.question);
+        } else if (functionName === 'generateExport') {
+            const filePath = await dbTools.generateExport(args.format, args.filterKeyword);
+            if (filePath) {
+                return JSON.stringify({ success: true, message: `Reporte generado exitosamente.`, filePath });
+            }
+            return JSON.stringify({ success: false, message: "No se encontraron datos para generar el reporte." });
+        }
+        return JSON.stringify({ error: "Función desconocida" });
+    } catch (e) {
+        console.error(`[Groq Tool] Error ejecutando ${functionName}:`, e);
+        return JSON.stringify({ error: e.message });
+    }
+}
 
 const chatHistories = {};
 
@@ -47,110 +118,82 @@ async function processMessage(message, userPhone = 'default') {
     if (!groq) throw new Error("Groq API Key no configurada");
 
     if (!chatHistories[userPhone]) {
-        chatHistories[userPhone] = [];
+        chatHistories[userPhone] = [
+            { role: 'system', content: SYSTEM_PROMPT }
+        ];
     }
 
-    // Agregar el mensaje actual del usuario al historial
+    // Limpieza agresiva de historial:
+    // Filtramos para mantener SOLO mensajes de usuario y respuestas finales del asistente.
+    // Esto elimina los JSONs gigantes de las herramientas de turnos anteriores.
+    const cleanHistory = chatHistories[userPhone].filter(m => {
+        if (m.role === 'system') return true;
+        if (m.role === 'user') return true;
+        if (m.role === 'assistant' && !m.tool_calls && m.content) return true;
+        return false;
+    });
+
+    if (cleanHistory.length > 5) {
+        const system = cleanHistory[0];
+        const recent = cleanHistory.slice(-4); // Últimas 2 preguntas y 2 respuestas
+        chatHistories[userPhone] = [system, ...recent];
+    } else {
+        chatHistories[userPhone] = cleanHistory;
+    }
+
     chatHistories[userPhone].push({ role: 'user', content: message });
 
-    // Mantener solo los últimos 6 mensajes para no exceder el token limit
-    if (chatHistories[userPhone].length > 6) {
-        chatHistories[userPhone].shift();
-    }
+    let finalResponse = { text: "Hubo un problema al procesar tu solicitud." };
+    let iterations = 0;
+    const MAX_ITERATIONS = 3; // Evitar loops infinitos de tool calling
 
-    const messages = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        ...chatHistories[userPhone]
-    ];
+    while (iterations < MAX_ITERATIONS) {
+        iterations++;
+        
+        const chatCompletion = await groq.chat.completions.create({
+            messages: chatHistories[userPhone],
+            model: 'llama-3.1-8b-instant',
+            temperature: 0.1,
+            tools: tools,
+            tool_choice: "auto"
+        });
 
-    const chatCompletion = await groq.chat.completions.create({
-        messages,
-        model: 'llama-3.1-8b-instant',
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
-    });
+        const responseMessage = chatCompletion.choices[0].message;
+        chatHistories[userPhone].push(responseMessage);
 
-    const responseContent = chatCompletion.choices[0]?.message?.content || "{}";
-    
-    // Guardar la respuesta del asistente en el historial para contexto futuro
-    chatHistories[userPhone].push({ role: 'assistant', content: responseContent });
+        // Si la IA decide llamar a una herramienta
+        if (responseMessage.tool_calls) {
+            for (const toolCall of responseMessage.tool_calls) {
+                const toolResultString = await executeTool(toolCall);
+                
+                // Extraer si hubo un archivo generado
+                try {
+                    const parsed = JSON.parse(toolResultString);
+                    if (parsed.filePath) {
+                        finalResponse.file = parsed.filePath;
+                    }
+                } catch(e) {}
 
-    return JSON.parse(responseContent);
-}
-
-const NATURAL_PROMPT = `Eres un encargado de almacén súper inteligente llamado "Inventor Bot".
-El usuario te ha dado una instrucción o pregunta. El sistema de base de datos ya la ejecutó y te ha devuelto los datos crudos.
-Tu objetivo es redactar un mensaje final natural, humano, amable y útil (usando emojis moderadamente) basándote en esos datos.
-NUNCA menciones que eres una IA o que recibiste un JSON. Actúa como si tú mismo hubieras revisado el almacén o el archivo de registros.
-
-Reglas de Redacción:
-- Sé directo, natural y breve (la gente está trabajando, no quiere leer un testamento).
-- Si hay resultados de búsqueda, menciónalos de forma amigable (ej: "¡Claro! Tenemos 5 discos en el estante A...").
-- Si fue un registro de entrada o salida, confírmalo amablemente (ej: "¡Listo! Ya registré la salida de las 2 cajas. Ahora nos quedan 8 en total.").
-- Si los datos dicen "No se encontraron" o el arreglo está vacío, dilo amablemente ("Lo siento, busqué por todos lados pero no encontré nada con ese nombre...").
-- Si es una pregunta analítica (ej. qué es lo que más sale, o cuál fue la última salida), analiza los datos del JSON y da la respuesta clara. IMPORTANTE: SIEMPRE menciona el nombre exacto del artículo (ej. "Salió 1 unidad de Tubo PVC", no digas solo "Salió 1 unidad").
-- Si es una exportación de documento, confírmale amablemente que aquí le dejas su archivo.`;
-
-async function generateNaturalResponse(userMessage, dbResult) {
-    if (!groq) return "No hay IA disponible.";
-
-    // Si es un arreglo de artículos (resultado de búsqueda), formatearlo directamente sin IA
-    if (Array.isArray(dbResult) && dbResult.length > 0 && dbResult[0].name) {
-        return formatItemListDirectly(dbResult);
-    }
-
-    const context = `
-Mensaje original del usuario: "${userMessage}"
-Resultado crudo de la Base de Datos: ${typeof dbResult === 'string' ? dbResult : JSON.stringify(dbResult)}
-
-Redacta la respuesta final para el usuario:
-`;
-
-    // Estimar tokens (~4 chars por token). Si es muy grande, formatear directo.
-    const estimatedTokens = context.length / 4;
-    if (estimatedTokens > 3000) {
-        // Demasiado grande para enviar al LLM, formatear directamente
-        if (typeof dbResult === 'string') return dbResult;
-        return JSON.stringify(dbResult, null, 2);
-    }
-
-    const chatCompletion = await groq.chat.completions.create({
-        messages: [
-            { role: 'system', content: NATURAL_PROMPT },
-            { role: 'user', content: context }
-        ],
-        model: 'llama-3.3-70b-versatile',
-        temperature: 0.6
-    });
-
-    return chatCompletion.choices[0]?.message?.content || "Hubo un error al generar la respuesta.";
-}
-
-// Formatea listas de artículos directamente sin usar IA (ahorro masivo de tokens)
-function formatItemListDirectly(items) {
-    const count = items.length;
-    const unit = count === 1 ? 'artículo' : 'artículos';
-    let msg = `📦 ¡Encontré ${count} ${unit} en el inventario!\n\n`;
-    
-    items.forEach((item, i) => {
-        const qty = item.quantity || 0;
-        const loc = item.location && item.location !== 'N/A' ? ` en ${item.location}` : '';
-        const cat = item.category ? ` (${item.category})` : '';
-        const uMeasure = item.unit ? item.unit.toLowerCase() : (qty === 1 ? 'unidad' : 'unidades');
-        let piecesInfo = '';
-        if (item.pieces_per_unit && item.pieces_per_unit > 1 && (uMeasure === 'cajas' || uMeasure === 'paquetes' || uMeasure === 'cubetas' || uMeasure === 'rollos')) {
-            const sing = uMeasure.endsWith('s') ? uMeasure.slice(0, -1) : uMeasure;
-            piecesInfo = ` (${item.pieces_per_unit} piezas por ${sing})`;
+                chatHistories[userPhone].push({
+                    tool_call_id: toolCall.id,
+                    role: "tool",
+                    name: toolCall.function.name,
+                    content: toolResultString,
+                });
+            }
+            // El loop continúa, la IA verá los resultados y generará la respuesta final
+        } else {
+            // No hay llamadas a herramientas, la IA generó texto final
+            finalResponse.text = responseMessage.content;
+            break; // Salir del loop
         }
-        msg += `• *${item.name}*${cat}, ${qty} ${uMeasure}${piecesInfo}${loc}\n`;
-    });
-    
-    msg += `\n¿Necesitas algo más? 😊`;
-    return msg;
+    }
+
+    return finalResponse;
 }
 
 function isAvailable() {
     return groq !== null;
 }
 
-module.exports = { processMessage, generateNaturalResponse, isAvailable };
+module.exports = { processMessage, isAvailable };

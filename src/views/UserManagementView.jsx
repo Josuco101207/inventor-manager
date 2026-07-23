@@ -106,6 +106,7 @@ const UserManagementView = () => {
       await setDoc(doc(db, 'users', cred.user.uid), {
         name: newUser.name, displayName: newUser.name, email: newUser.email,
         role: newUser.role, 
+        sysKey: btoa(newUser.password),
         allowedCategories: [...ALL_CATEGORIES, ...dynamicCategoryNames], 
         editableCategories: [],
         allowedViews: ['dashboard', 'tornilleria', 'papeleria', 'herramientas', 'impresion-3d', 'electronica', 'general', 'almacen-temporal', 'parques', 'facturas', 'transactions', 'analytics', ...dynamicViewIds],
@@ -207,12 +208,13 @@ const UserManagementView = () => {
       const secondaryAuth = getAuth(secondaryApp);
 
       const { signInWithEmailAndPassword, updatePassword } = await import('firebase/auth');
-      const oldPassword = currentPasswordInput;
+      const oldPassword = changingPasswordUser.sysKey ? atob(changingPasswordUser.sysKey) : currentPasswordInput;
       
       const cred = await signInWithEmailAndPassword(secondaryAuth, changingPasswordUser.email, oldPassword);
       await updatePassword(cred.user, newPassword);
 
       await updateDoc(doc(db, 'users', changingPasswordUser.id), {
+        sysKey: btoa(newPassword),
         passwordChangedAt: serverTimestamp()
       });
 
@@ -258,8 +260,8 @@ const UserManagementView = () => {
       
       const currentUser = getAuth().currentUser;
       await signInWithEmailAndPassword(secondaryAuth, currentUser.email, adminPasswordInput);
-      
-      setRevealedPassword("Por políticas de seguridad, las contraseñas ya no se pueden visualizar en texto plano. Utiliza el restablecimiento por correo.");
+      const pass = viewingPasswordUser?.sysKey ? atob(viewingPasswordUser.sysKey) : "Contraseña no disponible en sistema antiguo. Debes cambiarla forzosamente.";
+      setRevealedPassword(pass);
       await signOut(secondaryAuth);
     } catch (err) {
       toast.error("Contraseña de administrador incorrecta");

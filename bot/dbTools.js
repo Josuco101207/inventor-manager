@@ -72,107 +72,104 @@ async function isAuthorizedUser(phoneNumber) {
   }
 }
 
-async function searchItems({ keyword }) {
+async function searchItems({ keyword, category, grupo, location }) {
   try {
     const snapshot = await getDocs(collection(db, 'items'));
-    let allItems = [];
-    const lowerKeyword = keyword ? keyword.toLowerCase() : '';
+    let items = [];
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
-      allItems.push({
-        id: docSnap.id,
+      items.push({
         name: data.name || '',
         category: data.category || '',
-        subcategory: data.subcategory || '',
-        grupo: data.grupo || '',
-        item_number: data.item_number || '',
-        quantity: data.qty || 0,
+        qty: data.qty || 0,
         location: data.location || 'N/A',
-        unit: data.unit || '',
-        pieces_per_unit: data.pieces_per_unit || null,
-        combinedText: `${data.name || ''} ${data.category || ''} ${data.subcategory || ''} ${data.grupo || ''} ${data.item_number || ''}`
+        combinedText: `${data.name || ''} ${data.category || ''} ${data.subcategory || ''} ${data.grupo || ''} ${data.item_number || ''}`.toLowerCase()
       });
     });
 
-    if (!lowerKeyword) {
-      return JSON.stringify(allItems.map(r => {
-        delete r.combinedText;
-        return r;
-      }));
+    // 1. Filtrado estricto por campos (si el LLM los proporciona)
+    if (category) {
+      const catLower = category.toLowerCase();
+      items = items.filter(item => item.category.toLowerCase().includes(catLower));
+    }
+    if (grupo) {
+      const groupLower = grupo.toLowerCase();
+      // Usar optional chaining porque no estamos mapeando grupo al objeto simplificado (está en combinedText)
+      items = items.filter(item => item.combinedText.includes(groupLower));
+    }
+    if (location) {
+      const locLower = location.toLowerCase();
+      items = items.filter(item => item.location.toLowerCase().includes(locLower));
     }
 
-    // PASO 1: Preparar palabras clave (manejar plurales simples para que coincidan con singular)
-    const keywords = lowerKeyword.split(/\s+/).map(kw => {
-      if (kw.length > 3) {
-        if (kw.endsWith('es')) return kw.slice(0, -2); // ej: balones -> balon, coples -> copl (copl entra en cople)
-        if (kw.endsWith('s')) return kw.slice(0, -1);  // ej: lonas -> lona, amarillos -> amarillo
-      }
-      return kw;
-    });
-
-    let exactMatches = allItems.filter(item => {
-      const text = item.combinedText.toLowerCase();
-      // Usar fronteras de palabra (\b) para evitar que "lona" haga match dentro de "escaLONAda"
-      return keywords.every(kw => {
-        // Escapar caracteres especiales por si acabo el usuario mete un + o (
-        const safeKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return new RegExp(`\\b${safeKw}`, 'i').test(text);
+    // 2. Filtrado por palabra clave general (nombre u otros detalles)
+    if (keyword) {
+      const lowerKeyword = keyword.toLowerCase();
+      
+      const keywords = lowerKeyword.split(/\s+/).map(kw => {
+        if (kw.length > 3) {
+          if (kw.endsWith('es')) return kw.slice(0, -2);
+          if (kw.endsWith('s')) return kw.slice(0, -1);
+        }
+        return kw;
       });
-    });
 
-    // Si no encuentra con TODAS las palabras, intentar con AL MENOS UNA (solo si la palabra tiene más de 3 letras)
-    if (exactMatches.length === 0) {
-      const validKeywords = keywords.filter(kw => kw.length > 3);
-      if (validKeywords.length > 0) {
-        exactMatches = allItems.filter(item => {
-          const text = item.combinedText.toLowerCase();
-          return validKeywords.some(kw => {
-            const safeKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            return new RegExp(`\\b${safeKw}`, 'i').test(text);
-          });
+      let exactMatches = items.filter(item => {
+        const text = item.combinedText;
+        return keywords.every(kw => {
+          const safeKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          return new RegExp(`\\b${safeKw}`, 'i').test(text);
         });
+      });
+
+      if (exactMatches.length === 0) {
+        const validKeywords = keywords.filter(kw => kw.length > 3);
+        if (validKeywords.length > 0) {
+          exactMatches = items.filter(item => {
+            const text = item.combinedText;
+            return validKeywords.some(kw => {
+              const safeKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              return new RegExp(`\\b${safeKw}`, 'i').test(text);
+            });
+          });
+        }
+      }
+
+      if (exactMatches.length > 0) {
+        items = exactMatches;
+      } else {
+        // Fallback fuzzy solo si no hubo matches exactos
+        const fuse = new Fuse(items, {
+          keys: ['combinedText'],
+          threshold: 0.2,
+          ignoreLocation: true
+        });
+        const searchResults = fuse.search(lowerKeyword);
+        items = searchResults.map(r => r.item);
       }
     }
 
-    // PASO 2: Si la búsqueda exacta encontró resultados, usarlos directamente
-    if (exactMatches.length > 0) {
-      let results = exactMatches.map(item => {
-        delete item.combinedText;
-        return item;
-      });
-      results = results.slice(0, 150);
-      return JSON.stringify(results);
-    }
-
-    // PASO 3: Solo si no hay resultados exactos, usar búsqueda fuzzy como respaldo EXTREMADAMENTE ESTRICTO
-    const fuse = new Fuse(allItems, {
-      keys: ['combinedText'],
-      threshold: 0.15, // Muy estricto para evitar que "lonas" traiga "balones"
-      ignoreFieldNorm: true,
-      ignoreLocation: true,
-      includeScore: true
-    });
-
-    let searchResults = fuse.search(lowerKeyword);
-    searchResults = searchResults.filter(r => r.score < 0.2); // Solo coincidencias casi perfectas
-    
-    let results = searchResults.map(result => {
-      const item = result.item;
+    // Limpiar combinedText antes de devolver al LLM
+    let results = items.map(item => {
       delete item.combinedText;
       return item;
     });
 
-    results = results.slice(0, 150);
+    const totalMatches = results.length;
+    results = results.slice(0, 15); // Límite estricto a 15 para salvar tokens del LLM
 
-    if (results.length === 0) {
-      return "No se encontraron artículos con esa descripción o categoría. Por favor verifica si el nombre está bien escrito o si la categoría existe.";
+    if (totalMatches === 0) {
+      return JSON.stringify({ message: "No se encontraron artículos con esos criterios." });
     }
 
-    return JSON.stringify(results);
+    return JSON.stringify({
+      message: totalMatches > 15 ? `Mostrando los primeros 15 resultados de ${totalMatches} encontrados.` : "Resultados encontrados.",
+      results: results
+    });
   } catch (error) {
     console.error("Error en searchItems:", error);
-    return "Ocurrió un error al buscar.";
+    return JSON.stringify({ error: "Ocurrió un error al buscar en la base de datos." });
   }
 }
 
