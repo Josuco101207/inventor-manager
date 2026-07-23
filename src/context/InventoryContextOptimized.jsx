@@ -428,11 +428,19 @@ export const InventoryProvider = ({ children }) => {
     const unsubscribe = onSnapshot(q, { includeMetadataChanges: false }, (snapshot) => {
       if (snapshot.docChanges().length === 0) return;
       
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        time: doc.data().timestamp?.toDate?.()?.toLocaleString() || 'Reciente'
-      }));
+      const data = snapshot.docs.map(doc => {
+        const d = doc.data();
+        let timeStr = 'Reciente';
+        if (d.timestamp) {
+          const tObj = d.timestamp.toDate ? d.timestamp.toDate() : (d.timestamp instanceof Date ? d.timestamp : new Date(d.timestamp));
+          if (!isNaN(tObj)) timeStr = tObj.toLocaleString();
+        }
+        return {
+          id: doc.id,
+          ...d,
+          time: timeStr
+        };
+      });
       
       setMovements(data);
       cache.set(CACHE_KEYS.MOVEMENTS, data);

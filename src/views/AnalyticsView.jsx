@@ -41,7 +41,9 @@ const AnalyticsView = () => {
 
     itemMovements.forEach(m => {
       if (!m.timestamp) return;
-      const date = m.timestamp.toDate().toISOString().split('T')[0];
+      const t = m.timestamp;
+      const dateObj = t?.toDate ? t.toDate() : (t instanceof Date ? t : new Date(t));
+      const date = dateObj.toISOString().split('T')[0];
       if (dailyData[date]) {
         if (m.action === 'Salida' || m.action === 'Préstamo') {
           const qty = Number(m.qty) || 0;

@@ -143,7 +143,7 @@ const TransactionsView = () => {
             filteredMovements.map((mov, index) => {
               const cfg = getActionConfig(mov.action);
               const Icon = cfg.icon;
-              const movDate = mov.timestamp?.toDate();
+              const movDate = mov.timestamp?.toDate ? mov.timestamp.toDate() : (mov.timestamp instanceof Date ? mov.timestamp : new Date(mov.timestamp || Date.now()));
               
               return (
                 <div key={mov.id || index} className="dash-timeline-item">

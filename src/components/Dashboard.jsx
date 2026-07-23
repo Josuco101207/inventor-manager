@@ -60,7 +60,9 @@ const Dashboard = () => {
   const dayMovements = useMemo(() =>
     movements.filter(m => {
       if (!m.timestamp) return false;
-      return toLocalDateString(m.timestamp.toDate()) === movDate;
+      const t = m.timestamp;
+      const dateObj = t.toDate ? t.toDate() : (t instanceof Date ? t : new Date(t));
+      return toLocalDateString(dateObj) === movDate;
     }),
     [movements, movDate]
   );
@@ -245,7 +247,9 @@ const Dashboard = () => {
                   <div className="dash-tl-content glass-panel-ultra">
                     <div className="dash-tl-top">
                       <span className="dash-tl-action" style={{ color: cfg.color }}>{mov.action}</span>
-                      <span className="dash-tl-time">{mov.timestamp?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}</span>
+                      <span className="dash-tl-time">
+                        {(mov.timestamp?.toDate ? mov.timestamp.toDate() : (mov.timestamp instanceof Date ? mov.timestamp : new Date(mov.timestamp))).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}
+                      </span>
                     </div>
                     <div className="dash-tl-name">{mov.item}</div>
                     <div className="dash-tl-cat">{mov.category || 'Gral'} {mov.subcategory ? `• ${mov.subcategory}` : ''}</div>
