@@ -3,7 +3,7 @@ import Header from '../components/Header';
 import { db } from '../firebase/config';
 import { collection, onSnapshot, query, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut, setPersistence, inMemoryPersistence } from 'firebase/auth';
 import { useInventory } from '../context/InventoryContextOptimized';
 import { useCustomCategories } from '../context/CustomCategoriesContext';
 import {
@@ -99,6 +99,7 @@ const UserManagementView = () => {
     try {
       secondaryApp = initializeApp(firebaseConfig, `Secondary_${Date.now()}`);
       const secondaryAuth = getAuth(secondaryApp);
+      await setPersistence(secondaryAuth, inMemoryPersistence);
       const cred = await createUserWithEmailAndPassword(secondaryAuth, newUser.email, newUser.password);
       const dynamicCategoryNames = customCategories?.map(c => c.name) || [];
       const dynamicViewIds = customCategories?.map(c => c.id) || [];
@@ -206,6 +207,7 @@ const UserManagementView = () => {
     try {
       secondaryApp = initializeApp(firebaseConfig, `UpdatePass_${Date.now()}`);
       const secondaryAuth = getAuth(secondaryApp);
+      await setPersistence(secondaryAuth, inMemoryPersistence);
 
       const { signInWithEmailAndPassword, updatePassword } = await import('firebase/auth');
       const oldPassword = changingPasswordUser.sysKey ? atob(changingPasswordUser.sysKey) : currentPasswordInput;
@@ -256,6 +258,7 @@ const UserManagementView = () => {
     try {
       secondaryApp = initializeApp(firebaseConfig, `VerifyAdmin_${Date.now()}`);
       const secondaryAuth = getAuth(secondaryApp);
+      await setPersistence(secondaryAuth, inMemoryPersistence);
       const { signInWithEmailAndPassword } = await import('firebase/auth');
       
       const currentUser = getAuth().currentUser;
