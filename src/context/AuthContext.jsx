@@ -174,6 +174,11 @@ export const AuthProvider = ({ children }) => {
     return editable.includes(category);
   }, [isAdmin, isStaff, userData?.editableCategories]);
 
+  const canViewCosts = useCallback(() => {
+    if (isAdmin) return true;
+    return !!userData?.canViewCosts;
+  }, [isAdmin, userData?.canViewCosts]);
+
   const contextValue = useMemo(() => ({
     user, 
     userData, 
@@ -184,8 +189,9 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     isStaff,
     canAddTo,
-    canEditIn
-  }), [user, userData, loading, isAdmin, isStaff, canAddTo, canEditIn]);
+    canEditIn,
+    canViewCosts
+  }), [user, userData, loading, isAdmin, isStaff, canAddTo, canEditIn, canViewCosts]);
 
   return (
     <AuthContext.Provider value={contextValue}>

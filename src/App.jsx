@@ -14,6 +14,7 @@ const TransactionsView = lazy(() => import('./views/TransactionsView'));
 const ToolsView = lazy(() => import('./views/ToolsView'));
 const InvoicesView = lazy(() => import('./views/InvoicesView'));
 const SectionAdminView = lazy(() => import('./views/SectionAdminView'));
+const RequisicionesView = lazy(() => import('./views/RequisicionesView'));
 
 import { InventoryProvider, useInventory } from './context/InventoryContextOptimized';
 import { CustomCategoriesProvider, useCustomCategories } from './context/CustomCategoriesContext';
@@ -103,6 +104,7 @@ const RootApp = () => {
               <Route path="/general" element={<ViewProtectedRoute viewId="general"><InventoryView categoryTitle="Inventario General" /></ViewProtectedRoute>} />
               <Route path="/almacen-temporal" element={<ViewProtectedRoute viewId="almacen-temporal"><InventoryView categoryTitle="Almacén Temporal" /></ViewProtectedRoute>} />
               <Route path="/parques" element={<ViewProtectedRoute viewId="parques"><ParquesView /></ViewProtectedRoute>} />
+              <Route path="/requisiciones" element={<ViewProtectedRoute viewId="requisiciones"><RequisicionesView /></ViewProtectedRoute>} />
               
               {/* Dynamic Categories */}
               {customCategories?.map(cat => (

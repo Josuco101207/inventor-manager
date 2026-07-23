@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { 
   Package, Wrench, PenTool, Cpu, Printer, Landmark,
   LayoutDashboard, Settings, User, LogOut, ShieldCheck, Users, Layers, Archive, History, Activity,
-  Menu, X, FileText, Box, Tag, Key, MapPin
+  Menu, X, FileText, Box, Tag, Key, MapPin, ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useInventory } from '../context/InventoryContextOptimized';
@@ -136,6 +136,14 @@ const Sidebar = () => {
                 <NavLink to="/parques" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                   <Landmark size={20} />
                   <span>Parques</span>
+                </NavLink>
+              </li>
+            )}
+            {hasAccess('requisiciones') && (
+              <li>
+                <NavLink to="/requisiciones" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                  <ClipboardList size={20} />
+                  <span>Requisiciones Prod.</span>
                 </NavLink>
               </li>
             )}

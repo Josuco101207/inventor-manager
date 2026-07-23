@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
-export const exportToExcel = async (data, filename, category = "General") => {
+export const exportToExcel = async (data, filename, category = "General", options = {}) => {
   if (!data || data.length === 0) return;
 
   const workbook = new ExcelJS.Workbook();
@@ -50,7 +50,7 @@ export const exportToExcel = async (data, filename, category = "General") => {
         };
       case 'Parques':
       case (category.startsWith('Parques') ? category : null):
-        return {
+        const rowData = {
           "Articulo": item.name || '',
           "Seccion": item.subcategory || '-',
           "Marca": item.marca || '-',
@@ -58,6 +58,10 @@ export const exportToExcel = async (data, filename, category = "General") => {
           "Minimo": item.threshold || 0,
           "Estado": (item.qty || 0) <= (item.threshold || 0) ? 'CRITICO' : 'OK',
         };
+        if (options.canViewCosts) {
+          rowData["Costo Unit."] = `$${parseFloat(item.costo_unitario || 0).toFixed(2)}`;
+        }
+        return rowData;
       default:
         return {
           "Nombre": item.name || '',

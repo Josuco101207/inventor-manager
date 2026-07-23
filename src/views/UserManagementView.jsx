@@ -173,6 +173,14 @@ const UserManagementView = () => {
     togglePermission(u, field, category, !(u[field] || []).includes(category));
   };
 
+  const toggleBooleanPerm = async (u, field) => {
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'users', u.id), { [field]: !u[field] });
+    } catch { toast.error('Error al guardar'); }
+    finally { setSaving(false); }
+  };
+
   const setAll = async (u, field, value) => {
     setSaving(true);
     const dynamicCategoryNames = customCategories?.map(c => c.name) || [];
@@ -460,6 +468,23 @@ const UserManagementView = () => {
                             <p>
                               💡 <strong>Tip:</strong> Si activas "Agregar" o "Editar" para una categoría, el sistema le dará automáticamente permiso de <strong>Vista</strong> para que pueda entrar.
                             </p>
+                          </div>
+                          
+                          <div className="um-perms-section-header" style={{ marginTop: '16px' }}>
+                            <p className="um-perms-section-title">
+                              <Lock size={14} /> Permisos Especiales
+                            </p>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div className={`um-cat-row ${u.canViewCosts ? 'active' : ''}`}>
+                              <span className="um-cat-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                Ver Costos Unitarios
+                                <span style={{ fontSize: '9px', background: '#8b5cf6', color: 'white', padding: '1px 4px', borderRadius: '4px' }}>Sensible</span>
+                              </span>
+                              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                <PermToggle active={!!u.canViewCosts} color="#8b5cf6" disabled={saving} onClick={() => toggleBooleanPerm(u, 'canViewCosts')} />
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

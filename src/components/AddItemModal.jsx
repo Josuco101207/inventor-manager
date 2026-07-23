@@ -5,6 +5,7 @@ import { useInventory } from '../context/InventoryContextOptimized';
 import { storage } from '../firebase/config';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useCustomCategories } from '../context/CustomCategoriesContext';
+import { useAuth } from '../context/AuthContext';
 import { HEADER_MAP } from '../utils/importUtils';
 import './ActionModal.css'; // Reusing base modal styles
 import './AddItemModal.css';
@@ -69,6 +70,7 @@ const CATEGORY_SCHEMAS = {
 const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
   const { brands, locations, addBrand, addLocation, items } = useInventory();
   const { customCategories } = useCustomCategories();
+  const { canViewCosts } = useAuth();
   const [newBrandName, setNewBrandName] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isAddingBrand, setIsAddingBrand] = useState(false);
@@ -557,7 +559,7 @@ const AddItemModal = ({ isOpen, onClose, category, onSave, initialData }) => {
                   <label>Nombre del Artículo</label>
                   <input name="name" required value={formData.name} placeholder="Ej: Tornillo Hexagonal..." onChange={handleChange} className="w-full" />
                 </div>
-                {showAdvanced && !isDynamicCategory && (
+                {showAdvanced && !isDynamicCategory && (category !== 'Parques' || canViewCosts()) && (
                   <div className="f-group flex-1">
                     <label>Costo Unitario ($)</label>
                     <input type="number" name="costo_unitario" step="0.01" value={formData.costo_unitario} onChange={handleChange} />

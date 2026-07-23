@@ -19,7 +19,7 @@ import './ToolsView.css';
 import './ParquesView.css';
 
 const TableRow = memo(({ 
-  item, index, isAdmin, isStaff, canEdit, 
+  item, index, isAdmin, isStaff, canEdit, canViewCosts,
   onEdit, onDelete, onAction, onAudit, setSelectedImage 
 }) => {
   if (!item) return null;
@@ -29,7 +29,7 @@ const TableRow = memo(({
   const stockClass = isCritical ? 'critical' : isLow ? 'low' : 'ok';
 
   return (
-    <div className="parques-grid-row parques-data-row">
+    <div className="parques-grid-row parques-data-row" style={{ gridTemplateColumns: canViewCosts ? '2fr 1fr 1fr 1fr 120px' : '2fr 1fr 1fr 120px' }}>
       {/* Artículo / Sede */}
       <div className="parques-cell-art">
         <div className="parques-avatar">
@@ -74,6 +74,15 @@ const TableRow = memo(({
         <span className="parques-badge-min">Mín: {item.threshold || 0}</span>
       </div>
 
+      {/* Costo Unitario (Condicional) */}
+      {canViewCosts && (
+        <div className="parques-cell-cost" style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontWeight: 'bold', color: '#10b981' }}>
+            ${parseFloat(item.costo_unitario || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
+      )}
+
       {/* Acciones */}
       <div className="parques-cell-act">
         {isStaff && (
@@ -103,7 +112,7 @@ const TableRow = memo(({
 
 const ParquesView = () => {
   const { items, updateStock, addItem, deleteItem, editItem, bulkAddItems, auditStock, loading } = useInventory();
-  const { isAdmin, isStaff, userData, canAddTo, canEditIn } = useAuth();
+  const { isAdmin, isStaff, userData, canAddTo, canEditIn, canViewCosts } = useAuth();
   const location = useLocation();
   
   const [searchTerm, setSearchTerm] = useState(location.state?.prefillSearch || '');
@@ -171,7 +180,7 @@ const ParquesView = () => {
 
   const handleExport = async () => {
     const { exportToExcel } = await import('../utils/exportUtils');
-    exportToExcel(filteredItems, `parques_${activeSubcategory}`, `Parques - ${activeSubcategory}`);
+    exportToExcel(filteredItems, `parques_${activeSubcategory}`, `Parques - ${activeSubcategory}`, { canViewCosts: canViewCosts() });
   };
 
   const handleImport = async (e) => {
@@ -281,10 +290,11 @@ const ParquesView = () => {
       )}
 
       <div className="parques-container">
-        <div className="parques-grid-row parques-header-row">
+        <div className="parques-grid-row parques-header-row" style={{ gridTemplateColumns: canViewCosts() ? '2fr 1fr 1fr 1fr 120px' : '2fr 1fr 1fr 120px' }}>
           <div>Artículo / Sede</div>
           <div style={{ textAlign: 'center' }}>Stock Actual</div>
           <div style={{ textAlign: 'center' }}>Referencia</div>
+          {canViewCosts() && <div style={{ textAlign: 'center' }}>Costo Unit.</div>}
           <div style={{ textAlign: 'right' }}>Acciones</div>
         </div>
         
@@ -301,6 +311,7 @@ const ParquesView = () => {
                   isAdmin={isAdmin}
                   isStaff={isStaff}
                   canEdit={canEditIn('Parques')}
+                  canViewCosts={canViewCosts()}
                   setSelectedImage={setSelectedImage}
                   onEdit={(item) => { setSelectedItem(item); setIsAddModalOpen(true); }}
                   onDelete={(id, name) => { if (window.confirm(`¿Eliminar ${name}?`)) deleteItem(id, userName); }}

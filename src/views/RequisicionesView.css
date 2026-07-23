@@ -1,0 +1,208 @@
+.requisiciones-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.requisiciones-header {
+  margin-bottom: 2rem;
+}
+
+.requisiciones-header h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: hsl(var(--text-main));
+  margin-bottom: 0.5rem;
+}
+
+.requisiciones-header p {
+  color: hsl(var(--text-soft));
+  font-size: 0.95rem;
+}
+
+.req-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.req-card {
+  background: hsl(var(--bg-card));
+  border: 1px solid hsla(var(--border-color), 0.5);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.req-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.req-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid hsla(var(--border-color), 0.5);
+  padding-bottom: 1rem;
+}
+
+.req-id {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: hsl(var(--text-main));
+}
+
+.req-area {
+  font-size: 0.85rem;
+  color: hsl(var(--text-soft));
+  background: hsla(var(--primary), 0.1);
+  color: hsl(var(--primary));
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.req-items {
+  flex-grow: 1;
+}
+
+.req-item-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed hsla(var(--border-color), 0.3);
+}
+
+.req-item-row:last-child {
+  border-bottom: none;
+}
+
+.req-item-name {
+  color: hsl(var(--text-main));
+  font-weight: 500;
+}
+
+.req-item-qty {
+  color: hsl(var(--text-soft));
+  font-weight: 600;
+}
+
+.req-item-new-badge {
+  font-size: 0.7rem;
+  background: hsl(var(--secondary));
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+.btn-recibir {
+  width: 100%;
+  background: hsl(var(--primary));
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-recibir:hover {
+  background: hsl(var(--primary-dark));
+}
+
+/* Modal styles para la recepción */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: hsl(var(--bg-main));
+  width: 90%;
+  max-width: 600px;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: hsl(var(--text-main));
+}
+
+.receive-item-card {
+  background: hsl(var(--bg-card));
+  border: 1px solid hsla(var(--border-color), 0.5);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.receive-item-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.receive-item-select {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid hsla(var(--border-color), 0.8);
+  background: hsl(var(--bg-main));
+  color: hsl(var(--text-main));
+  font-size: 0.9rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 1px solid hsla(var(--border-color), 1);
+  color: hsl(var(--text-main));
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-confirm {
+  background: hsl(var(--primary));
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
